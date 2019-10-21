@@ -5,10 +5,7 @@ Welcome to Generalized Interface for Surface Hopping's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   readme
-   installation
-   usage
-   modules
+   gifs 
    contributing
    authors
    history

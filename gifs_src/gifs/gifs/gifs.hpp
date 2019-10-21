@@ -5,33 +5,32 @@
 #include <memory>
 
 #include "gifs/sh/sh.hpp"
-#include "gifs/es/es.hpp"
+#include "gifs/sh/es.hpp"
 
 namespace gifs 
 {
 /* Virtual base class, defining all operations that 
  * should be called from the MD software
  *
- * P
  */
 class Gifs
 {
 public:
-    explicit Gifs(std::string fname) : _configfile{fname} {};
-    virtual ~Gifs() {};
-    // surface hopping Routines
-    virtual void do_surface_hopping()  = 0;
+    using unit = double;
+    // factory to generate SurfaceHopping code
+    explicit Gifs(std::string fname);
+    ~Gifs() {};
+    // call surface hopping Routines
+    void do_surface_hopping();
     // compute functions
     // mechanical embedding:
-    virtual unit get_energy(std::vector<double>& crd) = 0;
-    virtual unit get_eandg(std::vector<double>& crd, std::vector<unit>& grad) = 0;
+    unit get_energy(std::vector<unit>& crd);
+    unit get_eandg(std::vector<unit>& crd, std::vector<unit>& grad);
 private:
     std::string _configfile{};
     // Implementation
-    std::unique_prt<SurfaceHopping> _sh{nullptr};
-    std::unique_prt<ElectronicStructure> _es{nullptr};
+    std::unique_ptr<SurfaceHopping> _sh{nullptr};
 };
-
 
 } // end namespace gifs
 
