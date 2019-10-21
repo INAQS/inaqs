@@ -3,19 +3,6 @@ Generalized Interface for Surface Hopping
 =========================================
 
 
-.. image:: https://img.shields.io/pypi/v/gifs.svg
-        :target: https://pypi.python.org/pypi/gifs
-
-.. image:: https://img.shields.io/travis/mfsjmenger/gifs.svg
-        :target: https://travis-ci.org/mfsjmenger/gifs
-
-.. image:: https://readthedocs.org/projects/gifs/badge/?version=latest
-        :target: https://gifs.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
-
-
-
 Generalized representation of surface hopping algorithms
 
 

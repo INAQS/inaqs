@@ -6,24 +6,29 @@
 
 namespace gifs 
 {
-/* Base class, defining all operations that 
- * should be called from the MD software/nuclear propagator
+/* Virtual base class, defining all operations that 
+ * should be called from the MD software
+ *
+>>>>>>> 2e157ee07321291b7fe280d48e01e62c1363ef85
  */
 class Gifs
 {
 public:
-    explicit Gifs(std::string fname) : _configfile{fname} {};
-    virtual ~Gifs() {};
-    // surface hopping Routines
-    virtual void do_surface_hopping()  = 0;
+    using unit = double;
+    // factory to generate SurfaceHopping code
+    explicit Gifs(std::string fname);
+    ~Gifs() {};
+    // call surface hopping Routines
+    void do_surface_hopping();
     // compute functions
     // mechanical embedding:
-    inline double get_energy(std::vector<double>& crd) = 0;
-    inline double get_eandg(std::vector<double>& crd, std::vector<unit>& grad) = 0;
+    unit get_energy(std::vector<unit>& crd);
+    unit get_eandg(std::vector<unit>& crd, std::vector<unit>& grad);
 private:
     std::string _configfile{};
+    // Implementation
+    std::unique_ptr<SurfaceHopping> _sh{nullptr};
 };
-
 
 } // end namespace gifs
 
