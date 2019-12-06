@@ -85,6 +85,18 @@ protected:
 };
 
 
+class Electronic
+{
+    void propagate();
+}
+
+class SH
+{
+private:
+    ElectronicPropagation;
+}
+
+
 } // end namespace gifs
 
 #endif // GIFS_SH_ES_CORE_H

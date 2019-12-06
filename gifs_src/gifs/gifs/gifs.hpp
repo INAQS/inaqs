@@ -8,6 +8,7 @@ namespace gifs
 {
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
+
 class Gifs
 {
 public:
@@ -15,17 +16,27 @@ public:
     // factory to generate SurfaceHopping code
     explicit Gifs(std::string fname);
     ~Gifs() {};
-    // call surface hopping Routines
-    void do_surface_hopping();
+    // 
+    double getGradient(
+
+            double* Grd
+            
+            
+    );
     // rescaling (QM only? or also MM parts?)
-    void rescale_velocities(unit* veloc, unit* mass);
-    void rescale_velocities(int* iqm, unit* veloc, unit* mass);
-    // compute functions
-    // mechanical embedding:
-    unit get_energy(unit* crd);
-    unit get_eandg(unit* crd, unit* grad);
+    void rescale_velocities(unit* veloc, unit* mass, unit* gradient);
 private:
     std::string _configfile{};
+    // fixed
+    int NQM;             // const
+    int* atomids;        // NQM
+    // 
+    int* qm_idx;         // NQM, are they const throughout the simulation?
+    // flexible
+    int NMM;             // flexible
+    double* crd_qm;      // NQM*3 
+    double* crd_mm;      // NMM*3
+    double* chg_mm;      // NMM
     // Implementation
     std::unique_ptr<SurfaceHopping> _sh{nullptr};
 };
