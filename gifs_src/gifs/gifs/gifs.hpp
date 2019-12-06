@@ -8,8 +8,6 @@ namespace gifs
 {
 /* Virtual base class, defining all operations that 
  * should be called from the MD software
- *
->>>>>>> 2e157ee07321291b7fe280d48e01e62c1363ef85
  */
 class Gifs
 {
