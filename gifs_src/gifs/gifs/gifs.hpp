@@ -7,10 +7,7 @@
 namespace gifs 
 {
 /* Virtual base class, defining all operations that 
- * should be called from the MD software
- *
->>>>>>> 2e157ee07321291b7fe280d48e01e62c1363ef85
- */
+ * should be called from the MD software */
 class Gifs
 {
 public:
@@ -20,10 +17,13 @@ public:
     ~Gifs() {};
     // call surface hopping Routines
     void do_surface_hopping();
+    // rescaling (QM only? or also MM parts?)
+    void rescale_velocities(unit* veloc, unit* mass);
+    void rescale_velocities(int* iqm, unit* veloc, unit* mass);
     // compute functions
     // mechanical embedding:
-    unit get_energy(std::vector<unit>& crd);
-    unit get_eandg(std::vector<unit>& crd, std::vector<unit>& grad);
+    unit get_energy(unit* crd);
+    unit get_eandg(unit* crd, unit* grad);
 private:
     std::string _configfile{};
     // Implementation

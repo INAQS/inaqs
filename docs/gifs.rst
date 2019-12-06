@@ -28,8 +28,8 @@ a few interface method need to be exposed, namely:
 
 .. literalinclude:: ../gifs_src/gifs/gifs/gifs.hpp
    :language: cpp
-   :lines: 11-35
-   :emphasize-lines: 2-24
+   :lines: 9-32
+   :emphasize-lines: 2-22
 
 
 Surface Hopping

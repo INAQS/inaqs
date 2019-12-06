@@ -6,9 +6,6 @@ Welcome to Generalized Interface for Surface Hopping's documentation!
    :caption: Contents:
 
    gifs 
-   contributing
-   authors
-   history
 
 Indices and tables
 ==================
