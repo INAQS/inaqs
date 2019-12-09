@@ -2,44 +2,107 @@
 #define GIFS_SH_GIFS_CORE_H
 
 #include <string>
-#include <memory>
 
 namespace gifs 
 {
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
 
+// factory to create new bomd instance, based on an input file!
+BOMD* get_bomd_instance(std::string fname) {
+    // store objects in a global map, so that
+    // the addition of user defined BOMD codes is possible
+};
+
+
 class Gifs
 {
-public:
-    using unit = double;
-    // factory to generate SurfaceHopping code
-    explicit Gifs(std::string fname);
-    ~Gifs() {};
-    // 
-    double getGradient(
+    // create instance, can only be called once!
+    explicit Gifs(std::string fname) {
+        impl = GifsImpl::get_instance(fname);   
+    }
+    // get a local handle to the interface 
+    explicit Gifs() {
+        impl = GifsImpl::get_instance();   
+    }
 
-            double* Grd
-            
-            
-    );
-    // rescaling (QM only? or also MM parts?)
-    void rescale_velocities(unit* veloc, unit* mass, unit* gradient);
+    template<typename T>
+    inline
+    T get_gradient(T* qm_crd, T* mm_crd, T* mm_chg, T* qm_gradient, T* mm_gradient)
+    {
+        impl->get_gradient(qm_crd, mm_crd, mm_chg, qm_gradient, mm_gradient);
+    }
+
+    template<typename T>
+    inline 
+    T rescale_velocities(T* total_gradient, T* masses, T* velocities)
+    {
+        impl->rescale_velocities(total_gradient, masses, velocities);
+    }
 private:
-    std::string _configfile{};
-    // fixed
-    int NQM;             // const
-    int* atomids;        // NQM
-    // 
-    int* qm_idx;         // NQM, are they const throughout the simulation?
-    // flexible
-    int NMM;             // flexible
-    double* crd_qm;      // NQM*3 
-    double* crd_mm;      // NMM*3
-    double* chg_mm;      // NMM
-    // Implementation
-    std::unique_ptr<SurfaceHopping> _sh{nullptr};
+    GifsImpl* impl; 
 };
+
+
+class GifsImpl
+{
+public: 
+
+    template<typename T>
+    inline
+    T get_gradient(T* qm_crd, T* mm_crd, T* mm_chg, T* qm_gradient, T* mm_gradient)
+    {
+        bomd->get_gradient(qm_crd, mm_crd, mm_chg, qm_gradient, mm_gradient);
+    };
+
+    template<typename T>
+    inline 
+    T rescale_velocities(T* total_gradient, T* masses, T* velocities)
+    {
+        bomd->rescale_velocities(total_gradient, masses, velocities);
+    };
+
+    // creation
+    static 
+    GifsImpl* get_instance(std::string fname)
+    {
+        // actually create instance, and register 
+        // its destructor atexit!
+        if (impl != nullptr)
+            throw std::Exception("GIFS object was already created");
+        impl = new GifsImpl{fname};
+        //
+        atexit(GifsImpl::destory_instance);
+        return impl;
+    };
+
+    static 
+    GifsImpl* get_instance() {
+        if (impl == nullptr) {
+            throw std::Exception("GIFS object was not created, yet");
+        }
+        return impl;
+    };
+
+private:
+    //
+    GifsImpl(std::string fname) : bomd{get_bomd(fname)} {};
+    //
+    static destory_instance() {
+        if (impl != nullptr) {
+            delete impl->bomd;
+            delete impl;
+        }
+    }
+    //
+    static GifsImpl* impl; 
+    static int icount; 
+    //
+    BOMD* bomd{nullptr};
+};
+
+GifsImpl::impl = nullptr;
+GifsImpl::icount = 0;
 
 } // end namespace gifs
 
