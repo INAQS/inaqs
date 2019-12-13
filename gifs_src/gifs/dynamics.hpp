@@ -1,3 +1,9 @@
+#ifndef __DYNAMICS_HPP
+#define __DYNAMICS_HPP
+#include <unordered_map>
+#include <vector>
+#include "properties.hpp"
+
 /*
  * Basic strategie:
  *
@@ -189,7 +195,7 @@ public:
     void subtract_forces(qm, mm, total);
     void add_forces(qm, mm, total);
     // Should also handle the non link atom case, where only qm_idx are used!
-private:
+protected:
     int NLink;                        // const
     std::vector<int> qm_idx;         // NQM, are they const throughout the simulation?
     // QM-MM
@@ -206,17 +212,23 @@ private:
 class QMInterface
 {
 public:
-    void get_properties();
+    QMInterface(int nqm, std::vector<int> qmid};
+    void get_properties(PropMap &props);
 
-private:
-    //
+    void update(std::vector<double> &crdqm,
+		std::vector<double> &crdmm,
+		std::vector<double> &chgmm);  
+
+protected:
     int NQM;             // const, actually NQM+NLink
     //  fixed size
     std::vector<int> atomids;        // NQM
     std::vector<double> crd_qm;      // NQM*3
     // flexible
-    int NMM;             // flexible
+    int NMM;
     std::vector<double> crd_mm;      // NMM*3
     std::vector<double> chg_mm;      // NMM
 
 };
+
+#endif
