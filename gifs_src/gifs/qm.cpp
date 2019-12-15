@@ -1,7 +1,8 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "launch.hpp"
+#include "qm.hpp"
+#include "properties.hpp"
 
 #define FMT "%12.8g"
 
@@ -20,31 +21,25 @@ void p3vec(std::vector<double> vec){
   }
 }
 
-std::vector<double>& get(PropMap m, QMProps p){
-  auto itr = m.find(p);
-  if(itr == m.end()){
-    throw std::invalid_argument("Bad Key!");
-  }
-  else return itr->second;
+QMInterface::QMInterface(int nqm, std::vector<int> &qmid){
+  NQM = nqm;
+  atomids = qmid;
 }
 
-QM::QM(int nqm, int nmm,
-       std::vector<int> qmid,
-       std::vector<double> mmcharge){
-  n_qm = nqm;
-  n_mm = nmm;
-  
-  qm_id = qmid;
-  mm_charge = mmcharge;
+void QMInterface::update(std::vector<double> &crdqm,
+			 std::vector<double> &crdmm,
+			 std::vector<double> &chgmm){
+  crd_qm = crdqm;
+  NMM = chgmm.size();
+  crd_mm = crdmm;
+  chg_mm = chgmm;
 }
-  
-void QM::get_properties(PropMap &props,
-			std::vector<double> &qm_crd,
-			std::vector<double> &mm_crd){
+
+void QMInterface::get_properties(PropMap &props){
   std::vector<double> g_qm, g_mm;
 
-  g_qm=get(props, qmgradient);
-  g_mm=get(props, mmgradient);
+  g_qm=props.get(QMProperty::qmgradient);
+  g_mm=props.get(QMProperty::mmgradient);
   
   for(size_t i = 0; i < g_qm.size(); i++){
     g_qm[i] = 0;
@@ -56,13 +51,14 @@ void QM::get_properties(PropMap &props,
 }
 
 int main(void){
-  std::vector<double> qm_crd, mm_crd;
+  std::vector<double> qm_crd, mm_crd, mm_chg;
   int nqm = 4;
   int nmm = 2;
-  
-  QM* qm = new QM(nqm, nmm, std::vector<int> {9, 9, 9, 9},
-  		  std::vector<double> {0.1, -0.1});
 
+  std::vector<int> qmids = {9, 9, 9, 9};
+  
+  QMInterface* qm = new QMInterface(nqm, qmids);
+  
   qm_crd = { 2.1194186904,    -0.1478987347,     0.0000000000,
 	     1.4498754181,     1.0202212338,     0.0000000000,
 	     -1.4498754181,   -1.0202212338,     0.0000000000,
@@ -70,17 +66,22 @@ int main(void){
   
   mm_crd = {0.00000, 0.00000,  1.00000,
 	    0.00000, 0.00000, -1.00000};
+
+  mm_chg = {0.1, -0.1};
   
   std::cout << "qm_crd" << std::endl; p3vec(qm_crd);
   std::cout << "mm_crd" << std::endl; p3vec(mm_crd);
 
+  qm->update(qm_crd, mm_crd, mm_chg);
+  
   std::vector<double> g_qm, g_mm;
   g_qm.resize((size_t) 3 * nqm);
   g_mm.resize((size_t) 3 * nmm);
-
-  PropMap props = {{qmgradient, g_qm}, {mmgradient, g_mm}};
-
-  qm->get_properties(props, qm_crd, mm_crd);
+  
+  PropMap props;
+  props.emplace(QMProperty::qmgradient, g_qm);
+  props.emplace(QMProperty::mmgradient, g_mm);
+  qm->get_properties(props);
   
   std::cout << "g_qm" << std::endl; p3vec(g_qm);
   std::cout << "g_mm" << std::endl; p3vec(g_mm);
