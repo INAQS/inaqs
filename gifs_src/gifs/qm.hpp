@@ -17,6 +17,10 @@ public:
 		std::vector<double> &chgmm);  
 
 protected:
+  void get_gradient(std::vector<double> &g_qm, std::vector<double> &g_mm);
+  void write_gradient_job(std::string fname);
+  void exec_qchem(std::string qcprog, std::string ifname, std::string savdir);
+  void parse_qm_gradient(std::string savdir, std::vector<double> &g_qm);
     int NQM;             // const, actually NQM+NLink
     //  fixed size
     std::vector<int> atomids;        // NQM

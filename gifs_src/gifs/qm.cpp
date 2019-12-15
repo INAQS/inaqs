@@ -1,6 +1,10 @@
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
+#include <iomanip>
+#include <cstdlib>
 #include "qm.hpp"
 #include "properties.hpp"
 
@@ -40,14 +44,114 @@ void QMInterface::get_properties(PropMap &props){
 
   g_qm=props.get(QMProperty::qmgradient);
   g_mm=props.get(QMProperty::mmgradient);
-  
-  for(size_t i = 0; i < g_qm.size(); i++){
-    g_qm[i] = 0;
-  }
 
-  for(size_t i = 0; i < g_mm.size(); i++){
-    g_mm[i] = 0;
+  get_gradient(g_qm, g_mm);
+  //FIXME: the gradient doesn't make it above this call; some referenceing issue???
+}
+
+void QMInterface::get_gradient(std::vector<double> &g_qm,
+			       std::vector<double> &g_mm){
+  std::string ifname = "GQSH.in";
+  std::string qcprog = "../../qcprog.exe";
+  std::string savdir = "./GQSH.sav";
+  write_gradient_job(ifname);
+  exec_qchem(qcprog, ifname, savdir);
+  parse_qm_gradient(savdir, g_qm);
+}
+
+void QMInterface::parse_qm_gradient(std::string savdir,
+				    std::vector<double> &g_qm){
+  std::string gfile = savdir + "/" + "GRAD";
+  std::ifstream ifile(gfile);
+  std::string line;
+
+  bool gradient = false;
+  bool energy = false;
+  int i = 0;
+  double E = 0;
+  
+  while( getline(ifile, line) && i < NQM){
+    std::stringstream s(line);
+    if (energy){
+      s>>E;
+      energy = false;
+    }
+
+    if (gradient){
+      s>>g_qm[i*3 + 0]
+       >>g_qm[i*3 + 1]
+       >>g_qm[i*3 + 2];
+      i++;
+    }
+    
+    if (line == "$energy"){
+      energy = true;
+    }
+    if (line == "$gradient"){
+      energy = false;
+      gradient = true;
+    }
   }
+}
+
+void QMInterface::exec_qchem(std::string qcprog,
+			     std::string ifname,
+			     std::string savdir){
+  std::string cmd = qcprog + " " + ifname + " " + savdir;
+  std::system(cmd.c_str());
+}
+
+void QMInterface::write_gradient_job(std::string fname){
+  std::ofstream ifile(fname);
+
+  ifile << R"(
+$rem
+  jobtype          force
+  method           hf
+  basis	           6-31+G*
+  sym_ignore       true
+  qm_mm            true     # external charges in NAC; generate efield.dat
+$end
+)" << std::endl;
+  
+  ifile << "$molecule \n0 1" << std::endl;
+  
+  double x, y, z;
+  {
+    int id;
+    for (int i = 0; i < NQM; i++){
+      x = crd_qm[i*3 + 0];
+      y = crd_qm[i*3 + 1];
+      z = crd_qm[i*3 + 2];
+      id = atomids[i];
+      
+      ifile << id << " ";
+      ifile << x << " ";
+      ifile << y << " ";
+      ifile << z << std::endl;
+    }
+  }
+  ifile <<  "$end" << std::endl << std::endl;
+
+  ifile << "$external_charges" << std::endl;
+
+  {
+    double chg;
+    for (int i = 0; i < NQM; i++){
+      x = crd_mm[i*3 + 0];
+      y = crd_mm[i*3 + 1];
+      z = crd_mm[i*3 + 2];
+      chg = chg_mm[i];
+      
+      ifile << x << " ";
+      ifile << y << " ";
+      ifile << z << " ";
+      ifile << chg << std::endl;
+    }
+  }
+  ifile << "$end" << std::endl;
+
+  ifile.close();
 }
 
 int main(void){
@@ -85,6 +189,6 @@ int main(void){
   
   std::cout << "g_qm" << std::endl; p3vec(g_qm);
   std::cout << "g_mm" << std::endl; p3vec(g_mm);
-  
+
   return 0;
 }
