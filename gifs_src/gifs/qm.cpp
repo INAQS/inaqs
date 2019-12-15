@@ -47,12 +47,13 @@ void QMInterface::get_properties(PropMap &props){
 
   get_gradient(g_qm, g_mm);
   //FIXME: the gradient doesn't make it above this call; some referenceing issue???
+  p3vec(g_qm);
 }
 
 void QMInterface::get_gradient(std::vector<double> &g_qm,
 			       std::vector<double> &g_mm){
   std::string ifname = "GQSH.in";
-  std::string qcprog = "../../qcprog.exe";
+  std::string qcprog = "../../exe/qcprog.exe";
   std::string savdir = "./GQSH.sav";
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
