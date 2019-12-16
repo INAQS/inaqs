@@ -1,4 +1,4 @@
 mkdir -p build/
 mkdir -p install
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install  -DGMX_BUILD_OWN_FFTW=ON
+CC=icc cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/../install -DGMX_GIFS=/data/menger/gromacs/gifs -DGMX_BUILD_OWN_FFTW=ON
