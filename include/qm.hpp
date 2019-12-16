@@ -16,7 +16,7 @@ public:
 		std::vector<double> &crdmm,
 		std::vector<double> &chgmm);  
 
-    void update(float* crdqm, int nmm, float* crdmm, float* chgmm);
+    void update(float* crdqm, size_t nmm, float* crdmm, float* chgmm);
     inline int get_nqm() const noexcept { return NQM; };
 
 protected:

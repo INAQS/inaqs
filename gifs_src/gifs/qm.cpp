@@ -39,7 +39,7 @@ void QMInterface::update(std::vector<double> &crdqm,
   chg_mm = chgmm;
 }
 
-void QMInterface::update(float* crdqm, int nmm, float* crdmm, float* chgmm)
+void QMInterface::update(float* crdqm, size_t nmm, float* crdmm, float* chgmm)
 {
   NMM = nmm;
   if (nmm < crd_mm.capacity()) {
