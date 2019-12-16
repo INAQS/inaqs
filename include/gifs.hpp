@@ -15,8 +15,8 @@ extern "C" {
 #endif
 
 
-void create_qm_interface(int nqm, int* qm_atomids);
-float gifs_get_forces(float* qm_crd, int nmm, float* mm_crd, float* mm_chg, float* f, float* fshift);
+void create_qm_interface(size_t nqm, int* qm_atomids);
+float gifs_get_forces(float* qm_crd, size_t nmm, float* mm_crd, float* mm_chg, float* f, float* fshift);
 
 #ifdef __cplusplus 
 }

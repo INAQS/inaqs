@@ -3,7 +3,7 @@
 #include "properties.hpp"
 
 
-void create_qm_interface(int nqm, int* qm_atomids)
+void create_qm_interface(size_t nqm, int* qm_atomids)
 {
     if (qm == nullptr) {
         std::vector<int> qmids(qm_atomids, qm_atomids+nqm);
@@ -12,17 +12,19 @@ void create_qm_interface(int nqm, int* qm_atomids)
 }
 
 
-float gifs_get_forces(float* qm_crd, int nmm, float* mm_crd, float* mm_chg, float* f, float* fshift)
+float gifs_get_forces(float* qm_crd, size_t nmm, float* mm_crd, float* mm_chg, float* f, float* fshift)
 {
     //
-    int nqm = qm->get_nqm();
+    size_t nqm = qm->get_nqm();
     qm->update(qm_crd, nmm, mm_crd, mm_chg);
     // 
     std::vector<double> g_qm(nqm*3), g_mm(3*nmm);
+    std::vector<double> energy(1);
     //
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &g_qm);
     props.emplace(QMProperty::mmgradient, &g_mm);
+    props.emplace(QMProperty::energies, &energy);
     //
     qm->get_properties(props);
     //
@@ -41,6 +43,6 @@ float gifs_get_forces(float* qm_crd, int nmm, float* mm_crd, float* mm_chg, floa
         fshift[j] = f[j];
     }
     //
-    return 0.0;
+    return HARTREE2KJ * energy[0];
 
 };

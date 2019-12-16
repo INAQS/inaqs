@@ -11,7 +11,7 @@
 enum class QMProperty{
     qmgradient,
     mmgradient,
-    energy,
+    energies,
 };
 
 class PropMap:

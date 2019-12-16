@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#some install and build files
+gromacs-4.6.5/setup.sh
+gromacs-4.6.5/install
+
 # C extensions
 *.so
 

@@ -20,10 +20,11 @@ public:
     inline size_t get_nqm() const noexcept { return NQM; };
 
 protected:
-  void get_gradient(std::vector<double> &g_qm, std::vector<double> &g_mm);
+  void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
   void write_gradient_job(std::string fname);
   void exec_qchem(std::string qcprog, std::string ifname, std::string savdir);
-  void parse_qm_gradient(std::string savdir, std::vector<double> &g_qm);
+  void parse_qm_gradient(std::string savdir, std::vector<double> &g_qm, std::vector<double> &e);
+  std::string get_qcprog(void);
     size_t NQM;             // const, actually NQM+NLink
     //  fixed size
     std::vector<int> atomids;        // NQM

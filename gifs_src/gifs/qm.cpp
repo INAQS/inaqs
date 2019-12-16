@@ -65,27 +65,43 @@ void QMInterface::update(float* crdqm, size_t nmm, float* crdmm, float* chgmm)
 }
 
 void QMInterface::get_properties(PropMap &props){
-  auto& g_qm=props.get(QMProperty::qmgradient);
-  auto& g_mm=props.get(QMProperty::mmgradient);
+  std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
+  std::vector<double>& g_mm=props.get(QMProperty::mmgradient);
+  std::vector<double>& e=props.get(QMProperty::energies);
 
   //auto& g_qm = *props[QMProperty::qmgradient];
   //auto& g_mm = *props[QMProperty::mmgradient];
   
-  get_gradient(g_qm, g_mm);
+  get_gradient_energies(g_qm, g_mm, e);
 }
 
-void QMInterface::get_gradient(std::vector<double> &g_qm,
-			       std::vector<double> &g_mm){
+void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
+					std::vector<double> &g_mm,
+					std::vector<double> &e){
   std::string ifname = "GQSH.in";
-  std::string qcprog = "../../exe/qcprog.exe";
+  std::string qcprog = get_qcprog();
   std::string savdir = "./GQSH.sav";
+
+  std::cout << qcprog << std::endl;
+  
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
-  parse_qm_gradient(savdir, g_qm);
+  parse_qm_gradient(savdir, g_qm, e);
+}
+
+std::string QMInterface::get_qcprog(void){
+  char * qc_str = std::getenv("QC");
+  if (nullptr == qc_str){
+    return "../../exe/qcprog.exe";
+  }
+  else{
+    return std::string(qc_str) + "/exe/qcprog.exe";
+  }
 }
 
 void QMInterface::parse_qm_gradient(std::string savdir,
-				    std::vector<double> &g_qm){
+				    std::vector<double> &g_qm,
+				    std::vector<double> &e){
   std::string gfile = savdir + "/" + "GRAD";
   std::ifstream ifile(gfile);
   std::string line;
@@ -93,12 +109,11 @@ void QMInterface::parse_qm_gradient(std::string savdir,
   bool gradient = false;
   bool energy = false;
   size_t i = 0;
-  double E = 0;
   
   while( getline(ifile, line) && i < NQM){
     std::stringstream s(line);
     if (energy){
-      s>>E;
+      s>>e[0];
       energy = false;
     }
 

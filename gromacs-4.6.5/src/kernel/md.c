@@ -1233,7 +1233,6 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                           ekind, M, wcycle, upd, bInitStep, etrtVELOCITY1,
                           cr, nrnb, constr, &top->idef);
 #ifdef GMX_GIFS
-            gifs_say_hallo(fplog);
             gifs_scale_velocities(state->v, f, mdatoms->invmass);
             if (mdatoms->cACC) {
                 fprintf(fplog, "cAcc != nullptr\n");
