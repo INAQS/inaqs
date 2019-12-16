@@ -91,8 +91,10 @@ void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
 
 std::string QMInterface::get_qcprog(void){
   char * qc_str = std::getenv("QC");
+  std::string default_path = "../../exe/qcprog.exe";
   if (nullptr == qc_str){
-    return "../../exe/qcprog.exe";
+    std::cerr << "Warning, $QC not set; using " << default_path << std::endl;
+    return default_path;
   }
   else{
     return std::string(qc_str) + "/exe/qcprog.exe";

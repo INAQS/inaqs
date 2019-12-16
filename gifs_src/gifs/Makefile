@@ -1,5 +1,5 @@
 CPP=g++
-CPPFLAGS= -std=c++11 -O2 -Werror -Wall
+CPPFLAGS= -std=c++11 -O0 -Werror -Wall -g
 
 INCLUDE= -I../../include
 

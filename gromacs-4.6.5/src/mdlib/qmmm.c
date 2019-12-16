@@ -166,13 +166,15 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
      * Note that f is actually the gradient, i.e. -f
      */
     real QMener = 0.0;
-#ifdef GMX_GIFS
+    //FIXME: apparently these preprocessor defines aren't acutally getting set by cmake
+    /*#ifdef GMX_GIFS*/
+    //FIXME: we segfault below here, no clue why
     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM, 
                              mm->nrMMatoms, mm->xMM, mm->MMcharges,
-                             f, fshift)
+			       f, fshift);
     //
     return QMener;
-#endif
+    /*#endif*/
 
     /* do a semi-empiprical calculation */
 
@@ -210,8 +212,10 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
             QMener = call_gaussian(cr, fr, qm, mm, f, fshift);
 #elif defined GMX_QMMM_ORCA
             QMener = call_orca(cr, fr, qm, mm, f, fshift);
+#elif defined GMX_GIFS
+	    /*Nothing to do*/
 #else
-            gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+            //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
         }
     }
@@ -240,8 +244,10 @@ void init_QMroutine(t_commrec *cr, t_QMrec *qm, t_MMrec *mm)
         init_gaussian(cr, qm, mm);
 #elif defined GMX_QMMM_ORCA
         init_orca(cr, qm, mm);
+#elif defined GMX_GIFS
+	    /*Nothing to do*/
 #else
-        gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+        //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
     }
 } /* init_QMroutine */
@@ -784,8 +790,10 @@ void init_QMMMrec(t_commrec  *cr,
             init_gaussian(cr, qr->qm[0], qr->mm);
 #elif defined GMX_QMMM_ORCA
             init_orca(cr, qr->qm[0], qr->mm);
+#elif defined GMX_GIFS
+	    /*Nothing to do*/
 #else
-            gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+            //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
         }
     }
