@@ -19,10 +19,12 @@ float gifs_get_forces(float* qm_crd, size_t nmm, float* mm_crd, float* mm_chg, f
     qm->update(qm_crd, nmm, mm_crd, mm_chg);
     // 
     std::vector<double> g_qm(nqm*3), g_mm(3*nmm);
+    std::vector<double> energy(1);
     //
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &g_qm);
     props.emplace(QMProperty::mmgradient, &g_mm);
+    props.emplace(QMProperty::energies, &energy);
     //
     qm->get_properties(props);
     //
@@ -41,6 +43,6 @@ float gifs_get_forces(float* qm_crd, size_t nmm, float* mm_crd, float* mm_chg, f
         fshift[j] = f[j];
     }
     //
-    return 0.0;
+    return HARTREE2KJ * energy[0];
 
 };
