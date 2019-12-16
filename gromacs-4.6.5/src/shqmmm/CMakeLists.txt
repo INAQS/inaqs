@@ -7,17 +7,14 @@ add_library(gifsgmx
     ${GIFS_SOURCES}
 )
 
-#set_property(TARGETS pyqmmmgromacs 
-#    PROPERTY 
-#      POSITION_INDEPENDENT_CODE 1
-#)
-
 target_include_directories(gifsgmx
     PRIVATE
+    ${GMX_GIFS}/include
 )
 
 target_link_libraries(gifsgmx
     PRIVATE
+    ${GMX_GIFS}/lib/libgifs.so
 )
 
 install(TARGETS gifsgmx 
