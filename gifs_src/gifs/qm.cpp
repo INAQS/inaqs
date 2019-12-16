@@ -77,11 +77,24 @@ void QMInterface::get_properties(PropMap &props){
 void QMInterface::get_gradient(std::vector<double> &g_qm,
 			       std::vector<double> &g_mm){
   std::string ifname = "GQSH.in";
-  std::string qcprog = "../../exe/qcprog.exe";
+  std::string qcprog = get_qcprog();
   std::string savdir = "./GQSH.sav";
+
+  std::cout << qcprog << std::endl;
+  
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
   parse_qm_gradient(savdir, g_qm);
+}
+
+std::string QMInterface::get_qcprog(void){
+  char * qc_str = std::getenv("QC");
+  if (nullptr == qc_str){
+    return "../../exe/qcprog.exe";
+  }
+  else{
+    return std::string(qc_str) + "/exe/qcprog.exe";
+  }
 }
 
 void QMInterface::parse_qm_gradient(std::string savdir,

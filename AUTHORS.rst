@@ -2,10 +2,11 @@
 Credits
 =======
 
-Development Lead
+Development Leads
 ----------------
 
 * Maximilian Menger <menger.maximilian@gmail.com>
+* Vale Cofer-Shabica <vale.cofershabica@gmail.com>
 
 Contributors
 ------------
