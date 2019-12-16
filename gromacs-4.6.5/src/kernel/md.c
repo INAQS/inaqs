@@ -39,7 +39,9 @@
 #include <config.h>
 #endif
 
-#include "../shqmmm/gmxgifs.h"
+#ifdef GMX_GIFS
+    #include "../shqmmm/gmxgifs.h"
+#endif
 #include "typedefs.h"
 #include "smalloc.h"
 #include "sysstuff.h"
@@ -1230,7 +1232,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                           f, bUpdateDoLR, fr->f_twin, fcd,
                           ekind, M, wcycle, upd, bInitStep, etrtVELOCITY1,
                           cr, nrnb, constr, &top->idef);
-
+#ifdef GMX_GIFS
             gifs_say_hallo(fplog);
             gifs_scale_velocities(state->v, f, mdatoms->invmass);
             if (mdatoms->cACC) {
@@ -1238,6 +1240,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
             } else {
                 fprintf(fplog, "cAcc = nullptr \n");
             }
+#endif
             /* MM: 
              * Hook for velocity rescaling here!  
              *

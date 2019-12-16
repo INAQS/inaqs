@@ -39,6 +39,31 @@ void QMInterface::update(std::vector<double> &crdqm,
   chg_mm = chgmm;
 }
 
+void QMInterface::update(float* crdqm, int nmm, float* crdmm, float* chgmm)
+{
+  NMM = nmm;
+  if (nmm < crd_mm.capacity()) {
+        crd_mm.resize(nmm);
+        chg_mm.resize(nmm);
+  }
+  // QM Crd
+  for (int i=0; i<NQM; ++i) {
+      crd_qm[i*3    ] = crdqm[i*3    ];
+      crd_qm[i*3 + 1] = crdqm[i*3 + 1];
+      crd_qm[i*3 + 2] = crdqm[i*3 + 2];
+  }
+  // MM Crd
+  for (int i=0; i<NMM; ++i) {
+      crd_mm[i*3    ] = crdmm[i*3    ];
+      crd_mm[i*3 + 1] = crdmm[i*3 + 1];
+      crd_mm[i*3 + 2] = crdmm[i*3 + 2];
+  }
+  // Charges
+  for (int i=0; i<NMM; ++i) {
+      chg_mm[i] = chgmm[i];
+  }
+}
+
 void QMInterface::get_properties(PropMap &props){
   auto& g_qm=props.get(QMProperty::qmgradient);
   auto& g_mm=props.get(QMProperty::mmgradient);
@@ -154,6 +179,7 @@ $end
   ifile.close();
 }
 
+/*
 int main(void){
   std::vector<double> qm_crd, mm_crd, mm_chg;
   int nqm = 4;
@@ -192,3 +218,4 @@ int main(void){
 
   return 0;
 }
+*/

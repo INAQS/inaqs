@@ -40,7 +40,10 @@
 #endif
 
 #include <math.h>
-#include "../shqmmm/gmxgifs.h"
+
+#ifdef GMX_GIFS
+    #include "../shqmmm/gmxgifs.h"
+#endif
 #include "sysstuff.h"
 #include "typedefs.h"
 #include "macros.h"
@@ -163,7 +166,7 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
      * Note that f is actually the gradient, i.e. -f
      */
     real QMener = 0.0;
-#ifdef GMX_GIFS_SH
+#ifdef GMX_GIFS
     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM, 
                              mm->nrMMatoms, mm->xMM, mm->MMcharges,
                              f, fshift)

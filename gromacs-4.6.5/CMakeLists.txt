@@ -174,6 +174,8 @@ if(NOT DEFINED GMX_CPU_ACCELERATION AND NOT CMAKE_CROSSCOMPILING)
     gmx_detect_acceleration(GMX_SUGGESTED_CPU_ACCELERATION)
 endif()
 
+
+
 # Detect the architecture the compiler is targetting, detect
 # acceleration possibilities on that hardware, suggest an acceleration
 # to use if none is specified, and populate the cache option for CPU

@@ -16,6 +16,9 @@ public:
 		std::vector<double> &crdmm,
 		std::vector<double> &chgmm);  
 
+    void update(float* crdqm, int nmm, float* crdmm, float* chgmm);
+    inline int get_nqm() const noexcept { return NQM; };
+
 protected:
   void get_gradient(std::vector<double> &g_qm, std::vector<double> &g_mm);
   void write_gradient_job(std::string fname);
