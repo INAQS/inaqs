@@ -15,10 +15,10 @@ enum class QMProperty{
 };
 
 class PropMap:
-  public std::unordered_map<QMProperty, std::vector<double>&>{
+  public std::unordered_map<QMProperty, std::vector<double>*>{
 public:
-  PropMap() : std::unordered_map<QMProperty, std::vector<double>&>{} {}
-  std::vector<double> get(QMProperty key);
+  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {}
+  std::vector<double>& get(QMProperty key);
 };
 
 #endif

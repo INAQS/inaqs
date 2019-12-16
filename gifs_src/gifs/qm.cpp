@@ -40,14 +40,13 @@ void QMInterface::update(std::vector<double> &crdqm,
 }
 
 void QMInterface::get_properties(PropMap &props){
-  std::vector<double> g_qm, g_mm;
+  auto& g_qm=props.get(QMProperty::qmgradient);
+  auto& g_mm=props.get(QMProperty::mmgradient);
 
-  g_qm=props.get(QMProperty::qmgradient);
-  g_mm=props.get(QMProperty::mmgradient);
-
+  //auto& g_qm = *props[QMProperty::qmgradient];
+  //auto& g_mm = *props[QMProperty::mmgradient];
+  
   get_gradient(g_qm, g_mm);
-  //FIXME: the gradient doesn't make it above this call; some referenceing issue???
-  p3vec(g_qm);
 }
 
 void QMInterface::get_gradient(std::vector<double> &g_qm,
@@ -184,8 +183,8 @@ int main(void){
   g_mm.resize((size_t) 3 * nmm);
   
   PropMap props;
-  props.emplace(QMProperty::qmgradient, g_qm);
-  props.emplace(QMProperty::mmgradient, g_mm);
+  props.emplace(QMProperty::qmgradient, &g_qm);
+  props.emplace(QMProperty::mmgradient, &g_mm);
   qm->get_properties(props);
   
   std::cout << "g_qm" << std::endl; p3vec(g_qm);
