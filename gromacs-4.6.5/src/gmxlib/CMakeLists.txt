@@ -120,8 +120,13 @@ target_link_libraries(gmx
     ${GMX_EXTRA_LIBRARIES}
     ${THREAD_LIB}
     ${OpenMP_SHARED_LINKER_FLAGS}
-    gifsgmx
 )
+
+if(DEFINED GMX_GIFS)
+    target_link_libraries(gmx 
+        gifsgmx
+    )
+endif()
 if(USE_VERSION_H)
 	add_dependencies(gmx gmx_version) 
 endif()

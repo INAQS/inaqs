@@ -45,7 +45,7 @@ else()
   set(MD_PREFIX)
 endif()
 
-if(NOT DEFINED GMX_GIFS)
+if(DEFINED GMX_GIFS)
     add_subdirectory(shqmmm)
 endif()
 add_subdirectory(gmxlib)
