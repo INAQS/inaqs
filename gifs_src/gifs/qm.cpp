@@ -25,7 +25,7 @@ void p3vec(std::vector<double> vec){
   }
 }
 
-QMInterface::QMInterface(int nqm, std::vector<int> &qmid){
+QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
   NQM = nqm;
   atomids = qmid;
 }
@@ -39,7 +39,7 @@ void QMInterface::update(std::vector<double> &crdqm,
   chg_mm = chgmm;
 }
 
-void QMInterface::update(float* crdqm, int nmm, float* crdmm, float* chgmm)
+void QMInterface::update(float* crdqm, size_t nmm, float* crdmm, float* chgmm)
 {
   NMM = nmm;
   if (nmm < crd_mm.capacity()) {
@@ -47,19 +47,19 @@ void QMInterface::update(float* crdqm, int nmm, float* crdmm, float* chgmm)
         chg_mm.resize(nmm);
   }
   // QM Crd
-  for (int i=0; i<NQM; ++i) {
+  for (size_t i=0; i<NQM; ++i) {
       crd_qm[i*3    ] = crdqm[i*3    ];
       crd_qm[i*3 + 1] = crdqm[i*3 + 1];
       crd_qm[i*3 + 2] = crdqm[i*3 + 2];
   }
   // MM Crd
-  for (int i=0; i<NMM; ++i) {
+  for (size_t i=0; i<NMM; ++i) {
       crd_mm[i*3    ] = crdmm[i*3    ];
       crd_mm[i*3 + 1] = crdmm[i*3 + 1];
       crd_mm[i*3 + 2] = crdmm[i*3 + 2];
   }
   // Charges
-  for (int i=0; i<NMM; ++i) {
+  for (size_t i=0; i<NMM; ++i) {
       chg_mm[i] = chgmm[i];
   }
 }
@@ -92,7 +92,7 @@ void QMInterface::parse_qm_gradient(std::string savdir,
 
   bool gradient = false;
   bool energy = false;
-  int i = 0;
+  size_t i = 0;
   double E = 0;
   
   while( getline(ifile, line) && i < NQM){
@@ -144,7 +144,7 @@ $end
   double x, y, z;
   {
     int id;
-    for (int i = 0; i < NQM; i++){
+    for (size_t i = 0; i < NQM; i++){
       x = crd_qm[i*3 + 0];
       y = crd_qm[i*3 + 1];
       z = crd_qm[i*3 + 2];
@@ -162,7 +162,7 @@ $end
 
   {
     double chg;
-    for (int i = 0; i < NQM; i++){
+    for (size_t i = 0; i < NQM; i++){
       x = crd_mm[i*3 + 0];
       y = crd_mm[i*3 + 1];
       z = crd_mm[i*3 + 2];
@@ -182,8 +182,8 @@ $end
 /*
 int main(void){
   std::vector<double> qm_crd, mm_crd, mm_chg;
-  int nqm = 4;
-  int nmm = 2;
+  size_t nqm = 4;
+  size_t nmm = 2;
 
   std::vector<int> qmids = {9, 9, 9, 9};
   
