@@ -1,0 +1,108 @@
+.TH genion 1 "Mon 2 Dec 2013" "" "GROMACS suite, VERSION 4.6.5"
+.SH NAME
+genion\ -\ generates\ mono\ atomic\ ions\ on\ energetically\ favorable\ positions
+
+.B VERSION 4.6.5
+.SH SYNOPSIS
+\f3genion\fP
+.BI "\-s" " topol.tpr "
+.BI "\-n" " index.ndx "
+.BI "\-o" " out.gro "
+.BI "\-p" " topol.top "
+.BI "\-[no]h" ""
+.BI "\-[no]version" ""
+.BI "\-nice" " int "
+.BI "\-np" " int "
+.BI "\-pname" " string "
+.BI "\-pq" " int "
+.BI "\-nn" " int "
+.BI "\-nname" " string "
+.BI "\-nq" " int "
+.BI "\-rmin" " real "
+.BI "\-seed" " int "
+.BI "\-conc" " real "
+.BI "\-[no]neutral" ""
+.SH DESCRIPTION
+\&\fB genion\fR randomly replaces solvent molecules with monoatomic ions.
+\&The group of solvent molecules should be continuous and all molecules
+\&should have the same number of atoms.
+\&The user should add the ion molecules to the topology file or use
+\&the \fB \-p\fR option to automatically modify the topology.
+
+
+\&The ion molecule type, residue and atom names in all force fields
+\&are the capitalized element names without sign. This molecule name
+\&should be given with \fB \-pname\fR or \fB \-nname\fR, and the
+\&\fB [molecules]\fR section of your topology updated accordingly,
+\&either by hand or with \fB \-p\fR. Do not use an atom name instead!
+\&
+
+Ions which can have multiple charge states get the multiplicity
+\&added, without sign, for the uncommon states only.
+
+
+\&For larger ions, e.g. sulfate we recommended using \fB genbox\fR.
+.SH FILES
+.BI "\-s" " topol.tpr" 
+.B Input
+ Run input file: tpr tpb tpa 
+
+.BI "\-n" " index.ndx" 
+.B Input, Opt.
+ Index file 
+
+.BI "\-o" " out.gro" 
+.B Output
+ Structure file: gro g96 pdb etc. 
+
+.BI "\-p" " topol.top" 
+.B In/Out, Opt.
+ Topology file 
+
+.SH OTHER OPTIONS
+.BI "\-[no]h"  "no    "
+ Print help info and quit
+
+.BI "\-[no]version"  "no    "
+ Print version info and quit
+
+.BI "\-nice"  " int" " 19" 
+ Set the nicelevel
+
+.BI "\-np"  " int" " 0" 
+ Number of positive ions
+
+.BI "\-pname"  " string" " NA" 
+ Name of the positive ion
+
+.BI "\-pq"  " int" " 1" 
+ Charge of the positive ion
+
+.BI "\-nn"  " int" " 0" 
+ Number of negative ions
+
+.BI "\-nname"  " string" " CL" 
+ Name of the negative ion
+
+.BI "\-nq"  " int" " \-1" 
+ Charge of the negative ion
+
+.BI "\-rmin"  " real" " 0.6   " 
+ Minimum distance between ions
+
+.BI "\-seed"  " int" " 1993" 
+ Seed for random number generator
+
+.BI "\-conc"  " real" " 0     " 
+ Specify salt concentration (mol/liter). This will add sufficient ions to reach up to the specified concentration as computed from the volume of the cell in the input \fB .tpr\fR file. Overrides the \fB \-np\fR and \fB \-nn\fR options.
+
+.BI "\-[no]neutral"  "no    "
+ This option will add enough ions to neutralize the system. These ions are added on top of those specified with \fB \-np\fR/\fB \-nn\fR or \fB \-conc\fR. 
+
+.SH KNOWN PROBLEMS
+\- If you specify a salt concentration existing ions are not taken into account. In effect you therefore specify the amount of salt to be added.
+
+.SH SEE ALSO
+.BR gromacs(7)
+
+More information about \fBGROMACS\fR is available at <\fIhttp://www.gromacs.org/\fR>.

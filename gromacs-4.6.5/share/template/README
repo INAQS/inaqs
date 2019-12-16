@@ -1,0 +1,19 @@
+Once installed, this directory contains CMakelist.txt,
+Makefile.pkg and a small program that you could use as
+a template when writing your own analysis software.
+
+The CMakelist.txt can be used together with cmake to
+build the template program:
+$ source /path/to/GMXRC
+$ cmake /path/to/template
+
+The Makefile.pkg can be used if cmake is unavailble. It
+makes use of pkg-config only to build the template program:
+$ source /path/to/GMXRC
+$ make -f Makefile.pkg
+
+----------------------------------------------------------
+
+If you are reading this in the distribution directory,
+remember that CMakelist.txt.template will be renamed to
+CMakelist.txt during the installation.
