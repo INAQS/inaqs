@@ -140,6 +140,7 @@ void QMInterface::exec_qchem(std::string qcprog,
 			     std::string savdir){
   std::string cmd = qcprog + " " + ifname + " " + savdir;
   std::system(cmd.c_str());
+  first_call = false;
 }
 
 void QMInterface::write_gradient_job(std::string fname){
@@ -152,8 +153,15 @@ $rem
   basis	           6-31+G*
   sym_ignore       true
   qm_mm            true     # external charges in NAC; generate efield.dat
-$end
-)" << std::endl;
+)";
+
+  if (! first_call ){
+    ifile << "  scf_guess        read" << std::endl;
+  }
+  
+  ifile << "$end" << std::endl;
+
+  
   
   ifile << "$molecule \n0 1" << std::endl;
   

@@ -33,6 +33,7 @@ protected:
     size_t NMM;
     std::vector<double> crd_mm;      // NMM*3
     std::vector<double> chg_mm;      // NMM
+  bool first_call = true;
 
 };
 
