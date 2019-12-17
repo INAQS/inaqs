@@ -28,6 +28,7 @@ void p3vec(std::vector<double> vec){
 QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
   NQM = nqm;
   atomids = qmid;
+  crd_qm.reserve(nqm);
 }
 
 void QMInterface::update(std::vector<double> &crdqm,
@@ -82,8 +83,6 @@ void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
   std::string qcprog = get_qcprog();
   std::string savdir = "./GQSH.sav";
 
-  std::cout << qcprog << std::endl;
-  
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
   parse_qm_gradient(savdir, g_qm, e);
@@ -175,23 +174,25 @@ $end
   }
   ifile <<  "$end" << std::endl << std::endl;
 
-  ifile << "$external_charges" << std::endl;
+  if (NMM > 0){
+    ifile << "$external_charges" << std::endl;
 
-  {
-    double chg;
-    for (size_t i = 0; i < NQM; i++){
-      x = crd_mm[i*3 + 0];
-      y = crd_mm[i*3 + 1];
-      z = crd_mm[i*3 + 2];
-      chg = chg_mm[i];
-      
-      ifile << x << " ";
-      ifile << y << " ";
-      ifile << z << " ";
-      ifile << chg << std::endl;
+    {
+      double chg;
+      for (size_t i = 0; i < NQM; i++){
+	x = crd_mm[i*3 + 0];
+	y = crd_mm[i*3 + 1];
+	z = crd_mm[i*3 + 2];
+	chg = chg_mm[i];
+	
+	ifile << x << " ";
+	ifile << y << " ";
+	ifile << z << " ";
+	ifile << chg << std::endl;
+      }
     }
+    ifile << "$end" << std::endl;
   }
-  ifile << "$end" << std::endl;
 
   ifile.close();
 }
