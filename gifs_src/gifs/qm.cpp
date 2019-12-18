@@ -35,15 +35,15 @@ void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, con
   }
   // QM Crd
   for (size_t i=0; i<NQM; ++i) {
-      crd_qm[i*3    ] = crdqm[i*3    ] / BOHR2NM;
-      crd_qm[i*3 + 1] = crdqm[i*3 + 1] / BOHR2NM;
-      crd_qm[i*3 + 2] = crdqm[i*3 + 2] / BOHR2NM;
+      crd_qm[i*3    ] = crdqm[i*3    ] * 10;
+      crd_qm[i*3 + 1] = crdqm[i*3 + 1] * 10;
+      crd_qm[i*3 + 2] = crdqm[i*3 + 2] * 10;
   }
   // MM Crd
   for (size_t i=0; i<NMM; ++i) {
-      crd_mm[i*3    ] = crdmm[i*3    ] / BOHR2NM;
-      crd_mm[i*3 + 1] = crdmm[i*3 + 1] / BOHR2NM;
-      crd_mm[i*3 + 2] = crdmm[i*3 + 2] / BOHR2NM;
+      crd_mm[i*3    ] = crdmm[i*3    ] * 10;
+      crd_mm[i*3 + 1] = crdmm[i*3 + 1] * 10;
+      crd_mm[i*3 + 2] = crdmm[i*3 + 2] * 10;
   }
   // Charges
   for (size_t i=0; i<NMM; ++i) {
@@ -119,6 +119,17 @@ void QMInterface::parse_qm_gradient(std::string savdir,
       gradient = true;
     }
   }
+
+  /*
+    Unit conversion: Q-Chem outputs (??? need to confirm) in
+    Hartree/Angstrom; our interface expects Hartree/Bohr
+  */
+  {
+    const double ang2bohr = 0.529177249;
+    for (auto& v : g_qm){
+      g_qm *= ang2bohr;
+    }
+  }
 }
 
 void QMInterface::exec_qchem(std::string qcprog,
@@ -140,9 +151,18 @@ $rem
   basis	           6-31+G*
   sym_ignore       true
   qm_mm            true     # external charges in NAC; generate efield.dat
-  input_bohr       true
 )";
 
+  /*
+    NOTE:
+    can add
+      input_bohr = true
+    to the q-chem input if our input is in atomic units.
+
+    The default in angstroms and it's not clear how all of the
+    gradient methods interact with a input unit change...
+   */
+  
   if (! first_call ){
     ifile << "  scf_guess        read" << std::endl;
   }

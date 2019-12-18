@@ -8,8 +8,6 @@
 #define HARTREE_BOHR2MD  (HARTREE2KJ*AVOGADRO/BOHR2NM)
 
 #ifdef __cplusplus
-#include "qm.hpp"
-
 extern "C" {
 #endif
  
