@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include "qm.hpp"
 #include "properties.hpp"
-#include "gifs.hpp"
 
 #define FMT "%12.8g"
 
@@ -127,7 +126,7 @@ void QMInterface::parse_qm_gradient(std::string savdir,
   {
     const double ang2bohr = 0.529177249;
     for (auto& v : g_qm){
-      g_qm *= ang2bohr;
+      v *= ang2bohr;
     }
   }
 }

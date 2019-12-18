@@ -1,5 +1,5 @@
-#include "gifs.hpp"
 #include <vector>
+#include "gifs.hpp"
 #include "properties.hpp"
 #include "qm.hpp"
 
@@ -47,6 +47,6 @@ float gifs_get_forces(const float* qm_crd, size_t nmm, const float* mm_crd, cons
       }
     }
     
-    return HARTREE2KJ * energy[0];
+    return HARTREE2KJ * AVOGADRO * energy[0];
 
 };
