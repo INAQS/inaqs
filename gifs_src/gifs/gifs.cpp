@@ -46,7 +46,8 @@ float gifs_get_forces(const float* qm_crd, size_t nmm, const float* mm_crd, cons
         fshift[j] = f[j];
       }
     }
-    
+
+    /* Return in "MD" units of KJ/mole */
     return HARTREE2KJ * AVOGADRO * energy[0];
 
 };
