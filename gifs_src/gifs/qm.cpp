@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include "qm.hpp"
 #include "properties.hpp"
+#include "gifs.hpp"
 
 #define FMT "%12.8g"
 
@@ -40,7 +41,7 @@ void QMInterface::update(std::vector<double> &crdqm,
   chg_mm = chgmm;
 }
 
-void QMInterface::update(float* crdqm, size_t nmm, float* crdmm, float* chgmm)
+void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm)
 {
   NMM = nmm;
   if (nmm < crd_mm.capacity()) {
@@ -49,15 +50,15 @@ void QMInterface::update(float* crdqm, size_t nmm, float* crdmm, float* chgmm)
   }
   // QM Crd
   for (size_t i=0; i<NQM; ++i) {
-      crd_qm[i*3    ] = crdqm[i*3    ];
-      crd_qm[i*3 + 1] = crdqm[i*3 + 1];
-      crd_qm[i*3 + 2] = crdqm[i*3 + 2];
+      crd_qm[i*3    ] = crdqm[i*3    ] / BOHR2NM;
+      crd_qm[i*3 + 1] = crdqm[i*3 + 1] / BOHR2NM;
+      crd_qm[i*3 + 2] = crdqm[i*3 + 2] / BOHR2NM;
   }
   // MM Crd
   for (size_t i=0; i<NMM; ++i) {
-      crd_mm[i*3    ] = crdmm[i*3    ];
-      crd_mm[i*3 + 1] = crdmm[i*3 + 1];
-      crd_mm[i*3 + 2] = crdmm[i*3 + 2];
+      crd_mm[i*3    ] = crdmm[i*3    ] / BOHR2NM;
+      crd_mm[i*3 + 1] = crdmm[i*3 + 1] / BOHR2NM;
+      crd_mm[i*3 + 2] = crdmm[i*3 + 2] / BOHR2NM;
   }
   // Charges
   for (size_t i=0; i<NMM; ++i) {
@@ -138,6 +139,7 @@ void QMInterface::parse_qm_gradient(std::string savdir,
 void QMInterface::exec_qchem(std::string qcprog,
 			     std::string ifname,
 			     std::string savdir){
+  /*FIXME: Need to fail if qchem crashes*/
   std::string cmd = qcprog + " " + ifname + " " + savdir;
   std::system(cmd.c_str());
   first_call = false;
@@ -153,6 +155,7 @@ $rem
   basis	           6-31+G*
   sym_ignore       true
   qm_mm            true     # external charges in NAC; generate efield.dat
+  input_bohr       true
 )";
 
   if (! first_call ){
