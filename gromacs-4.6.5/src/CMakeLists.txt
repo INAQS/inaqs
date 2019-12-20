@@ -47,7 +47,6 @@ endif()
 
 if(GMX_GIFS)
     add_subdirectory(shqmmm)
-    add_definitions(-DGMX_GIFS)
 endif()
 add_subdirectory(gmxlib)
 add_subdirectory(mdlib)

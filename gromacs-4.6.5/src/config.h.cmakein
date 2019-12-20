@@ -175,6 +175,9 @@
 /* Use ORCA for QM-MM calculations */
 #cmakedefine GMX_QMMM_ORCA
 
+/* General Interface For Surface hopping and QMMM */
+#cmakedefine GMX_GIFS
+
 /* Use the GROMACS software 1/sqrt(x) */
 #cmakedefine GMX_SOFTWARE_INVSQRT
 
