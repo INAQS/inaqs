@@ -166,15 +166,12 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
      * Note that f is actually the gradient, i.e. -f
      */
     real QMener = 0.0;
-    //FIXME: apparently these preprocessor defines aren't acutally getting set by cmake
-    /*#ifdef GMX_GIFS*/
-    //FIXME: we segfault below here, no clue why
+#ifdef GMX_GIFS
     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM, 
-                             mm->nrMMatoms, mm->xMM, mm->MMcharges,
+			       mm->nrMMatoms, mm->xMM, mm->MMcharges,
 			       f, fshift);
-    //
     return QMener;
-    /*#endif*/
+#endif
 
     /* do a semi-empiprical calculation */
 
@@ -215,7 +212,7 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
 #elif defined GMX_GIFS
 	    /*Nothing to do*/
 #else
-            //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+            gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
         }
     }
@@ -245,9 +242,9 @@ void init_QMroutine(t_commrec *cr, t_QMrec *qm, t_MMrec *mm)
 #elif defined GMX_QMMM_ORCA
         init_orca(cr, qm, mm);
 #elif defined GMX_GIFS
-	    /*Nothing to do*/
+	/*Nothing to do*/
 #else
-        //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+        gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
     }
 } /* init_QMroutine */
@@ -793,7 +790,7 @@ void init_QMMMrec(t_commrec  *cr,
 #elif defined GMX_GIFS
 	    /*Nothing to do*/
 #else
-            //gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
+            gmx_fatal(FARGS, "Ab-initio calculation only supported with Gamess, Gaussian or ORCA.");
 #endif
         }
     }
