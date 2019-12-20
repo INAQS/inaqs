@@ -171,40 +171,31 @@ $rem
   
   
   ifile << "$molecule \n0 1" << std::endl;
+  /*
+    format of $molecule section:
+    [atomic-number] [x-coord] [y-coord] [x-coord]
+  */
   
-  double x, y, z;
-  {
-    int id;
-    for (size_t i = 0; i < NQM; i++){
-      x = crd_qm[i*3 + 0];
-      y = crd_qm[i*3 + 1];
-      z = crd_qm[i*3 + 2];
-      id = atomids[i];
-      
-      ifile << id << " ";
-      ifile << x << " ";
-      ifile << y << " ";
-      ifile << z << std::endl;
-    }
+  for (size_t i = 0; i < NQM; i++){
+    ifile << atomids[i]      << " ";        // id
+    ifile << crd_qm[i*3 + 0] << " ";        // x
+    ifile << crd_qm[i*3 + 1] << " ";        // y
+    ifile << crd_qm[i*3 + 2] << std::endl;  // x
   }
-  ifile <<  "$end" << std::endl << std::endl;
+  ifile <<  "$end" << std::endl;
 
   if (NMM > 0){
-    ifile << "$external_charges" << std::endl;
-
-    {
-      double chg;
-      for (size_t i = 0; i < NQM; i++){
-	x = crd_mm[i*3 + 0];
-	y = crd_mm[i*3 + 1];
-	z = crd_mm[i*3 + 2];
-	chg = chg_mm[i];
-	
-	ifile << x << " ";
-	ifile << y << " ";
-	ifile << z << " ";
-	ifile << chg << std::endl;
-      }
+    ifile << std::endl << "$external_charges" << std::endl;
+    /*
+      format of $external_charges section:
+      [x-coord] [y-coord] [x-coord] [charge]
+    */
+    
+    for (size_t i = 0; i < NQM; i++){
+      ifile << crd_mm[i*3 + 0] << " ";        // x
+      ifile << crd_mm[i*3 + 1] << " ";        // y
+      ifile << crd_mm[i*3 + 2] << " ";        // z
+      ifile << chg_mm[i]       << std::endl;  // charge
     }
     ifile << "$end" << std::endl;
   }
