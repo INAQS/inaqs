@@ -39,9 +39,6 @@
 #include <config.h>
 #endif
 
-#ifdef GMX_GIFS
-    #include "../shqmmm/gmxgifs.h"
-#endif
 #include "typedefs.h"
 #include "smalloc.h"
 #include "sysstuff.h"
@@ -106,6 +103,11 @@
 #ifdef GMX_FAHCORE
 #include "corewrap.h"
 #endif
+
+#ifdef GMX_GIFS
+#include "../shqmmm/gmxgifs.h"
+#endif
+
 
 static void reset_all_counters(FILE *fplog, t_commrec *cr,
                                gmx_large_int_t step,
@@ -1232,7 +1234,15 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                           f, bUpdateDoLR, fr->f_twin, fcd,
                           ekind, M, wcycle, upd, bInitStep, etrtVELOCITY1,
                           cr, nrnb, constr, &top->idef);
+	    
 #ifdef GMX_GIFS
+	    /* Hook for velocity rescaling here. This is after the
+             * first velocity half-step update (therefore at integer
+             * time-step) and before enforcing constratints or the
+             * second half-step. See subsequent calls to:
+             * update_coords() and update_constraints()
+            */
+
             gifs_scale_velocities(state->v, f, mdatoms->invmass);
             if (mdatoms->cACC) {
                 fprintf(fplog, "cAcc != nullptr\n");
@@ -1240,11 +1250,6 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                 fprintf(fplog, "cAcc = nullptr \n");
             }
 #endif
-            /* MM: 
-             * Hook for velocity rescaling here!  
-             *
-             * */
-
             if (bIterativeCase && do_per_step(step-1, ir->nstpcouple) && !bInitStep)
             {
                 gmx_iterate_init(&iterate, TRUE);
