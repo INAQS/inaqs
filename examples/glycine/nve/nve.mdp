@@ -1,6 +1,6 @@
 ; Run parameters
 integrator              = md-vv     ; velocity verlet integrator
-nsteps                  = 50        ; 2 * 50 = 100 fs
+nsteps                  = 25        ; 2 * 25 = 50 fs
 dt                      = 0.002     ; 2 fs
 
 ; QMMM settings
@@ -11,10 +11,10 @@ QMbasis	    = 6-31G
 QMMMscheme  = normal
 
 ; Output control
-nstxout                 = 0.01       ; save coordinates every 10 fs
-nstvout                 = 0.01       ; save velocities every 10 fs
-nstenergy               = 0.01       ; save energies every 10 fs
-nstlog                  = 0.01       ; update log file every 10 fs
+nstxout                 = 1       ; save coordinates every frame
+nstvout                 = 1       ; save velocities every frame
+nstenergy               = 1       ; save energies every frame
+nstlog                  = 1       ; update log file every frame
 
 ; Bond parameters
 continuation            = no        ; first dynamics run
@@ -40,7 +40,7 @@ pcoupl                  = no        ; pressure
 
 ; Periodic boundary conditions
 pbc                     = no        ; 3-D PBC
-comm_mode 		= angular   ; remove center of mass translation and rotation
+comm_mode 		= angular   ; angular>linear>none; remove center of mass translation and rotation
 
 ; Velocity generation
 gen_vel                 = yes       ; assign velocities from Maxwell distribution

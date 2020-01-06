@@ -1,8 +1,6 @@
-;define                  = -DPOSRES  ; position restrain the protein
-
 ; Run parameters
 integrator              = md-vv     ; velocity verlet integrator
-nsteps                  = 50        ; 2 * 50 = 100 fs
+nsteps                  = 25        ; 2 * 25 = 50 fs
 dt                      = 0.002     ; 2 fs
 
 ; QMMM settings
@@ -13,15 +11,15 @@ QMbasis	    = 6-31G
 QMMMscheme  = normal
 
 ; Output control
-nstxout                 = 0.01       ; save coordinates every 10 fs
-nstvout                 = 0.01       ; save velocities every 10 fs
-nstenergy               = 0.01       ; save energies every 10 fs
-nstlog                  = 0.01       ; update log file every 10 fs
+nstxout                 = 1       ; save coordinates every frame
+nstvout                 = 1       ; save velocities every frame
+nstenergy               = 1       ; save energies every frame
+nstlog                  = 1       ; update log file every frame
 
 ; Bond parameters
 continuation            = no        ; first dynamics run
 constraint_algorithm    = lincs     ; holonomic constraints 
-constraints             = h-bonds   ; bonds involving H are constrained
+constraints             = none      ; only constraints specified in the topology file
 lincs_iter              = 1         ; accuracy of LINCS
 lincs_order             = 4         ; also related to accuracy
 
@@ -33,14 +31,13 @@ rcoulomb                = 1.0       ; short-range electrostatic cutoff (in nm)
 rvdw                    = 1.0       ; short-range van der Waals cutoff (in nm)
 
 ; Electrostatics
-coulombtype             = Reaction-Field ; Particle Mesh Ewald for long-range electrostatics
-pme_order               = 4         ; cubic interpolation
-fourierspacing          = 0.16      ; grid spacing for FFT
+coulombtype             = Reaction-Field ;
+epsilon-rf		= 0              ; diecletric constant default. synonym for infinity
 
 ; Temperature coupling is on
-tcoupl                  = V-rescale             ; modified Berendsen thermostat
-tc-grps                 = System ; two coupling groups - more accurate
-tau_t                   = 0.1            ; time constant, in ps
+tcoupl                  = V-rescale      ; modified Berendsen thermostat
+tc-grps                 = qmatoms        ; Probably not what we'd want for real qm-mm; surely not for surface hopping
+tau_t                   = 0.01           ; time constant, in ps; Dimitry originally had this as 0.10 ps
 ref_t                   = 300            ; reference temperature, one for each group, in K
 
 ; Pressure coupling is off
@@ -48,9 +45,9 @@ pcoupl                  = no        ; no pressure coupling in NVT
 
 ; Periodic boundary conditions
 pbc                     = no        ; 3-D PBC
-comm_mode = ANGULAR;
+comm_mode 		= angular   ; angular>linear>none; remove center of mass translation and rotation
 
 ; Velocity generation
 gen_vel                 = yes       ; assign velocities from Maxwell distribution
 gen_temp                = 300       ; temperature for Maxwell distribution
-gen_seed                = -1        ; generate a random seed
+gen_seed                = 1234      ; use our random seed; -1 => generate one
