@@ -11,5 +11,5 @@ genbox -cp qmmm-solvated.gro -cs spc216.gro -o qmmm-solvated.gro -shell 1.0 -p g
 make_ndx -f qmmm-solvated.gro -o ${NAME} <<<q
 
 grompp -f qmmm.mdp -c qmmm-solvated.gro -p glycine.top -n ${NAME}.ndx -o ${NAME}.tpr
-#mdrun -v -deffnm ${NAME}
+mdrun -nt 1 -v -deffnm ${NAME}
 
