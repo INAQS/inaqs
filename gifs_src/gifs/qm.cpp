@@ -134,9 +134,11 @@ void QMInterface::parse_qm_gradient(std::string savdir,
 void QMInterface::exec_qchem(std::string qcprog,
 			     std::string ifname,
 			     std::string savdir){
-  /*FIXME: Need to fail if qchem crashes*/
   std::string cmd = qcprog + " " + ifname + " " + savdir;
-  std::system(cmd.c_str());
+  int status = std::system(cmd.c_str());
+  if (status){
+    throw std::runtime_error("Q-Chem could not be called or exited abnormally.");
+  }
   first_call = false;
 }
 
