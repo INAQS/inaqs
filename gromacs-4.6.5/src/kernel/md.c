@@ -1244,11 +1244,6 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
             */
 
             gifs_scale_velocities(state->v, f, mdatoms->invmass);
-            if (mdatoms->cACC) {
-                fprintf(fplog, "cAcc != nullptr\n");
-            } else {
-                fprintf(fplog, "cAcc = nullptr \n");
-            }
 #endif
             if (bIterativeCase && do_per_step(step-1, ir->nstpcouple) && !bInitStep)
             {
