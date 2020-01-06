@@ -91,6 +91,8 @@ void QMInterface::parse_mm_gradient(std::string savdir,
   /*
     FIXME: need to implement this!
   */
+  (void) savdir;
+  (void) g_mm;
 }
 
 void QMInterface::parse_qm_gradient(std::string savdir,
