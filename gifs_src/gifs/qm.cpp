@@ -13,7 +13,7 @@
 QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
   NQM = nqm;
   atomids = qmid;
-  crd_qm.reserve(nqm);
+  crd_qm.reserve(3 * nqm);
 }
 
 void QMInterface::update(std::vector<double> &crdqm,
