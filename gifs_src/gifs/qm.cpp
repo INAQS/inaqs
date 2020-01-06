@@ -12,6 +12,7 @@
 
 QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
   NQM = nqm;
+  NMM = 0;
   atomids = qmid;
   crd_qm.reserve(3 * nqm);
 }
@@ -28,9 +29,9 @@ void QMInterface::update(std::vector<double> &crdqm,
 void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm)
 {
   NMM = nmm;
-  if (nmm < crd_mm.capacity()) {
-        crd_mm.resize(nmm);
-        chg_mm.resize(nmm);
+  if (crd_mm.capacity() < 3 * nmm) {
+        crd_mm.resize(3 * nmm);
+        chg_mm.resize(3 * nmm);
   }
   // QM Crd
   for (size_t i=0; i<NQM; ++i) {
