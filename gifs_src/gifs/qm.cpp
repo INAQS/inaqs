@@ -71,6 +71,7 @@ void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
   parse_qm_gradient(savdir, g_qm, e);
+  parse_mm_gradient(savdir, g_mm); // NOT IMPLEMENTED!
 }
 
 std::string QMInterface::get_qcprog(void){
@@ -83,6 +84,13 @@ std::string QMInterface::get_qcprog(void){
   else{
     return std::string(qc_str) + "/exe/qcprog.exe";
   }
+}
+
+void QMInterface::parse_mm_gradient(std::string savdir,
+				    std::vector<double> &g_mm){
+  /*
+    FIXME: need to implement this!
+  */
 }
 
 void QMInterface::parse_qm_gradient(std::string savdir,
