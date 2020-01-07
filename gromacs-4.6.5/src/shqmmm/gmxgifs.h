@@ -2,7 +2,7 @@
 #define GMX_GIFS_INTERFACE_H
 #include <stddef.h>
 
-void gifs_scale_velocities(float* v, float* f, float* invmass);
+void gifs_scale_velocities(float (*v)[3], float (*f)[3], float* invmass);
 float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
 			size_t nmm, const float* mm_crd, const float* mm_chg,
                        float* f, float* fshift);
@@ -11,20 +11,35 @@ float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
 
 FIXME: Compilation errors to be dealt with.
 
-/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/md.c: In function ‘do_md’:
-/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/md.c:1246:35: warning: passing argument 1 of ‘gifs_scale_velocities’ from incompatible pointer type [-Wincompatible-pointer-types]
-             gifs_scale_velocities(state->v, f, mdatoms->invmass);
-                                   ^~~~~
-In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/md.c:108:0:
-/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/../shqmmm/gmxgifs.h:5:6: note: expected ‘float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
- void gifs_scale_velocities(float* v, float* f, float* invmass);
-      ^~~~~~~~~~~~~~~~~~~~~
-/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/md.c:1246:45: warning: passing argument 2 of ‘gifs_scale_velocities’ from incompatible pointer type [-Wincompatible-pointer-types]
-             gifs_scale_velocities(state->v, f, mdatoms->invmass);
-                                             ^
-In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/md.c:108:0:
-/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/kernel/../shqmmm/gmxgifs.h:5:6: note: expected ‘float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
- void gifs_scale_velocities(float* v, float* f, float* invmass);
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c: In function ‘call_QMroutine’:
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:170:67: warning: passing argument 3 of ‘gifs_do_qm_forces’ from incompatible pointer type [-Wincompatible-pointer-types]
+     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM,
+                                                                   ^~
+In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:45:0:
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/../shqmmm/gmxgifs.h:6:7: note: expected ‘const float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
+ float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
+       ^~~~~~~~~~~~~~~~~
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:171:26: warning: passing argument 5 of ‘gifs_do_qm_forces’ from incompatible pointer type [-Wincompatible-pointer-types]
+           mm->nrMMatoms, mm->xMM, mm->MMcharges,
+                          ^~
+In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:45:0:
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/../shqmmm/gmxgifs.h:6:7: note: expected ‘const float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
+ float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
+       ^~~~~~~~~~~~~~~~~
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:172:11: warning: passing argument 7 of ‘gifs_do_qm_forces’ from incompatible pointer type [-Wincompatible-pointer-types]
+           f, fshift);
+           ^
+In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:45:0:
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/../shqmmm/gmxgifs.h:6:7: note: expected ‘float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
+ float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
+       ^~~~~~~~~~~~~~~~~
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:172:14: warning: passing argument 8 of ‘gifs_do_qm_forces’ from incompatible pointer type [-Wincompatible-pointer-types]
+           f, fshift);
+              ^~~~~~
+In file included from /data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/qmmm.c:45:0:
+/data/home/vale/projects/GQSH/gifs/gromacs-4.6.5/src/mdlib/../shqmmm/gmxgifs.h:6:7: note: expected ‘float *’ but argument is of type ‘real (*)[3] {aka float (*)[3]}’
+ float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
+       ^~~~~~~~~~~~~~~~~
 
 */
 
