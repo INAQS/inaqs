@@ -197,7 +197,8 @@ void QMInterface::exec_qchem(std::string qcprog,
 
 void QMInterface::write_gradient_job(std::string fname){
   std::ofstream ifile(fname);
-
+  ifile.setf(std::ios_base::fixed, std::ios_base::floatfield);
+  
   ifile << R"(
 $rem
   jobtype          force
