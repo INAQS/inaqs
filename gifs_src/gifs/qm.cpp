@@ -15,6 +15,9 @@ QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
   NMM = 0;
   atomids = qmid;
   crd_qm.reserve(3 * nqm);
+
+  qm_charge = 0;
+  qm_multiplicity = 1;
 }
 
 void QMInterface::update(std::vector<double> &crdqm,
@@ -220,14 +223,19 @@ $rem
   
   ifile << "$end" << std::endl;
 
-  
-  
-  ifile << "$molecule \n0 1" << std::endl;
   /*
     format of $molecule section:
+    $molecule
+    [charge] [multiplicity]
     [atomic-number] [x-coord] [y-coord] [x-coord]
+    ...
+    $end
   */
-  
+  ifile << "$molecule" << std::endl;
+  ifile << qm_charge << " " << qm_multiplicity << std::endl;
+  /*
+    FIXME: need to increase the precision of these outputs
+  */
   for (size_t i = 0; i < NQM; i++){
     ifile << atomids[i]      << " ";        // id
     ifile << crd_qm[i*3 + 0] << " ";        // x

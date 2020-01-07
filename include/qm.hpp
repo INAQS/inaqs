@@ -24,7 +24,10 @@ protected:
   void parse_qm_gradient(std::string savdir, std::vector<double> &g_qm, std::vector<double> &e);
   void parse_mm_gradient(std::string savdir, std::vector<double> &g_mm);
   std::string get_qcprog(void);
+
+  //Properties
   size_t NQM;             // const, actually NQM+NLink
+  int qm_charge, qm_multiplicity;
   //  fixed size
   std::vector<int> atomids;        // NQM
   std::vector<double> crd_qm;      // NQM*3
