@@ -29,9 +29,9 @@ void QMInterface::update(std::vector<double> &crdqm,
 void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm)
 {
   NMM = nmm;
-  if (crd_mm.capacity() < 3 * nmm) {
-        crd_mm.resize(3 * nmm);
-        chg_mm.resize(3 * nmm);
+  if (chg_mm.capacity() < nmm){
+    chg_mm.resize(nmm);
+    crd_mm.resize(3 * nmm);
   }
   // QM Crd
   for (size_t i=0; i<NQM; ++i) {
@@ -134,7 +134,7 @@ void QMInterface::parse_qm_gradient(std::string savdir,
   bool energy = false;
   size_t i = 0;
   
-  while( getline(ifile, line) && i < NQM){
+  while(getline(ifile, line) && i < NQM){
     std::stringstream s(line);
     if (energy){
       s>>e[0];
@@ -161,13 +161,14 @@ void QMInterface::parse_qm_gradient(std::string savdir,
     throw std::runtime_error("Unable to parse QM gradient!");
   }
   
-  /*
-    Unit conversion: Q-Chem outputs (??? need to confirm) in
-    Hartree/Angstrom; our interface expects Hartree/Bohr
-  */
   ang2bohr(g_qm);
 }
 
+
+/*
+  Unit conversion: Q-Chem outputs (??? need to confirm) in
+  Hartree/Angstrom; our interface expects Hartree/Bohr.
+*/
 inline void QMInterface::ang2bohr(std::vector<double> &v){
   const double a2b = 0.529177249;
   for (auto& e : v){
