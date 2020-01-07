@@ -17,6 +17,7 @@ public:
   inline size_t get_nqm() const noexcept { return NQM; };
 
 protected:
+  inline void ang2bohr(std::vector<double> &v);
   void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
   void write_gradient_job(std::string fname);
   void exec_qchem(std::string qcprog, std::string ifname, std::string savdir);

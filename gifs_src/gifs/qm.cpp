@@ -72,7 +72,9 @@ void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
   write_gradient_job(ifname);
   exec_qchem(qcprog, ifname, savdir);
   parse_qm_gradient(savdir, g_qm, e);
-  parse_mm_gradient(savdir, g_mm); // NOT IMPLEMENTED!
+  if (NMM > 0){
+    parse_mm_gradient(savdir, g_mm);
+  }
 }
 
 std::string QMInterface::get_qcprog(void){
@@ -89,11 +91,38 @@ std::string QMInterface::get_qcprog(void){
 
 void QMInterface::parse_mm_gradient(std::string savdir,
 				    std::vector<double> &g_mm){
-  /*
-    FIXME: need to implement this!
-  */
   (void) savdir;
-  (void) g_mm;
+
+  /*
+    FIXME: need to verify the units of efield.dat. Here we assume they
+    are: Hartrees/Angstrom/e-
+  */
+
+  std::string gfile = "efield.dat";
+  std::ifstream ifile(gfile);
+  std::string line;
+
+  for (size_t i = 0; i < NQM && getline(ifile, line); i++);
+
+  size_t i = 0;
+  {
+    double x, y, z;
+    while (getline(ifile, line) && i < NMM){
+      std::stringstream s(line);
+      s >> x >> y >> z;
+      const double q = chg_mm[i];
+      g_mm[i*3 + 0] = x * q;
+      g_mm[i*3 + 1] = y * q;
+      g_mm[i*3 + 2] = z * q;
+      i++;
+    }
+  }
+
+  if (i != NMM){
+    throw std::runtime_error("Unable to parse MM gradient!");
+  }
+
+  ang2bohr(g_mm);
 }
 
 void QMInterface::parse_qm_gradient(std::string savdir,
@@ -130,15 +159,21 @@ void QMInterface::parse_qm_gradient(std::string savdir,
     }
   }
 
+  if (i != NQM){
+    throw std::runtime_error("Unable to parse QM gradient!");
+  }
+  
   /*
     Unit conversion: Q-Chem outputs (??? need to confirm) in
     Hartree/Angstrom; our interface expects Hartree/Bohr
   */
-  {
-    const double ang2bohr = 0.529177249;
-    for (auto& v : g_qm){
-      v *= ang2bohr;
-    }
+  ang2bohr(g_qm);
+}
+
+inline void QMInterface::ang2bohr(std::vector<double> &v){
+  const double a2b = 0.529177249;
+  for (auto& e : v){
+    e *= a2b;
   }
 }
 
@@ -204,7 +239,7 @@ $rem
       [x-coord] [y-coord] [x-coord] [charge]
     */
     
-    for (size_t i = 0; i < NQM; i++){
+    for (size_t i = 0; i < NMM; i++){
       ifile << crd_mm[i*3 + 0] << " ";        // x
       ifile << crd_mm[i*3 + 1] << " ";        // y
       ifile << crd_mm[i*3 + 2] << " ";        // z
