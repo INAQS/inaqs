@@ -102,8 +102,6 @@ void QMInterface::parse_mm_gradient(std::string savdir,
   std::ifstream ifile(gfile);
   std::string line;
 
-  for (size_t i = 0; i < NQM && getline(ifile, line); i++);
-
   size_t i = 0;
   {
     double x, y, z;
