@@ -20,6 +20,11 @@ QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
 void QMInterface::update(std::vector<double> &crdqm,
 			 std::vector<double> &crdmm,
 			 std::vector<double> &chgmm){
+  /*
+    FIXME: the assignment operator '=' uses copying; when we implment
+    our whole class hierarcy, memory will be owned one level above the
+    BOMD class.
+  */
   crd_qm = crdqm;
   NMM = chgmm.size();
   crd_mm = crdmm;
