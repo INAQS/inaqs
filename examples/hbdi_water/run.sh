@@ -17,5 +17,5 @@ readonly grompp=grompp-slim.mdp
 grompp -f ${grompp} -c ${structure} -p ${topology} -n ${index} -o ${NAME}.tpr
 
 # do the run; must specify -nt 1
-#mdrun -nt 1 -v -deffnm ${NAME}
+mdrun -nt 1 -v -deffnm ${NAME}
 
