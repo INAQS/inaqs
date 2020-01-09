@@ -45,8 +45,8 @@ ref_t                   = 300   300      ; reference temperature, one for each g
 pcoupl                  = no        ; no pressure coupling in NVT
 
 ; Periodic boundary conditions
-pbc                     = no        ; 3-D PBC
-comm_mode 		= angular   ; angular>linear>none; remove center of mass translation and rotation
+pbc                     = xyz        ; 3-D PBC
+comm_mode 		= linear     ; angular>linear>none; remove center of mass translation and rotation
 
 ; Velocity generation
 gen_vel                 = yes       ; assign velocities from Maxwell distribution
