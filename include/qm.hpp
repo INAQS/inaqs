@@ -19,15 +19,20 @@ public:
 protected:
   inline void ang2bohr(std::vector<double> &v);
   void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
-  void write_gradient_job(std::string fname);
-  void exec_qchem(std::string qcprog, std::string ifname, std::string savdir);
-  void parse_qm_gradient(std::string savdir, std::vector<double> &g_qm, std::vector<double> &e);
-  void parse_mm_gradient(std::string savdir, std::vector<double> &g_mm);
+  void write_gradient_job(void);
+  void exec_qchem(void);
+  void parse_qm_gradient(std::vector<double> &g_qm, std::vector<double> &e);
+  void parse_mm_gradient(std::vector<double> &g_mm);
   std::string get_qcprog(void);
+  std::string get_qcscratch(void);
+  int readQFMan(int filenum, std::vector<double> &v);
 
   //Properties
   size_t NQM;             // const, actually NQM+NLink
   int qm_charge, qm_multiplicity;
+  const std::string qc_scratch_directory;
+  const std::string qc_executable;
+  const std::string qc_input_file = "GQSH.in";
   //  fixed size
   std::vector<int> atomids;        // NQM
   std::vector<double> crd_qm;      // NQM*3

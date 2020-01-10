@@ -10,7 +10,9 @@
 
 #define FMT "%12.8g"
 
-QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
+QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid):
+  qc_scratch_directory(get_qcscratch()),
+  qc_executable(get_qcprog()){
   NQM = nqm;
   NMM = 0;
   atomids = qmid;
@@ -18,6 +20,12 @@ QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid){
 
   qm_charge = 0;
   qm_multiplicity = 1;
+
+  /*
+    FIXME: This should be done in a configurable fashion
+    set the number of threads, but don't overwrite if the flag is set elsewhere
+  */
+  setenv("QCTHREADS", "4", 0);
 }
 
 void QMInterface::update(std::vector<double> &crdqm,
@@ -77,11 +85,11 @@ void QMInterface::get_gradient_energies(std::vector<double> &g_qm,
   std::string qcprog = get_qcprog();
   std::string savdir = "./GQSH.sav";
 
-  write_gradient_job(ifname);
-  exec_qchem(qcprog, ifname, savdir);
-  parse_qm_gradient(savdir, g_qm, e);
+  write_gradient_job();
+  exec_qchem();
+  parse_qm_gradient(g_qm, e);
   if (NMM > 0){
-    parse_mm_gradient(savdir, g_mm);
+    parse_mm_gradient(g_mm);
   }
 }
 
@@ -97,16 +105,32 @@ std::string QMInterface::get_qcprog(void){
   }
 }
 
-void QMInterface::parse_mm_gradient(std::string savdir,
-				    std::vector<double> &g_mm){
-  (void) savdir;
+/*
+  FIXME: need to ensure $QCSCRATCH is an absolute path
+*/
+std::string QMInterface::get_qcscratch(void){
+  char * pwd = std::getenv("PWD");
+  std::string default_path = std::string(pwd) + "/GQSH.sav";
 
+  return default_path;
+  
+  char * qc_str = std::getenv("QCSCRATCH");
+  if (nullptr == qc_str){
+    std::cerr << "Warning, $QCSCRATCH not set; using " << default_path << std::endl;
+    return default_path;
+  }
+  else{
+    return std::string(qc_str);
+  }
+}
+
+void QMInterface::parse_mm_gradient(std::vector<double> &g_mm){
   /*
     FIXME: need to verify the units of efield.dat. Here we assume they
     are: Hartrees/Angstrom/e-
   */
 
-  std::string gfile = "efield.dat";
+  std::string gfile = qc_scratch_directory + "/" + "efield.dat";
   std::ifstream ifile(gfile);
   std::string line;
 
@@ -131,10 +155,9 @@ void QMInterface::parse_mm_gradient(std::string savdir,
   ang2bohr(g_mm);
 }
 
-void QMInterface::parse_qm_gradient(std::string savdir,
-				    std::vector<double> &g_qm,
+void QMInterface::parse_qm_gradient(std::vector<double> &g_qm,
 				    std::vector<double> &e){
-  std::string gfile = savdir + "/" + "GRAD";
+  std::string gfile = qc_scratch_directory + "/" + "GRAD";
   std::ifstream ifile(gfile);
   std::string line;
 
@@ -184,10 +207,9 @@ inline void QMInterface::ang2bohr(std::vector<double> &v){
   }
 }
 
-void QMInterface::exec_qchem(std::string qcprog,
-			     std::string ifname,
-			     std::string savdir){
-  std::string cmd = qcprog + " " + ifname + " " + savdir;
+void QMInterface::exec_qchem(void){
+  std::string cmd = "cd " + qc_scratch_directory + "; " + qc_executable + " " + qc_input_file + " " + qc_scratch_directory;
+  std::cout << cmd << std::endl;
   int status = std::system(cmd.c_str());
   if (status){
     throw std::runtime_error("Q-Chem could not be called or exited abnormally.");
@@ -195,8 +217,8 @@ void QMInterface::exec_qchem(std::string qcprog,
   first_call = false;
 }
 
-void QMInterface::write_gradient_job(std::string fname){
-  std::ofstream ifile(fname);
+void QMInterface::write_gradient_job(){
+  std::ofstream ifile(qc_scratch_directory + "/" + qc_input_file);
   ifile.setf(std::ios_base::fixed, std::ios_base::floatfield);
   
   ifile << R"(
@@ -206,6 +228,7 @@ $rem
   basis	           6-31+G*
   sym_ignore       true
   qm_mm            true     # external charges in NAC; generate efield.dat
+  qmmm_ext_gifs    1
 )";
 
   /*
@@ -264,3 +287,24 @@ $rem
   ifile.close();
 }
 
+
+int QMInterface::readQFMan(int filenum, std::vector<double> &v){
+  std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
+  std::ifstream ifile;
+  ifile.open(path, std::ios::in | std::ios::binary);
+
+  if (!ifile.is_open()){
+    throw std::ios_base::failure("Error: cannot read from " + path);
+  }
+  
+  char buffer[sizeof(double)];
+  size_t i = 0;
+  while(ifile.read(buffer, sizeof(double))){
+    double * d = (double *) buffer;
+    v.push_back(*d);
+    i++;
+  }
+  ifile.close();
+
+  return i;
+}
