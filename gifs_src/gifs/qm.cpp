@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iomanip>
 #include <cstdlib>
+#include <sys/stat.h>
 #include "qm.hpp"
 #include "properties.hpp"
 
@@ -110,18 +111,23 @@ std::string QMInterface::get_qcprog(void){
 */
 std::string QMInterface::get_qcscratch(void){
   char * pwd = std::getenv("PWD");
-  std::string default_path = std::string(pwd) + "/GQSH.sav";
-
-  return default_path;
+  std::string scratch_path = std::string(pwd) + "/GQSH.sav";
   
   char * qc_str = std::getenv("QCSCRATCH");
   if (nullptr == qc_str){
-    std::cerr << "Warning, $QCSCRATCH not set; using " << default_path << std::endl;
-    return default_path;
+    std::cerr << "Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
   }
   else{
-    return std::string(qc_str);
+    scratch_path = std::string(qc_str);
   }
+
+  /* Make sure the directory exists; create otherwise */
+  struct stat st = {};
+  if (-1 == stat(scratch_path.c_str(), &st)){
+    mkdir(scratch_path.c_str(), 0700);
+  }
+
+  return scratch_path;
 }
 
 void QMInterface::parse_mm_gradient(std::vector<double> &g_mm){
