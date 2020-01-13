@@ -1,7 +1,6 @@
-#ifndef GIFS_SH_GIFS_BASE_H
-#define GIFS_SH_GIFS_BASE_H
-
+#include "gifs.hpp"
 #include <stdlib.h>
+#include <vector>
 
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
@@ -13,12 +12,17 @@ T GifsImpl::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* 
     return bomd->get_gradient(qm_crd, nmm, mm_crd, mm_chg, f, fshift);
 };
 
-template<typename T>
-inline 
-T GifsImpl::rescale_velocities(T* total_gradient, T* masses, T* velocities)
+template double GifsImpl::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
+template float GifsImpl::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
+
+template<typename T> 
+void GifsImpl::rescale_velocities(T* total_gradient, T* masses, T* velocities)
 {
-    return bomd->rescale_velocities(total_gradient, masses, velocities);
+    bomd->rescale_velocities(total_gradient, masses, velocities);
 };
+
+template void GifsImpl::rescale_velocities(double* total_gradient, double* masses, double* velocities);
+template void GifsImpl::rescale_velocities(float* total_gradient, float* masses, float* velocities);
 
     // creation
 GifsImpl* GifsImpl::get_instance(size_t nqm, std::vector<int>& qmid)
@@ -80,17 +84,19 @@ Gifs::Gifs() {
 };
 
 template<typename T>
-inline
 T Gifs::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
 {
     return impl->get_gradient(qm_crd, nmm, mm_crd, mm_chg, f, fshift);
 };
 
+template double Gifs::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
+template float Gifs::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
+
 template<typename T>
-inline 
-T Gifs::rescale_velocities(T* total_gradient, T* masses, T* velocities)
+void Gifs::rescale_velocities(T* total_gradient, T* masses, T* velocities)
 {
-    return impl->rescale_velocities(total_gradient, masses, velocities);
+    impl->rescale_velocities(total_gradient, masses, velocities);
 };
 
-#endif // GIFS_SH_GIFS_CORE_H
+template void Gifs::rescale_velocities(double* total_gradient, double* masses, double* velocities);
+template void Gifs::rescale_velocities(float* total_gradient, float* masses, float* velocities);

@@ -7,18 +7,10 @@
 #include "bomd.hpp"
 #include "gifs.hpp"
 //
-#include "gifs_base.hpp"
 //
 #include <string>
 #include <vector>
 #include <iostream>
-
-
-void
-do_something()
-{
-    Gifs gifs_handle{};
-}
 
 
 int

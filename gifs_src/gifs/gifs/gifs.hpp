@@ -1,7 +1,8 @@
 #ifndef GIFS_SH_GIFS_CORE_H
 #define GIFS_SH_GIFS_CORE_H
 
-#include <stdlib.h>
+#include <vector>
+#include "bomd.hpp"
 
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
@@ -14,10 +15,10 @@ class GifsImpl
 public: 
 
     template<typename T>
-    inline T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
+    T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
 
     template<typename T>
-    inline T rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
     // creation
     static GifsImpl* get_instance(size_t nqm, std::vector<int>& qmid);
@@ -47,10 +48,10 @@ public:
     explicit Gifs();
 
     template<typename T>
-    inline T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
+    T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
 
     template<typename T>
-    inline T rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 private:
     GifsImpl* impl{nullptr}; 
