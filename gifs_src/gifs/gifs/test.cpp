@@ -1,16 +1,17 @@
 #include "stddef.h"
-// #include "qm.hpp"
+//
 #include "constants.hpp"
+//
 #include "properties.hpp"
 #include "qm.hpp"
 #include "bomd.hpp"
 #include "gifs.hpp"
+//
 #include "properties_base.hpp"
 #include "qm_base.hpp"
 #include "bomd_base.hpp"
 #include "gifs_base.hpp"
-
-
+//
 #include <string>
 #include <vector>
 #include <iostream>
@@ -20,7 +21,6 @@ void
 do_something()
 {
     Gifs gifs_handle{};
-    
 }
 
 
@@ -40,7 +40,7 @@ main()
 
     std::cout << grad[0] << "\n";
 
-//    bomd.get_gradient(crd.data(), 0, null, null, grad.data(), grad.data());
+    gifs_handle.get_gradient(crd.data(), 0, null, null, grad.data(), grad.data());
 
     std::cout << grad[0] << "\n";
 
