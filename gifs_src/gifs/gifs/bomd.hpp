@@ -23,7 +23,6 @@ protected:
     std::vector<double> qm_grd{};
     // flexible size
     std::vector<double> mm_grd{};
-    // 
     std::vector<double> energy{};
 };
 

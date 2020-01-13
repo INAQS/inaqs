@@ -7,7 +7,6 @@
 #include "bomd.hpp"
 #include "gifs.hpp"
 //
-#include "properties_base.hpp"
 #include "qm_base.hpp"
 #include "bomd_base.hpp"
 #include "gifs_base.hpp"

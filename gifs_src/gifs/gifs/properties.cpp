@@ -1,5 +1,4 @@
-#ifndef __PROPERTIES_BASE_HPP
-#define __PROPERTIES_BASE_HPP
+#include "properties.hpp"
 
 /*
   List of all possible properties that could be produced by or
@@ -14,4 +13,3 @@ std::vector<double>& PropMap::get(QMProperty key) {
     else return *(itr->second);
 };
 
-#endif

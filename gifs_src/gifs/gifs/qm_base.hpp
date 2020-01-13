@@ -3,21 +3,15 @@
 
 #include <vector>
 
-QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid) 
-    : NQM{nqm}, NMM{0}, crd_qm{}, atomids{qmid}, crd_mm{}, chg_mm{}, first_call{true} 
-{
-      crd_qm.resize(3 * nqm);
-};
-
 template<typename T>
 void
 QMInterface::update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm) {
-
-    if (chg_mm.size() < nmm) {
-        chg_mm.resize(nmm);
-        crd_mm.resize(nmm*3);
-    }    
-
+  NMM = nmm;
+  if (chg_mm.size() < nmm){
+    chg_mm.resize(nmm);
+    crd_mm.resize(3 * nmm);
+  }
+  // QM Crd
   for (size_t i=0; i<NQM; ++i) {
       crd_qm[i*3    ] = crdqm[i*3    ] * 10;
       crd_qm[i*3 + 1] = crdqm[i*3 + 1] * 10;
@@ -33,7 +27,6 @@ QMInterface::update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm) 
   for (size_t i=0; i<NMM; ++i) {
       chg_mm[i] = chgmm[i];
   }
-
-};
+}
 
 #endif

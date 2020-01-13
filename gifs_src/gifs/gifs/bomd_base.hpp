@@ -4,17 +4,18 @@
 #include "properties.hpp"
 
 
-BOMD::BOMD(size_t nqm, std::vector<int>& qmid) 
-    : energy{}, qm_grd{}, mm_grd{}, qm{new QMInterface(nqm, qmid)} {
-        qm_grd.resize(nqm);
-        energy.resize(1);
+BOMD::BOMD(size_t nqm, std::vector<int>& qmid):
+  qm{new QMInterface(nqm, qmid)},
+  qm_grd{}, mm_grd{}, energy{}{
+    qm_grd.resize(nqm * 3);
+    energy.resize(1);
 };
 
 
 template<typename T>
 T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
 {
-    size_t nqm = qm->get_nqm();
+  //size_t nqm = qm->get_nqm();
     
     qm->update(qm_crd, nmm, mm_crd, mm_chg);
     
