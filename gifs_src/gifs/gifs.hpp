@@ -14,10 +14,10 @@ class GifsImpl
 {
 public: 
 
-    template<typename T>
+    template<typename T> inline
     T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
 
-    template<typename T>
+    template<typename T> inline
     void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
     // creation
@@ -47,10 +47,10 @@ public:
     // get a local handle to the interface 
     explicit Gifs();
 
-    template<typename T>
+    template<typename T> inline
     T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
 
-    template<typename T>
+    template<typename T> inline
     void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 private:
