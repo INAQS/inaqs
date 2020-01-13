@@ -1,6 +1,3 @@
-#ifndef GIFS_SH_BOMD_BASE_H
-#define GIFS_SH_BOMD_BASE_H
-
 #include "properties.hpp"
 #include "constants.hpp"
 #include "bomd.hpp"
@@ -57,6 +54,3 @@ void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
 };
 template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
 template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);
-
-
-#endif
