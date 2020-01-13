@@ -1,0 +1,35 @@
+$rem
+  jobtype          force
+  method           hf
+  basis	           6-31+G*
+  sym_ignore       true
+  qm_mm            true     # external charges in NAC; generate efield.dat
+$end
+
+$comment
+  cis_n_roots      2        # num excited states 
+  cis_singlets     true
+  cis_triplets     false
+  calc_nac         true     # Main NAC keyword
+  cis_der_numstate 2        # NAC: must match with $derivative_coupling
+  cis_state_deriv  1        # which excited state derivative
+$end
+
+$molecule
+0 1
+  9     2.1194186904    -0.1478987347     0.0000000000
+  9     1.4498754181     1.0202212338     0.0000000000
+  9    -1.4498754181    -1.0202212338     0.0000000000
+  9    -2.1194186904     0.1478987347     0.0000000000
+$end
+
+$external_charges
+   0.00000   0.00000   1.00000   0.1
+   0.00000   0.00000  -1.00000  -0.1
+$end
+
+
+$derivative_coupling
+  Recall: 1) first line=comment 2) 0=ground state 3) match CIS_DER_NUMSTATE
+  1 2
+$end
