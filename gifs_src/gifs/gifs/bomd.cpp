@@ -3,6 +3,7 @@
 
 #include "properties.hpp"
 #include "constants.hpp"
+#include "bomd.hpp"
 
 BOMD::BOMD(size_t nqm, std::vector<int>& qmid){
     qm = new QMInterface(nqm, qmid);
@@ -45,10 +46,17 @@ T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_c
     return HARTREE2KJ * AVOGADRO * energy[0];
 };
 
+template double BOMD::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
+template float BOMD::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
 
 template<typename T>
 void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
-  
+  (void) total_gradient;
+  (void) masses;
+  (void) velocities;
 };
+template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
+template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);
+
 
 #endif
