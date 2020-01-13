@@ -15,15 +15,15 @@ public:
     T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
     //
     template<typename T>
-    inline T rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 protected:
     QMInterface* qm{nullptr};
     // fixed size
-    std::vector<double> qm_grd{};
+    std::vector<double> qm_grd;
     // flexible size
-    std::vector<double> mm_grd{};
-    std::vector<double> energy{};
+    std::vector<double> mm_grd;
+    std::vector<double> energy;
 };
 
 

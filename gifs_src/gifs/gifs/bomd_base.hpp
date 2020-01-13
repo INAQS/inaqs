@@ -4,9 +4,8 @@
 #include "properties.hpp"
 
 
-BOMD::BOMD(size_t nqm, std::vector<int>& qmid):
-  qm{new QMInterface(nqm, qmid)},
-  qm_grd{}, mm_grd{}, energy{}{
+BOMD::BOMD(size_t nqm, std::vector<int>& qmid){
+    qm = new QMInterface(nqm, qmid);
     qm_grd.resize(nqm * 3);
     energy.resize(1);
 };
@@ -15,8 +14,6 @@ BOMD::BOMD(size_t nqm, std::vector<int>& qmid):
 template<typename T>
 T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
 {
-  //size_t nqm = qm->get_nqm();
-    
     qm->update(qm_crd, nmm, mm_crd, mm_chg);
     
     mm_grd.resize(nmm*3);
@@ -50,9 +47,8 @@ T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_c
 
 
 template<typename T>
-inline T 
-BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
-    
+void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
+  
 };
 
 #endif
