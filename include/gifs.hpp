@@ -1,21 +1,60 @@
-#ifndef GIFS_MAIN_H
-#define GIFS_MAIN_H
+#ifndef GIFS_SH_GIFS_CORE_H
+#define GIFS_SH_GIFS_CORE_H
 
-/*Constants from gromacs*/
-#define AVOGADRO         (6.0221367e23)
-#define HARTREE2KJ       (4.3597482e-21)
-#define BOHR2NM          (0.0529177249)
-#define HARTREE_BOHR2MD  (HARTREE2KJ*AVOGADRO/BOHR2NM)
+#include <vector>
+#include "bomd.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
- 
-  void create_qm_interface(size_t nqm, const int* qm_atomids);
-  float gifs_get_forces(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
+/* Virtual base class, defining all operations that 
+ * should be called from the MD software */
 
-#ifdef __cplusplus 
-}
-#endif
+// factory to create new bomd instance, based on an input file!
 
-#endif
+
+class GifsImpl
+{
+public: 
+
+    template<typename T>
+    T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
+
+    template<typename T>
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+
+    // creation
+    static GifsImpl* get_instance(size_t nqm, std::vector<int>& qmid);
+
+    static GifsImpl* get_instance();
+    
+    static inline bool instance_exists() noexcept;
+
+private:
+    //
+    GifsImpl(size_t nqm, std::vector<int>& qmid);
+    //
+    static void destory_instance();
+    //
+    static GifsImpl* impl; 
+    //
+    BOMD* bomd{nullptr};
+};
+
+
+class Gifs
+{
+public:
+    // create instance, can only be called once!
+    explicit Gifs(size_t nqm, std::vector<int>& qmid);
+    // get a local handle to the interface 
+    explicit Gifs();
+
+    template<typename T>
+    T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
+
+    template<typename T>
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+
+private:
+    GifsImpl* impl{nullptr}; 
+};
+
+#endif // GIFS_SH_GIFS_CORE_H
