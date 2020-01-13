@@ -2,7 +2,7 @@
 #define GIFS_SH_BOMD_BASE_H
 
 #include "properties.hpp"
-
+#include "constants.hpp"
 
 BOMD::BOMD(size_t nqm, std::vector<int>& qmid){
     qm = new QMInterface(nqm, qmid);
