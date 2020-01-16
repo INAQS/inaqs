@@ -2,7 +2,7 @@
 #include "constants.hpp"
 #include "bomd.hpp"
 
-BOMD::BOMD(size_t nqm, std::vector<int>& qmid){
+BOMD::BOMD(size_t nqm, const int *qmid){
     qm = new QMInterface(nqm, qmid);
     qm_grd.resize(nqm * 3);
     energy.resize(1);

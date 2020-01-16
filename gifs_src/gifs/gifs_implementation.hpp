@@ -21,7 +21,7 @@ public:
     void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
     // creation
-    static GifsImpl* get_instance(size_t nqm, std::vector<int>& qmid);
+    static GifsImpl* get_instance(size_t nqm, const int * qmid);
 
     static GifsImpl* get_instance();
     
@@ -29,7 +29,7 @@ public:
 
 private:
     //
-    GifsImpl(size_t nqm, std::vector<int>& qmid);
+    GifsImpl(size_t nqm, const int * qmid);
     //
     static void destory_instance();
     //
@@ -43,11 +43,11 @@ class Gifs
 {
 public:
     // create instance, can only be called once!
-    explicit Gifs(size_t nqm, std::vector<int>& qmid);
+    explicit Gifs(size_t nqm, const int * qmid);
     // get a local handle to the interface 
     explicit Gifs();
 
-    template<typename T> inline
+    template<typename T>
     T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
 
     template<typename T> inline

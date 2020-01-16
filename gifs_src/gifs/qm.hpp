@@ -6,7 +6,7 @@
 
 class QMInterface{
 public:
-  QMInterface(size_t nqm, std::vector<int> &qmid);
+  QMInterface(size_t nqm, const int * qmid);
   void get_properties(PropMap &props);
 
   template<typename T>

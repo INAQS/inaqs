@@ -25,7 +25,7 @@ template void GifsImpl::rescale_velocities(double* total_gradient, double* masse
 template void GifsImpl::rescale_velocities(float* total_gradient, float* masses, float* velocities);
 
     // creation
-GifsImpl* GifsImpl::get_instance(size_t nqm, std::vector<int>& qmid)
+GifsImpl* GifsImpl::get_instance(size_t nqm, const int * qmid)
 {
 // actually create instance, and register 
 // its destructor atexit!
@@ -55,7 +55,7 @@ inline bool GifsImpl::instance_exists() noexcept {
 }
 
 
-GifsImpl::GifsImpl(size_t nqm, std::vector<int>& qmid) : bomd{new BOMD(nqm, qmid)} {};
+GifsImpl::GifsImpl(size_t nqm, const int * qmid) : bomd{new BOMD(nqm, qmid)} {};
 //
 void GifsImpl::destory_instance() {
     if (impl != nullptr) {
@@ -69,7 +69,7 @@ GifsImpl* GifsImpl::impl = nullptr;
 
 
 // create instance, can only be called once!
-Gifs::Gifs(size_t nqm, std::vector<int>& qmid) {
+Gifs::Gifs(size_t nqm, const int * qmid) {
     if (!GifsImpl::instance_exists()) {
         impl = GifsImpl::get_instance(nqm, qmid);   
     } else {

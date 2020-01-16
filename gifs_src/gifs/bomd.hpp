@@ -8,7 +8,7 @@ class BOMD
 {
 public:
 
-    explicit BOMD(size_t nqm, std::vector<int>& qmid);
+    explicit BOMD(size_t nqm, const int *qmid);
 
     ~BOMD() {delete qm;}
 

@@ -11,13 +11,15 @@
 
 #define FMT "%12.8g"
 
-QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid):
+QMInterface::QMInterface(size_t nqm, const int * qmid):
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()){
   NQM = nqm;
   NMM = 0;
-  atomids = qmid;
-  crd_qm.reserve(3 * nqm);
+  atomids.resize(nqm);
+  atomids.assign(qmid, qmid + nqm);
+  
+  crd_qm.resize(3 * nqm);
 
   qm_charge = 0;
   qm_multiplicity = 1;
