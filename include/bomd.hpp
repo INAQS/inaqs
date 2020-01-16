@@ -10,7 +10,7 @@ public:
 
     explicit BOMD(size_t nqm, const int *qmid);
 
-    ~BOMD() {delete qm;}
+    virtual ~BOMD() {delete qm;}
 
     template<typename T>
     T get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift);
