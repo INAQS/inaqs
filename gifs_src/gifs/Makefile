@@ -12,7 +12,7 @@ CPPFLAGS = -std=c++11 -O0 -Werror -Wall -Wextra -g
 
 INCLUDE = -I../../include
 
-OBJ = gifs.o qm.o properties.o bomd.o gifs_implementation.o qm_interface.o qm_qchem.o
+OBJ = gifs.o properties.o bomd.o gifs_implementation.o qm_interface.o qm_qchem.o
 
 libgifs: $(OBJ)
 	mkdir -p ../../lib
