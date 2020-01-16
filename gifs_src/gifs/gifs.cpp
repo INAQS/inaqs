@@ -1,102 +1,54 @@
-#include "gifs.hpp"
-#include <stdlib.h>
 #include <vector>
+#include "gifs.hpp"
+#include "gifs_implementation.hpp"
+#include "properties.hpp"
+#include "qm.hpp"
 
-/* Virtual base class, defining all operations that 
- * should be called from the MD software */
+static QMInterface* qm = nullptr;
 
-// factory to create new bomd instance, based on an input file!
-template<typename T>
-T GifsImpl::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
+void create_qm_interface(size_t nqm, const int* qm_atomids)
 {
-    return bomd->get_gradient(qm_crd, nmm, mm_crd, mm_chg, f, fshift);
-};
+    if (qm == nullptr) {
+        std::vector<int> qmids(qm_atomids, qm_atomids+nqm);
+        qm = new QMInterface(nqm, qmids);
+    };
+}
 
-template double GifsImpl::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
-template float GifsImpl::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
 
-template<typename T> 
-void GifsImpl::rescale_velocities(T* total_gradient, T* masses, T* velocities)
+float gifs_get_forces(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift)
 {
-    bomd->rescale_velocities(total_gradient, masses, velocities);
-};
+    size_t nqm = qm->get_nqm();
 
-template void GifsImpl::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template void GifsImpl::rescale_velocities(float* total_gradient, float* masses, float* velocities);
-
-    // creation
-GifsImpl* GifsImpl::get_instance(size_t nqm, std::vector<int>& qmid)
-{
-// actually create instance, and register 
-// its destructor atexit!
-/*
-    if (impl != nullptr)
-    // throw std::Exception("GIFS object was already created");
-*/
-    impl = new GifsImpl(nqm, qmid);
-    //
-    atexit(destory_instance);
-    return impl;
-};
-
-GifsImpl* GifsImpl::get_instance() {
-    if (!instance_exists()) {
-        //   throw std::Exception("GIFS object was not initilized, yet!");
-    }
-    return impl;
-};
+    qm->update(qm_crd, nmm, mm_crd, mm_chg);
     
+    std::vector<double> g_qm(nqm*3), g_mm(3*nmm);
+    std::vector<double> energy(1);
 
-inline bool GifsImpl::instance_exists() noexcept {
-    if (impl == nullptr) {
-        return false;
+    PropMap props{};
+    props.emplace(QMProperty::qmgradient, &g_qm);
+    props.emplace(QMProperty::mmgradient, &g_mm);
+    props.emplace(QMProperty::energies, &energy);
+    //
+    qm->get_properties(props);
+
+    /* Unit conversion back qm->mm*/
+    {
+      int i = 0, j = 0;
+
+      for (auto& fqm: g_qm) {
+        j = i++;
+        f[j] = HARTREE_BOHR2MD*fqm;
+        fshift[j] = f[j];
+      }
+
+      for (auto& fmm: g_mm) {
+        j = i++;
+        f[j] = HARTREE_BOHR2MD*fmm;
+        fshift[j] = f[j];
+      }
     }
-    return true;
-}
 
+    /* Return in "MD" units of KJ/mole */
+    return HARTREE2KJ * AVOGADRO * energy[0];
 
-GifsImpl::GifsImpl(size_t nqm, std::vector<int>& qmid) : bomd{new BOMD(nqm, qmid)} {};
-//
-void GifsImpl::destory_instance() {
-    if (impl != nullptr) {
-        delete impl->bomd;
-        delete impl;
-    }
-}
-
-
-GifsImpl* GifsImpl::impl = nullptr;
-
-
-// create instance, can only be called once!
-Gifs::Gifs(size_t nqm, std::vector<int>& qmid) {
-    if (!GifsImpl::instance_exists()) {
-        impl = GifsImpl::get_instance(nqm, qmid);   
-    } else {
-        impl = GifsImpl::get_instance();   
-    }
-}
-
-
-// get a local handle to the interface 
-Gifs::Gifs() {
-    impl = GifsImpl::get_instance();   
 };
-
-template<typename T>
-T Gifs::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
-{
-    return impl->get_gradient(qm_crd, nmm, mm_crd, mm_chg, f, fshift);
-};
-
-template double Gifs::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
-template float Gifs::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
-
-template<typename T>
-void Gifs::rescale_velocities(T* total_gradient, T* masses, T* velocities)
-{
-    impl->rescale_velocities(total_gradient, masses, velocities);
-};
-
-template void Gifs::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template void Gifs::rescale_velocities(float* total_gradient, float* masses, float* velocities);

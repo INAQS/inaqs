@@ -1,5 +1,5 @@
-#ifndef GIFS_SH_GIFS_CORE_H
-#define GIFS_SH_GIFS_CORE_H
+#ifndef GIFS_SH_GIFS_IMPLEMENTATION_HPP
+#define GIFS_SH_GIFS_IMPLEMENTATION_HPP
 
 #include <vector>
 #include "bomd.hpp"
