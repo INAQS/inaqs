@@ -1,19 +1,17 @@
-#ifndef __QM_HPP
-#define __QM_HPP
+#ifndef GIFS_SH_QM_CORE_H
+#define GIFS_SH_QM_CORE_H
 
 #include "properties.hpp"
 #include <vector>
 
 class QMInterface{
 public:
-  QMInterface(size_t nqm, std::vector<int> &qmid);
+  QMInterface(size_t nqm, const int * qmid);
   void get_properties(PropMap &props);
 
-  void update(std::vector<double> &crdqm,
-	      std::vector<double> &crdmm,
-	      std::vector<double> &chgmm);  
+  template<typename T>
+  void update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm);
 
-  void update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm);
   inline size_t get_nqm() const noexcept { return NQM; };
 
 protected:
@@ -43,4 +41,4 @@ protected:
   bool first_call = true;
 };
 
-#endif //__QM_HPP
+#endif

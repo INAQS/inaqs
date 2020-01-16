@@ -14,10 +14,12 @@ enum class QMProperty{
     energies,
 };
 
-class PropMap:
-  public std::unordered_map<QMProperty, std::vector<double>*>{
+
+class PropMap :
+  public std::unordered_map<QMProperty, std::vector<double>*>
+{
 public:
-  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {}
+  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {};
   std::vector<double>& get(QMProperty key);
 };
 

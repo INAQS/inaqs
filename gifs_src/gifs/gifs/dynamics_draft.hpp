@@ -24,6 +24,7 @@
  *      (probably also phasetracking etc.)
  *
  */
+
 class BOMD
 {
 public:
@@ -228,7 +229,6 @@ protected:
     int NMM;
     std::vector<double> crd_mm;      // NMM*3
     std::vector<double> chg_mm;      // NMM
-
 };
 
 #endif

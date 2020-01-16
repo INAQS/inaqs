@@ -11,13 +11,15 @@
 
 #define FMT "%12.8g"
 
-QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid):
+QMInterface::QMInterface(size_t nqm, const int * qmid):
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()){
   NQM = nqm;
   NMM = 0;
-  atomids = qmid;
-  crd_qm.reserve(3 * nqm);
+  atomids.resize(nqm);
+  atomids.assign(qmid, qmid + nqm);
+  
+  crd_qm.resize(3 * nqm);
 
   qm_charge = 0;
   qm_multiplicity = 1;
@@ -29,24 +31,11 @@ QMInterface::QMInterface(size_t nqm, std::vector<int> &qmid):
   setenv("QCTHREADS", "4", 0);
 }
 
-void QMInterface::update(std::vector<double> &crdqm,
-			 std::vector<double> &crdmm,
-			 std::vector<double> &chgmm){
-  /*
-    FIXME: the assignment operator '=' uses copying; when we implment
-    our whole class hierarcy, memory will be owned one level above the
-    BOMD class.
-  */
-  crd_qm = crdqm;
-  NMM = chgmm.size();
-  crd_mm = crdmm;
-  chg_mm = chgmm;
-}
-
-void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm)
-{
+template<typename T>
+void
+QMInterface::update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm) {
   NMM = nmm;
-  if (chg_mm.capacity() < nmm){
+  if (chg_mm.size() < nmm){
     chg_mm.resize(nmm);
     crd_mm.resize(3 * nmm);
   }
@@ -67,6 +56,10 @@ void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, con
       chg_mm[i] = chgmm[i];
   }
 }
+
+template void QMInterface::update(const double* crdqm, size_t nmm, const double* crdmm, const double* chgmm);
+template void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm);
+
 
 void QMInterface::get_properties(PropMap &props){
   std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
