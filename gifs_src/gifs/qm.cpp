@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <sys/stat.h>
+#include <limits>
 #include "qm.hpp"
 #include "properties.hpp"
 
@@ -29,6 +30,14 @@ QMInterface::QMInterface(size_t nqm, const int * qmid):
     set the number of threads, but don't overwrite if the flag is set elsewhere
   */
   setenv("QCTHREADS", "4", 0);
+
+  /*
+    FIXME: Setting $QCTHREADS seems sufficient on the subotnik
+    cluster, but perhaps this is unique to our setup. Need to check
+    with Evgeny to be sure.
+  */
+  
+  //setenv("OMP_NUM_THREADS", "4", 0);
 }
 
 template<typename T>
@@ -39,22 +48,19 @@ QMInterface::update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm) 
     chg_mm.resize(nmm);
     crd_mm.resize(3 * nmm);
   }
+
+  /*
+    FIXME: Multiplying by 10 because of units (nm -> \AA) from
+    Gromacs. Should just have the GIFS interface above this handle
+    unit conversion and then use assign or copy of vectors.
+  */
+  
   // QM Crd
-  for (size_t i=0; i<NQM; ++i) {
-      crd_qm[i*3    ] = crdqm[i*3    ] * 10;
-      crd_qm[i*3 + 1] = crdqm[i*3 + 1] * 10;
-      crd_qm[i*3 + 2] = crdqm[i*3 + 2] * 10;
-  }
+  for (size_t i=0; i<NQM * 3; ++i) {crd_qm[i] = crdqm[i] * 10;}
   // MM Crd
-  for (size_t i=0; i<NMM; ++i) {
-      crd_mm[i*3    ] = crdmm[i*3    ] * 10;
-      crd_mm[i*3 + 1] = crdmm[i*3 + 1] * 10;
-      crd_mm[i*3 + 2] = crdmm[i*3 + 2] * 10;
-  }
+  for (size_t i=0; i<NMM * 3; ++i) {crd_mm[i] = crdmm[i] * 10;}
   // Charges
-  for (size_t i=0; i<NMM; ++i) {
-      chg_mm[i] = chgmm[i];
-  }
+  for (size_t i=0; i<NMM; ++i) {chg_mm[i] = chgmm[i];}
 }
 
 template void QMInterface::update(const double* crdqm, size_t nmm, const double* crdmm, const double* chgmm);
@@ -65,9 +71,6 @@ void QMInterface::get_properties(PropMap &props){
   std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
   std::vector<double>& g_mm=props.get(QMProperty::mmgradient);
   std::vector<double>& e=props.get(QMProperty::energies);
-
-  //auto& g_qm = *props[QMProperty::qmgradient];
-  //auto& g_mm = *props[QMProperty::mmgradient];
   
   get_gradient_energies(g_qm, g_mm, e);
 }
@@ -219,6 +222,7 @@ void QMInterface::exec_qchem(void){
 void QMInterface::write_gradient_job(){
   std::ofstream ifile(qc_scratch_directory + "/" + qc_input_file);
   ifile.setf(std::ios_base::fixed, std::ios_base::floatfield);
+  ifile.precision(std::numeric_limits<double>::digits10);
   
   ifile << R"(
 $rem
@@ -256,9 +260,7 @@ $rem
   */
   ifile << "$molecule" << std::endl;
   ifile << qm_charge << " " << qm_multiplicity << std::endl;
-  /*
-    FIXME: need to increase the precision of these outputs
-  */
+
   for (size_t i = 0; i < NQM; i++){
     ifile << atomids[i]      << " ";        // id
     ifile << crd_qm[i*3 + 0] << " ";        // x
