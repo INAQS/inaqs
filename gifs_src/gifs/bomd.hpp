@@ -2,7 +2,7 @@
 #define GIFS_SH_BOMD_CORE_H
 
 #include <vector>
-#include "qm.hpp"
+#include "qm_interface.hpp"
 
 class BOMD
 {

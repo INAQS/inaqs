@@ -2,7 +2,6 @@
 #include "gifs.hpp"
 #include "gifs_implementation.hpp"
 #include "properties.hpp"
-#include "qm.hpp"
 
 //Don't inline these; they need to be exported and available to Gromacs etc...
 

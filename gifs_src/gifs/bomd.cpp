@@ -1,20 +1,28 @@
 #include "properties.hpp"
 #include "constants.hpp"
 #include "bomd.hpp"
+#include "qm_qchem.hpp"
 
 BOMD::BOMD(size_t nqm, const int *qmid){
-    qm = new QMInterface(nqm, qmid);
-    qm_grd.resize(nqm * 3);
-    energy.resize(1);
+  qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1);
+  qm_grd.resize(nqm * 3);
+  energy.resize(1);
 };
 
 
 template<typename T>
 T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
 {
-    qm->update(qm_crd, nmm, mm_crd, mm_chg);
-    
-    mm_grd.resize(nmm*3);
+  std::vector<double> qm_crd_v(qm_crd, qm_crd + 3*qm->nqm());
+  std::vector<double> mm_crd_v(mm_crd, mm_crd + 3*nmm);
+  std::vector<double> mm_chg_v(mm_chg, mm_chg + nmm);
+
+  for(auto &x: qm_crd_v){x *= 10.0;} // nm->\AA
+  for(auto &x: mm_crd_v){x *= 10.0;} // nm->\AA
+  
+  qm->update(qm_crd_v, mm_crd_v, mm_chg_v);
+
+  mm_grd.resize(nmm*3);
 
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);
