@@ -67,9 +67,6 @@ std::string QM_QChem::get_qcprog(void){
   }
 }
 
-/*
-  FIXME: need to ensure $QCSCRATCH is an absolute path
-*/
 std::string QM_QChem::get_qcscratch(void){
   char * pwd = std::getenv("PWD");
   std::string scratch_path = std::string(pwd) + "/GQSH.sav";
@@ -77,6 +74,9 @@ std::string QM_QChem::get_qcscratch(void){
   char * qc_str = std::getenv("QCSCRATCH");
   if (nullptr == qc_str){
     std::cerr << "Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
+  }
+  else if (qc_str[0] != '/'){
+    std::cerr << "Warning, $QCSCRATCH is not an absolute path; instead using " << scratch_path << std::endl;
   }
   else{
     scratch_path = std::string(qc_str);
