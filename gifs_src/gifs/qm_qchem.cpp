@@ -76,6 +76,9 @@ std::string QM_QChem::get_qcscratch(void){
     std::cerr << "Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
   }
   else if (qc_str[0] != '/'){
+    /*
+      FIXME: *Q-Chem* will crash if QCSCRATCH=""
+    */
     std::cerr << "Warning, $QCSCRATCH is not an absolute path; instead using " << scratch_path << std::endl;
   }
   else{
@@ -176,11 +179,11 @@ void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm,
 
 
 void QM_QChem::exec_qchem(void){
-  std::string cmd = "cd " + qc_scratch_directory + "; " + qc_executable + " " + qc_input_file + " " + qc_scratch_directory;
-  std::cout << cmd << std::endl;
+  std::string cmd = "cd " + qc_scratch_directory + "; " +
+    qc_executable + " " + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
   int status = std::system(cmd.c_str());
   if (status){
-    throw std::runtime_error("Q-Chem could not be called or exited abnormally.");
+    throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + qc_log_file);
   }
   first_call = false;
 }

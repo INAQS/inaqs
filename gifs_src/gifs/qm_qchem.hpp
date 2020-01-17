@@ -25,6 +25,7 @@ private:
   const std::string qc_scratch_directory;
   const std::string qc_executable;
   const std::string qc_input_file = "GQSH.in";
+  const std::string qc_log_file = "GQSH.out";
   bool first_call = true;
 };
 
