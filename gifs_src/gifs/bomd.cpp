@@ -17,8 +17,8 @@ T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_c
   std::vector<double> mm_crd_v(mm_crd, mm_crd + 3*nmm);
   std::vector<double> mm_chg_v(mm_chg, mm_chg + nmm);
 
-  for(auto &x: qm_crd_v){x *= 10.0;} // nm->\AA
-  for(auto &x: mm_crd_v){x *= 10.0;} // nm->\AA
+  for(auto &x: qm_crd_v){x /= BOHR2NM;} // nm -> a0
+  for(auto &x: mm_crd_v){x /= BOHR2NM;} // nm -> a0
   
   qm->update(qm_crd_v, mm_crd_v, mm_chg_v);
 

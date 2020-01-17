@@ -32,61 +32,6 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 }
 
 
-// QMInterface::QMInterface(size_t nqm, const int * qmid):
-//   qc_scratch_directory(get_qcscratch()),
-//   qc_executable(get_qcprog()){
-//   NQM = nqm;
-//   NMM = 0;
-//   atomids.resize(nqm);
-//   atomids.assign(qmid, qmid + nqm);
-  
-//   crd_qm.resize(3 * nqm);
-
-//   qm_charge = 0;
-//   qm_multiplicity = 1;
-
-//   /*
-//     FIXME: This should be done in a configurable fashion
-//     set the number of threads, but don't overwrite if the flag is set elsewhere
-//   */
-//   setenv("QCTHREADS", "4", 0);
-
-//   /*
-//     FIXME: Setting $QCTHREADS seems sufficient on the subotnik
-//     cluster, but perhaps this is unique to our setup. Need to check
-//     with Evgeny to be sure.
-//   */
-  
-//   //setenv("OMP_NUM_THREADS", "4", 0);
-// }
-
-// template<typename T>
-// void
-// QMInterface::update(const T* crdqm, size_t nmm, const T* crdmm, const T* chgmm) {
-//   NMM = nmm;
-//   if (chg_mm.size() < nmm){
-//     chg_mm.resize(nmm);
-//     crd_mm.resize(3 * nmm);
-//   }
-
-//   /*
-//     FIXME: Multiplying by 10 because of units (nm -> \AA) from
-//     Gromacs. Should just have the GIFS interface above this handle
-//     unit conversion and then use assign or copy of vectors.
-//   */
-  
-//   // QM Crd
-//   for (size_t i=0; i<NQM * 3; ++i) {crd_qm[i] = crdqm[i] * 10;}
-//   // MM Crd
-//   for (size_t i=0; i<NMM * 3; ++i) {crd_mm[i] = crdmm[i] * 10;}
-//   // Charges
-//   for (size_t i=0; i<NMM; ++i) {chg_mm[i] = chgmm[i];}
-// }
-
-// template void QMInterface::update(const double* crdqm, size_t nmm, const double* crdmm, const double* chgmm);
-// template void QMInterface::update(const float* crdqm, size_t nmm, const float* crdmm, const float* chgmm);
-
-
 void QM_QChem::get_properties(PropMap &props){
   std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
   std::vector<double>& g_mm=props.get(QMProperty::mmgradient);
@@ -148,8 +93,24 @@ std::string QM_QChem::get_qcscratch(void){
 
 void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
   /*
-    FIXME: need to verify the units of efield.dat. Here we assume they
-    are: Hartrees/Angstrom/e-
+    efield.dat uses atomic units; its format is:
+
+    Ex(mm1) Ey(mm1) Ez(mm1)
+    ...
+    Ex(mmN) Ey(mmN) Ez(mmN)
+    Ex(qm1) Ey(qm1) Ez(qm1)
+    ...
+    Ex(qmN) Ey(qmN) Ez(qmN)
+
+    where Ea(u) is the component of the electric field in the a
+    direction at u and mmi and qmi are the coordinates of the ith mm
+    and qm atoms respectively.
+  */
+
+  /*
+    FIXME: This will return a *force* rather than a gradient unless it
+    is the negative of the field, which it may be. We need to return a
+    gradient.
   */
 
   std::string gfile = qc_scratch_directory + "/" + "efield.dat";
@@ -173,8 +134,6 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
   if (i != NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
   }
-
-  ang2bohr(g_mm);
 }
 
 void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm,
@@ -213,21 +172,8 @@ void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm,
   if (i != NQM){
     throw std::runtime_error("Unable to parse QM gradient!");
   }
-  
-  ang2bohr(g_qm);
 }
 
-
-/*
-  Unit conversion: Q-Chem outputs (??? need to confirm) in
-  Hartree/Angstrom; our interface expects Hartree/Bohr.
-*/
-inline void QM_QChem::ang2bohr(std::vector<double> &v){
-  const double a2b = 0.529177249;
-  for (auto& e : v){
-    e *= a2b;
-  }
-}
 
 void QM_QChem::exec_qchem(void){
   std::string cmd = "cd " + qc_scratch_directory + "; " + qc_executable + " " + qc_input_file + " " + qc_scratch_directory;
@@ -245,7 +191,13 @@ void QM_QChem::write_gradient_job(void){
   ifile.precision(std::numeric_limits<double>::digits10);
 
   write_molecule_section(ifile);
-  
+
+  /*
+    NOTE: require 
+      input_bohr = true
+    since all inputs/outputs from this module must be in atomic units
+  */
+
   ifile << R"(
 $rem
   jobtype          force
@@ -254,17 +206,9 @@ $rem
   sym_ignore       true
   qm_mm            true     # external charges in NAC; generate efield.dat
   qmmm_ext_gifs    1
+  input_bohr       true
 )";
 
-  /*
-    NOTE:
-    can add
-      input_bohr = true
-    to the q-chem input if our input is in atomic units.
-
-    The default in angstroms and it's not clear how all of the
-    gradient methods interact with a input unit change...
-   */
   
   if (! first_call ){
     ifile << "  scf_guess        read" << std::endl;
@@ -277,14 +221,19 @@ $rem
 
 void QM_QChem::write_molecule_section(std::ostream &ifile){
   /*
-    format of $molecule section:
+    format of $molecule & $externall_charges sections:
+
     $molecule
     [charge] [multiplicity]
     [atomic-number] [x-coord] [y-coord] [x-coord]
     ...
     $end
-  */
-  
+
+    $external_charges
+    [x-coord] [y-coord] [x-coord] [charge]
+    ...
+    $end
+  */  
   ifile << "$molecule" << std::endl;
   ifile << qm_charge << " " << qm_multiplicity << std::endl;
 
@@ -297,12 +246,7 @@ void QM_QChem::write_molecule_section(std::ostream &ifile){
   ifile <<  "$end" << std::endl;
 
   if (NMM > 0){
-    ifile << std::endl << "$external_charges" << std::endl;
-    /*
-      format of $external_charges section:
-      [x-coord] [y-coord] [x-coord] [charge]
-    */
-    
+    ifile << std::endl << "$external_charges" << std::endl;    
     for (size_t i = 0; i < NMM; i++){
       ifile << crd_mm[i*3 + 0] << " ";        // x
       ifile << crd_mm[i*3 + 1] << " ";        // y

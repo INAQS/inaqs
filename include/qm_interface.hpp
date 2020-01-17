@@ -5,7 +5,7 @@
 #include <vector>
 
 /*
-  Virtual base class for all implementations of QMInterface 
+  Abstract base class for all implementations of QMInterface 
 */
 
 class QMInterface{

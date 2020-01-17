@@ -7,8 +7,8 @@
 
 class QM_QChem: public QMInterface{
 public:
-  void get_properties(PropMap &props);
   QM_QChem(const std::vector<int> &qmid, int charge, int mult);
+  void get_properties(PropMap &props);
   
 private:
   inline void ang2bohr(std::vector<double> &v);
