@@ -11,5 +11,5 @@ std::vector<double>& PropMap::get(QMProperty key) {
       throw std::invalid_argument("Bad Key!");
     }
     else return *(itr->second);
-};
+}
 

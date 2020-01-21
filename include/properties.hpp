@@ -12,6 +12,10 @@ enum class QMProperty{
     qmgradient,
     mmgradient,
     energies,
+    nacvector,
+    nacvector_imag,
+    wfoverlap,
+    
 };
 
 
