@@ -1,4 +1,5 @@
 #include <vector>
+#include <map>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -15,10 +16,12 @@
 QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   QMInterface(qmid, charge, mult),
   qc_scratch_directory(get_qcscratch()),
-  qc_executable(get_qcprog()){
-
+  qc_executable(get_qcprog()),
+  exchange_method("HF"), // FIXME: Method/basis should be configurable;
+  basis_set("6-31+G*")   // by parsing an input file? Or higher up?
+{
   /*
-    FIXME: This should be done in a configurable fashion
+    FIXME: Threading should be done in a configurable fashion
     set the number of threads, but don't overwrite if the flag is set elsewhere
   */
   setenv("QCTHREADS", "4", 0);
@@ -189,40 +192,51 @@ void QM_QChem::exec_qchem(void){
 }
 
 void QM_QChem::write_gradient_job(void){
-  std::ofstream ifile(qc_scratch_directory + "/" + qc_input_file);
-  ifile.setf(std::ios_base::fixed, std::ios_base::floatfield);
-  ifile.precision(std::numeric_limits<double>::digits10);
-
+  std::ofstream ifile = get_input_handle();
+  //write_rem_section(ifile, "force");
+  write_rem_section(ifile, {{"jobtype","force"}});
   write_molecule_section(ifile);
-
-  /*
-    NOTE: require 
-      input_bohr = true
-    since all inputs/outputs from this module must be in atomic units
-  */
-
-  ifile << R"(
-$rem
-  jobtype          force
-  method           hf
-  basis	           6-31+G*
-  sym_ignore       true
-  qm_mm            true     # external charges in NAC; generate efield.dat
-  qmmm_ext_gifs    1
-  input_bohr       true
-)";
-
-  
-  if (! first_call ){
-    ifile << "  scf_guess        read" << std::endl;
-  }
-  
-  ifile << "$end" << std::endl;
 
   ifile.close();
 }
 
-void QM_QChem::write_molecule_section(std::ostream &ifile){
+/* Consistent formatting and file name */
+std::ofstream QM_QChem::get_input_handle(){
+  std::ofstream os(qc_scratch_directory + "/" + qc_input_file);
+  os.setf(std::ios_base::fixed, std::ios_base::floatfield);
+  os.precision(std::numeric_limits<double>::digits10);
+
+  return os;
+}
+
+void QM_QChem::write_rem_section(std::ostream &os, std::map<std::string, std::string> options){
+  // Default options 
+  std::map<std::string, std::string> rem_keys
+    {
+     {"method", exchange_method},
+     {"basis", basis_set},
+     {"sym_ignore","true"},
+     {"qm_mm","true"},
+     {"qmmm_ext_gifs","1   "},
+     {"input_bohr","true"}
+    };
+
+  // merge in options; usually will include jobtype 
+  rem_keys.insert(options.begin(), options.end());
+  
+  if (! first_call ){
+    rem_keys.emplace("scf_guess", "read");
+  }  
+  
+  os << "$rem" << std::endl;
+  for (const auto& e: rem_keys){
+    os << e.first << " " << e.second << std::endl;
+  }
+  os << "$end" << std::endl;  
+}
+
+
+void QM_QChem::write_molecule_section(std::ostream &os){
   /*
     format of $molecule & $externall_charges sections:
 
@@ -237,26 +251,26 @@ void QM_QChem::write_molecule_section(std::ostream &ifile){
     ...
     $end
   */  
-  ifile << "$molecule" << std::endl;
-  ifile << qm_charge << " " << qm_multiplicity << std::endl;
+  os << "$molecule" << std::endl;
+  os << qm_charge << " " << qm_multiplicity << std::endl;
 
   for (size_t i = 0; i < NQM; i++){
-    ifile << atomids[i]      << " ";        // id
-    ifile << crd_qm[i*3 + 0] << " ";        // x
-    ifile << crd_qm[i*3 + 1] << " ";        // y
-    ifile << crd_qm[i*3 + 2] << std::endl;  // x
+    os << atomids[i]      << " ";        // id
+    os << crd_qm[i*3 + 0] << " ";        // x
+    os << crd_qm[i*3 + 1] << " ";        // y
+    os << crd_qm[i*3 + 2] << std::endl;  // x
   }
-  ifile <<  "$end" << std::endl;
+  os <<  "$end" << std::endl;
 
   if (NMM > 0){
-    ifile << std::endl << "$external_charges" << std::endl;    
+    os << std::endl << "$external_charges" << std::endl;    
     for (size_t i = 0; i < NMM; i++){
-      ifile << crd_mm[i*3 + 0] << " ";        // x
-      ifile << crd_mm[i*3 + 1] << " ";        // y
-      ifile << crd_mm[i*3 + 2] << " ";        // z
-      ifile << chg_mm[i]       << std::endl;  // charge
+      os << crd_mm[i*3 + 0] << " ";        // x
+      os << crd_mm[i*3 + 1] << " ";        // y
+      os << crd_mm[i*3 + 2] << " ";        // z
+      os << chg_mm[i]       << std::endl;  // charge
     }
-    ifile << "$end" << std::endl;
+    os << "$end" << std::endl;
   }
 }
 
