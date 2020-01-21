@@ -10,14 +10,39 @@ CPPFLAGS = -std=c++11 -O0 -Werror -Wall -Wextra -g
 
 #LD_PRELOAD=/opt/gcc/7.3/lib64/libasan.so ASAN_OPTIONS=detect_leaks=0
 
-INCLUDE = -I../../include
+SRCS := $(wildcard *.cpp)
+OBJS := $(SRCS:%.cpp=%.o)
 
-OBJ = gifs.o properties.o bomd.o gifs_implementation.o qm_interface.o qm_qchem.o
+INCLUDE := -I../../include
+LIBDIR := ../../lib
+LIB := libgifs.so
+LIBRARY := $(LIBDIR)/$(LIB)
 
-libgifs: $(OBJ)
-	mkdir -p ../../lib
-	$(CPP) -shared -o ../../lib/libgifs.so $(OBJ)
+# automatic dependency generation; see:
+# http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+DEPDIR := .deps
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
+POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 
-%.o: %.cpp
-	$(CPP) $(INCLUDE) $(CPPFLAGS) -fPIC -c $<
+$(LIBRARY): $(OBJS) | $(LIBDIR)
+	$(CPP) -shared -o $@ $(OBJS)
+
+%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
+	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+clean:
+	rm *.o || true
+	rm -rf $(DEPDIR) || true
+	rm $(LIBRARY) || true
+
+
+$(LIBDIR): ; mkdir -p $@
+$(DEPDIR): ; mkdir -p $@
+
+DEPFILES := $(SRCS:%.cpp=$(DEPDIR)/%.d)
+$(DEPFILES):
+
+include $(wildcard $(DEPFILES))
