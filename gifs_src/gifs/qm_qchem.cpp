@@ -46,12 +46,15 @@ void QM_QChem::get_properties(PropMap &props){
 void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
 				     std::vector<double> &g_mm,
 				     std::vector<double> &e){
-  std::string ifname = "GQSH.in";
-  std::string qcprog = get_qcprog();
-  std::string savdir = "./GQSH.sav";
 
-  write_gradient_job();
+  // Build job
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, {{"jobtype","force"}});
+  write_molecule_section(input);
+  input.close();
+  
   exec_qchem();
+  
   parse_qm_gradient(g_qm, e);
   if (NMM > 0){
     parse_mm_gradient(g_mm);
@@ -191,14 +194,6 @@ void QM_QChem::exec_qchem(void){
   first_call = false;
 }
 
-void QM_QChem::write_gradient_job(void){
-  std::ofstream ifile = get_input_handle();
-  //write_rem_section(ifile, "force");
-  write_rem_section(ifile, {{"jobtype","force"}});
-  write_molecule_section(ifile);
-
-  ifile.close();
-}
 
 /* Consistent formatting and file name */
 std::ofstream QM_QChem::get_input_handle(){

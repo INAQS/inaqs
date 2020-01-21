@@ -14,7 +14,6 @@ public:
 private:
   inline void ang2bohr(std::vector<double> &v);
   void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
-  void write_gradient_job(void);
   void write_molecule_section(std::ostream &ifile);
   void write_rem_section(std::ostream &os, std::map<std::string, std::string> options);
   std::ofstream get_input_handle(void);
