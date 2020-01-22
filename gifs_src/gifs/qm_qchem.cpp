@@ -165,6 +165,37 @@ void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
   }
 }
 
+
+/*
+  FIXME: This will return a *force* rather than a gradient unless
+  efield is the negative of the field, which it may be. We need to
+  return a gradient.
+*/
+void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
+  size_t count = readQFMan(FILE_EFIELD, g_mm, 0, 3*NMM);
+
+  /*
+    FIXME: Why does the number of MM atoms fluctuate during a qmmm
+    run?
+  */
+  if (count > 3 * NMM){
+    g_mm.resize(3*NMM);
+  }
+  else if (count < 3* NMM){
+    throw std::runtime_error("Unable to parse MM gradient!");
+  }
+
+  std::cout << std::endl;
+  
+  for (size_t i = 0; i < NMM; i++){
+    const double q = chg_mm[i];
+    g_mm[3*i + 0] *= q;
+    g_mm[3*i + 1] *= q;
+    g_mm[3*i + 2] *= q;
+  }
+}
+
+
 const std::string QM_QChem::get_qcprog(void){
   char * qc_str = std::getenv("QC");
   std::string default_path = "qcprog.exe";
@@ -204,50 +235,56 @@ const std::string QM_QChem::get_qcscratch(void){
   return scratch_path;
 }
 
-void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
-  /*
-    efield.dat uses atomic units; its format is:
+// void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
+//   /*
+//     efield.dat uses atomic units; its format is:
 
-    Ex(mm1) Ey(mm1) Ez(mm1)
-    ...
-    Ex(mmN) Ey(mmN) Ez(mmN)
-    Ex(qm1) Ey(qm1) Ez(qm1)
-    ...
-    Ex(qmN) Ey(qmN) Ez(qmN)
+//     Ex(mm1) Ey(mm1) Ez(mm1)
+//     ...
+//     Ex(mmN) Ey(mmN) Ez(mmN)
+//     Ex(qm1) Ey(qm1) Ez(qm1)
+//     ...
+//     Ex(qmN) Ey(qmN) Ez(qmN)
 
-    where Ea(u) is the component of the electric field in the a
-    direction at u and mmi and qmi are the coordinates of the ith mm
-    and qm atoms respectively.
-  */
+//     where Ea(u) is the component of the electric field in the a
+//     direction at u and mmi and qmi are the coordinates of the ith mm
+//     and qm atoms respectively.
+//   */
 
-  /*
-    FIXME: This will return a *force* rather than a gradient unless it
-    is the negative of the field, which it may be. We need to return a
-    gradient.
-  */
 
-  std::string gfile = qc_scratch_directory + "/" + "efield.dat";
-  std::ifstream ifile(gfile);
-  std::string line;
+//   /*
+//     FIXME: Should be doing binary io with FMan for the efield.
+//   */
+  
+//   /*
+//     FIXME: This will return a *force* rather than a gradient unless it
+//     is the negative of the field, which it may be. We need to return a
+//     gradient.
+//   */
 
-  size_t i = 0;
-  {
-    double x, y, z;
-    while (getline(ifile, line) && i < NMM){
-      std::stringstream s(line);
-      s >> x >> y >> z;
-      const double q = chg_mm[i];
-      g_mm[i*3 + 0] = x * q;
-      g_mm[i*3 + 1] = y * q;
-      g_mm[i*3 + 2] = z * q;
-      i++;
-    }
-  }
+//   std::string gfile = qc_scratch_directory + "/" + "efield.dat";
+//   std::ifstream ifile(gfile);
+//   std::string line;
 
-  if (i != NMM){
-    throw std::runtime_error("Unable to parse MM gradient!");
-  }
-}
+//   size_t i = 0;
+//   {
+//     double x, y, z;
+//     while (getline(ifile, line) && i < NMM){
+//       std::stringstream s(line);
+//       s >> x >> y >> z;
+//       const double q = chg_mm[i];
+//       g_mm[i*3 + 0] = x * q;
+//       g_mm[i*3 + 1] = y * q;
+//       g_mm[i*3 + 2] = z * q;
+//       i++;
+//     }
+//   }
+
+//   if (i != NMM){
+//     throw std::runtime_error("Unable to parse MM gradient!");
+//   }
+// }
+
 
 
 void QM_QChem::exec_qchem(void){

@@ -45,7 +45,8 @@ private:
 
 #define FILE_SET_ENERGY       72    // Excitation energies CIS states
 #define FILE_ENERGY           99    // 
-#define FILE_NUCLEAR_GRADIENT 131   // 
+#define FILE_NUCLEAR_GRADIENT 131   //
+#define FILE_EFIELD           329   // 
 #define FILE_DERCOUP          967   // Derrivative coupling 
 
 /* And some offsets */
