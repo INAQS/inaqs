@@ -175,7 +175,8 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
 
   /*
     FIXME: Why does the number of MM atoms fluctuate during a qmmm
-    run?
+    run? Seems like GMX is already picking and choosing what to send
+    to us; perhaps via some cutoff??
   */
   if (count > 3 * NMM){
     g_mm.resize(3*NMM);
