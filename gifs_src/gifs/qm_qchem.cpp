@@ -1,5 +1,6 @@
 #include <vector>
 #include <map>
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,7 +19,8 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;
-  basis_set("6-31+G*")   // by parsing an input file? Or higher up?
+  basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
+  excited_states(2)
 {
   /*
     FIXME: Threading should be done in a configurable fashion
@@ -39,8 +41,12 @@ void QM_QChem::get_properties(PropMap &props){
   std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
   std::vector<double>& g_mm=props.get(QMProperty::mmgradient);
   std::vector<double>& e=props.get(QMProperty::energies);
-  
-  get_gradient_energies(g_qm, g_mm, e);
+
+  (void) g_mm;
+  (void) e;
+  //get_gradient_energies(g_qm, g_mm, e);
+  //get_excited_gradient(g_qm, g_mm, e, 2);
+  get_nac_vector(g_qm, 1, 2);
 }
 
 void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
@@ -61,7 +67,73 @@ void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
   }
 }
 
-std::string QM_QChem::get_qcprog(void){
+void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
+				    std::vector<double> &g_mm,
+				    std::vector<double> &e, size_t surface){
+  //FIXME: need to verify surface <= excited_states
+  
+  std::ofstream input = get_input_handle();
+  write_rem_section(input,
+		    {{"jobtype","force"},
+		     {"cis_n_roots", std::to_string(excited_states)},
+		     {"cis_state_deriv", std::to_string(surface)},
+		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+		     {"cis_triplets", "false"}  //be configurable
+		    });
+  write_molecule_section(input);
+  input.close();
+
+  exec_qchem();
+
+  parse_qm_gradient(g_qm, e);
+  if (NMM > 0){
+    parse_mm_gradient(g_mm);
+  }
+  
+}
+
+void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
+  std::ofstream input = get_input_handle();
+  write_rem_section(input,
+		    {{"jobtype","sp"},
+		     {"calc_nac", "true"},
+		     {"cis_n_roots", std::to_string(excited_states)},
+		     {"cis_der_numstate", "2"}, //Always, in our case, between 2 states
+		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+		     {"cis_triplets", "false"}  //be configurable
+		    });
+
+  /*
+    Section format:
+    $derivative_coupling
+      comment line
+      A B ...
+    $end
+    where A, B, ... are the states between which to compute the
+    derivative coupling. The $rem section must include
+    cis_der_numstates equal to the total number of states
+    specified. The ground state is 0.
+
+  */
+  input << "$derivative_coupling" << std::endl;
+  input << "comment" << std::endl;
+  input << A << " " << B << std::endl;
+  input << "$end" << std::endl;
+  
+  write_molecule_section(input);
+  input.close();
+
+  exec_qchem();
+
+  parse_nac_vector(nac);  
+}
+
+void QM_QChem::parse_nac_vector(std::vector<double> &nac){
+  size_t count = readQFMan(FILE_DERCOUP, nac); 
+  std::cout << count << std::endl;
+}
+
+const std::string QM_QChem::get_qcprog(void){
   char * qc_str = std::getenv("QC");
   std::string default_path = "qcprog.exe";
   if (nullptr == qc_str){
@@ -73,7 +145,7 @@ std::string QM_QChem::get_qcprog(void){
   }
 }
 
-std::string QM_QChem::get_qcscratch(void){
+const std::string QM_QChem::get_qcscratch(void){
   char * pwd = std::getenv("PWD");
   std::string scratch_path = std::string(pwd) + "/GQSH.sav";
   
@@ -208,12 +280,12 @@ void QM_QChem::write_rem_section(std::ostream &os, std::map<std::string, std::st
   // Default options 
   std::map<std::string, std::string> rem_keys
     {
-     {"method", exchange_method},
-     {"basis", basis_set},
-     {"sym_ignore","true"},
-     {"qm_mm","true"},
-     {"qmmm_ext_gifs","1   "},
-     {"input_bohr","true"}
+     {"method",        exchange_method},
+     {"basis",         basis_set},
+     {"sym_ignore",    "true"},
+     {"qm_mm",         "true"},
+     {"qmmm_ext_gifs", "1"},
+     {"input_bohr",    "true"}
     };
 
   // merge in options; usually will include jobtype 
@@ -269,7 +341,7 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   }
 }
 
-int QM_QChem::readQFMan(int filenum, std::vector<double> &v){
+size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
   std::ifstream ifile;
   ifile.open(path, std::ios::in | std::ios::binary);
