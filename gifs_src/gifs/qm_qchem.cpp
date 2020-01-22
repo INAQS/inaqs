@@ -153,7 +153,6 @@ void QM_QChem::parse_energies(std::vector<double> &e){
   }
 
   if (e.size() != excited_states + 1){
-    std::cout << e.size() << std::endl;
     throw std::runtime_error("Unable to parse energies!");
   }
 }
@@ -185,8 +184,6 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
     throw std::runtime_error("Unable to parse MM gradient!");
   }
 
-  std::cout << std::endl;
-  
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
     g_mm[3*i + 0] *= q;
