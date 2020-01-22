@@ -171,17 +171,16 @@ void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
   return a gradient.
 */
 void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
-  size_t count = readQFMan(FILE_EFIELD, g_mm, 0, 3*NMM);
+  /* Set a ceiling on the number of doubles we read-in because the
+     number of MM atoms can fluctuate during a simulation. */
+  readQFMan(FILE_EFIELD, g_mm, 3*NMM, FILE_POS_BEGIN);
 
   /*
     FIXME: Why does the number of MM atoms fluctuate during a qmmm
     run? Seems like GMX is already picking and choosing what to send
     to us; perhaps via some cutoff??
   */
-  if (count > 3 * NMM){
-    g_mm.resize(3*NMM);
-  }
-  else if (count < 3* NMM){
+  if (g_mm.size() != 3 * NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
   }
 
@@ -247,11 +246,6 @@ const std::string QM_QChem::get_qcscratch(void){
 //     where Ea(u) is the component of the electric field in the a
 //     direction at u and mmi and qmi are the coordinates of the ith mm
 //     and qm atoms respectively.
-//   */
-
-
-//   /*
-//     FIXME: Should be doing binary io with FMan for the efield.
 //   */
   
 //   /*

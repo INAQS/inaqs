@@ -51,5 +51,6 @@ private:
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11
+#define FILE_POS_BEGIN              0
 
 #endif
