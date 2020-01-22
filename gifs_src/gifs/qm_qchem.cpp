@@ -299,7 +299,7 @@ std::ofstream QM_QChem::get_input_handle(){
   return os;
 }
 
-void QM_QChem::write_rem_section(std::ostream &os, std::map<std::string, std::string> options){
+void QM_QChem::write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options){
   // Default options 
   std::map<std::string, std::string> rem_keys
     {
@@ -307,16 +307,23 @@ void QM_QChem::write_rem_section(std::ostream &os, std::map<std::string, std::st
      {"basis",         basis_set},
      {"sym_ignore",    "true"},
      {"qm_mm",         "true"},
-     {"qmmm_ext_gifs", "1"},
      {"input_bohr",    "true"}
     };
+  
+  if (first_call ){
+    rem_keys.emplace("qmmm_ext_gifs", "1");
+  }
+  else{
+    rem_keys.emplace("qmmm_ext_gifs", "2");
+    rem_keys.emplace("scf_guess",     "read");
+  }  
 
+  /*
+    FIXME: need to make sure passed options take precedence
+  */
+  
   // merge in options; usually will include jobtype 
   rem_keys.insert(options.begin(), options.end());
-  
-  if (! first_call ){
-    rem_keys.emplace("scf_guess", "read");
-  }  
   
   os << "$rem" << std::endl;
   for (const auto& e: rem_keys){

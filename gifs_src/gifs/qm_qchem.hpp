@@ -18,7 +18,7 @@ private:
 
   void exec_qchem(void);
   void write_molecule_section(std::ostream &ifile);
-  void write_rem_section(std::ostream &os, std::map<std::string, std::string> options);
+  void write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options);
   std::ofstream get_input_handle(void);
 
   void parse_qm_gradient(std::vector<double> &g_qm);
