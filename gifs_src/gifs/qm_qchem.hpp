@@ -21,11 +21,13 @@ private:
   void write_rem_section(std::ostream &os, std::map<std::string, std::string> options);
   std::ofstream get_input_handle(void);
 
-  void parse_qm_gradient(std::vector<double> &g_qm, std::vector<double> &e);
+  void parse_qm_gradient(std::vector<double> &g_qm);
+  void parse_energies(std::vector<double> &e);
   void parse_mm_gradient(std::vector<double> &g_mm);
   void parse_nac_vector(std::vector<double> &nac);
   size_t readQFMan(int filenum, std::vector<double> &v);
-  
+  size_t readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset);
+
   const std::string get_qcprog(void);
   const std::string get_qcscratch(void);
 
@@ -41,8 +43,12 @@ private:
 
 /* Some useful FMan Files */
 
-#define FILE_DERCOUP 967
-#define FILE_ENERGY 99
-#define FILE_NUCLEAR_GRADIENT 131
+#define FILE_SET_ENERGY       72    // Excitation energies CIS states
+#define FILE_ENERGY           99    // 
+#define FILE_NUCLEAR_GRADIENT 131   // 
+#define FILE_DERCOUP          967   // Derrivative coupling 
+
+/* And some offsets */
+#define FILE_POS_CRNT_TOTAL_ENERGY  11
 
 #endif

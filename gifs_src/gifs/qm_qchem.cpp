@@ -20,7 +20,7 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;
   basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
-  excited_states(2)
+  excited_states(0)
 {
   /*
     FIXME: Threading should be done in a configurable fashion
@@ -44,9 +44,9 @@ void QM_QChem::get_properties(PropMap &props){
 
   (void) g_mm;
   (void) e;
-  //get_gradient_energies(g_qm, g_mm, e);
+  get_gradient_energies(g_qm, g_mm, e);
   //get_excited_gradient(g_qm, g_mm, e, 2);
-  get_nac_vector(g_qm, 1, 2);
+  //get_nac_vector(g_qm, 1, 2);
 }
 
 void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
@@ -60,8 +60,9 @@ void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
   input.close();
   
   exec_qchem();
-  
-  parse_qm_gradient(g_qm, e);
+
+  parse_energies(e);
+  parse_qm_gradient(g_qm);
   if (NMM > 0){
     parse_mm_gradient(g_mm);
   }
@@ -129,8 +130,38 @@ void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
 }
 
 void QM_QChem::parse_nac_vector(std::vector<double> &nac){
-  size_t count = readQFMan(FILE_DERCOUP, nac); 
-  std::cout << count << std::endl;
+  size_t count = readQFMan(FILE_DERCOUP, nac);
+  if (count != 3 * (NMM + NQM)){
+    throw std::runtime_error("Unable to parse NAC vector!");
+  }
+}
+
+void QM_QChem::parse_energies(std::vector<double> &e){
+  readQFMan(FILE_ENERGY, e, 1, FILE_POS_CRNT_TOTAL_ENERGY);
+
+  if (excited_states > 0){
+    double e_ground = e[0];
+
+    readQFMan(FILE_SET_ENERGY, e);
+    /* Energies for higher states given in terms of exitations so we
+       must add in the ground */
+    e.emplace(e.begin(), 0.0);
+    for (auto & ei: e){
+      ei += e_ground;
+    }
+  }
+
+  if (e.size() != excited_states + 1){
+    std::cout << e.size() << std::endl;
+    throw std::runtime_error("Unable to parse energies!");
+  }
+}
+
+void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
+  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm);
+  if (count != 3 * NQM){
+    throw std::runtime_error("Unable to parse QM gradient!");
+  }
 }
 
 const std::string QM_QChem::get_qcprog(void){
@@ -214,44 +245,6 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
 
   if (i != NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
-  }
-}
-
-void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm,
-				 std::vector<double> &e){
-  std::string gfile = qc_scratch_directory + "/" + "GRAD";
-  std::ifstream ifile(gfile);
-  std::string line;
-
-  bool gradient = false;
-  bool energy = false;
-  size_t i = 0;
-  
-  while(getline(ifile, line) && i < NQM){
-    std::stringstream s(line);
-    if (energy){
-      s>>e[0];
-      energy = false;
-    }
-
-    if (gradient){
-      s>>g_qm[i*3 + 0]
-       >>g_qm[i*3 + 1]
-       >>g_qm[i*3 + 2];
-      i++;
-    }
-    
-    if (line == "$energy"){
-      energy = true;
-    }
-    if (line == "$gradient"){
-      energy = false;
-      gradient = true;
-    }
-  }
-
-  if (i != NQM){
-    throw std::runtime_error("Unable to parse QM gradient!");
   }
 }
 
@@ -341,7 +334,16 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   }
 }
 
+/*
+  Given a q-qchem file number (see qm_qchem.hpp for examples), reads
+  the file from the scratch directory into the vector v, the contents
+  of which are destroyed.
+*/
 size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
+  return readQFMan(filenum, v, v.max_size(), 0);
+}
+
+size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset){
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
   std::ifstream ifile;
   ifile.open(path, std::ios::in | std::ios::binary);
@@ -349,12 +351,21 @@ size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
   if (!ifile.is_open()){
     throw std::ios_base::failure("Error: cannot read from " + path);
   }
-  
+
+  /*
+    clear vector before reading so we aren't polluted by previous
+    elements; probably a small performance hit here, but 1) it doesn't
+    matter (this isn't our bottle-neck) and 2) it makes the code a lot
+    clearer.
+  */
+  v.clear();
   char buffer[sizeof(double)];
   size_t i = 0;
   while(ifile.read(buffer, sizeof(double))){
     double * d = (double *) buffer;
-    v.push_back(*d);
+    if ((i >= offset) && (i < offset+N)){
+      v.push_back(*d);
+    }
     i++;
   }
   ifile.close();
