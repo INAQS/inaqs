@@ -86,7 +86,8 @@ void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
 
   exec_qchem();
 
-  parse_qm_gradient(g_qm, e);
+  parse_energies(e);
+  parse_qm_gradient(g_qm);
   if (NMM > 0){
     parse_mm_gradient(g_mm);
   }
