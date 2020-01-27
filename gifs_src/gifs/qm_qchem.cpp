@@ -12,7 +12,6 @@
 #include "qm_qchem.hpp"
 #include "properties.hpp"
 
-#define FMT "%12.8g"
 
 QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   QMInterface(qmid, charge, mult),
@@ -49,6 +48,7 @@ void QM_QChem::get_properties(PropMap &props){
   //get_nac_vector(g_qm, 1, 2);
 }
 
+
 void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
 				     std::vector<double> &g_mm,
 				     std::vector<double> &e){
@@ -67,6 +67,7 @@ void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
     parse_mm_gradient(g_mm);
   }
 }
+
 
 void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
 				    std::vector<double> &g_mm,
@@ -90,9 +91,9 @@ void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
   parse_qm_gradient(g_qm);
   if (NMM > 0){
     parse_mm_gradient(g_mm);
-  }
-  
+  }  
 }
+
 
 void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
   std::ofstream input = get_input_handle();
@@ -130,12 +131,14 @@ void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
   parse_nac_vector(nac);  
 }
 
+
 void QM_QChem::parse_nac_vector(std::vector<double> &nac){
   size_t count = readQFMan(FILE_DERCOUP, nac);
   if (count != 3 * (NMM + NQM)){
     throw std::runtime_error("Unable to parse NAC vector!");
   }
 }
+
 
 void QM_QChem::parse_energies(std::vector<double> &e){
   readQFMan(FILE_ENERGY, e, 1, FILE_POS_CRNT_TOTAL_ENERGY);
@@ -157,6 +160,7 @@ void QM_QChem::parse_energies(std::vector<double> &e){
   }
 }
 
+
 void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
   size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm);
   if (count != 3 * NQM){
@@ -175,11 +179,6 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
      number of MM atoms can fluctuate during a simulation. */
   readQFMan(FILE_EFIELD, g_mm, 3*NMM, FILE_POS_BEGIN);
 
-  /*
-    FIXME: Why does the number of MM atoms fluctuate during a qmmm
-    run? Seems like GMX is already picking and choosing what to send
-    to us; perhaps via some cutoff??
-  */
   if (g_mm.size() != 3 * NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
   }
@@ -190,6 +189,23 @@ void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
     g_mm[3*i + 1] *= q;
     g_mm[3*i + 2] *= q;
   }
+  /*
+    This method replaced parsing efield.dat, which has the following
+    format:
+
+    Ex(mm1) Ey(mm1) Ez(mm1)
+    ...
+    Ex(mmN) Ey(mmN) Ez(mmN)
+    Ex(qm1) Ey(qm1) Ez(qm1)
+    ...
+    Ex(qmN) Ey(qmN) Ez(qmN)
+
+    where Ea(u) is the component of the electric field in the a
+    direction at u and mmi and qmi are the coordinates of the ith mm and
+    qm atoms respectively and there is a perhaps-present factor of (-1)
+    s.t. the product of the value and the charge is a gradient rather
+    than a force.
+  */
 }
 
 
@@ -204,6 +220,7 @@ const std::string QM_QChem::get_qcprog(void){
     return std::string(qc_str) + "/exe/qcprog.exe";
   }
 }
+
 
 const std::string QM_QChem::get_qcscratch(void){
   char * pwd = std::getenv("PWD");
@@ -232,52 +249,6 @@ const std::string QM_QChem::get_qcscratch(void){
   return scratch_path;
 }
 
-// void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
-//   /*
-//     efield.dat uses atomic units; its format is:
-
-//     Ex(mm1) Ey(mm1) Ez(mm1)
-//     ...
-//     Ex(mmN) Ey(mmN) Ez(mmN)
-//     Ex(qm1) Ey(qm1) Ez(qm1)
-//     ...
-//     Ex(qmN) Ey(qmN) Ez(qmN)
-
-//     where Ea(u) is the component of the electric field in the a
-//     direction at u and mmi and qmi are the coordinates of the ith mm
-//     and qm atoms respectively.
-//   */
-  
-//   /*
-//     FIXME: This will return a *force* rather than a gradient unless it
-//     is the negative of the field, which it may be. We need to return a
-//     gradient.
-//   */
-
-//   std::string gfile = qc_scratch_directory + "/" + "efield.dat";
-//   std::ifstream ifile(gfile);
-//   std::string line;
-
-//   size_t i = 0;
-//   {
-//     double x, y, z;
-//     while (getline(ifile, line) && i < NMM){
-//       std::stringstream s(line);
-//       s >> x >> y >> z;
-//       const double q = chg_mm[i];
-//       g_mm[i*3 + 0] = x * q;
-//       g_mm[i*3 + 1] = y * q;
-//       g_mm[i*3 + 2] = z * q;
-//       i++;
-//     }
-//   }
-
-//   if (i != NMM){
-//     throw std::runtime_error("Unable to parse MM gradient!");
-//   }
-// }
-
-
 
 void QM_QChem::exec_qchem(void){
   std::string cmd = "cd " + qc_scratch_directory + "; " +
@@ -298,6 +269,7 @@ std::ofstream QM_QChem::get_input_handle(){
 
   return os;
 }
+
 
 void QM_QChem::write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options){
   // Default options 
@@ -371,6 +343,7 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   }
 }
 
+
 /*
   Given a q-qchem file number (see qm_qchem.hpp for examples), reads
   the file from the scratch directory into the vector v, the contents
@@ -380,6 +353,10 @@ size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
   return readQFMan(filenum, v, v.max_size(), 0);
 }
 
+
+/*
+  Same as above except we read N elements starting from offset.
+*/
 size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset){
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
   std::ifstream ifile;
