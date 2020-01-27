@@ -81,9 +81,9 @@ int main(void){
   std::vector<int> grads{1, 2, 3};
   
   PropMap props{};
-  props.emplace(QMProperty::energies, &v);
   props.emplace(mkprop(QMProperty::qmgradient, grads), &u);
-  //props.emplace(mkprop(QMProperty::qmgradient), &v);
+  props.emplace(QMProperty::energies, &v);             // Comment this line and uncomment the below
+  //props.emplace(mkprop(QMProperty::qmgradient), &v); // a 'Bad Key!' abort
   
   std::vector<double> *out = props.get(QMProperty::energies);
   std::cout << v[1] << "\n";
