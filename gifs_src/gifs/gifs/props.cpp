@@ -1,4 +1,4 @@
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -7,7 +7,7 @@
   List of all possible properties that could be produced by or
   requested of a QMInterface.
 */
-enum class QMProperty{
+enum class QMPropertyEnum {
     qmgradient,
     mmgradient,
     energies,
@@ -16,20 +16,36 @@ enum class QMProperty{
     wfoverlap,
 };
 
-class QMReq{
-public:
-  QMReq(QMProperty p, std::vector<double> &r): prop(p), r(r), idx({}) {}
-  QMReq(QMProperty p, std::vector<double> &r, const std::vector<int> idx): prop(p), r(r), idx(idx) {}
-  
-  QMProperty prop;
-  std::vector<double> &r;
-  const std::vector<int> idx; 
-};
-
-class PropMap : public std::unordered_map<QMProperty, std::vector<double>*>
+class  QMProperty 
 {
 public:
-  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {};
+    QMProperty(QMPropertyEnum in_prop) : qmprop{in_prop} {}
+
+    inline bool operator==(QMPropertyEnum rhs) const { return rhs == qmprop; }
+    inline bool operator<(QMPropertyEnum rhs) const { return rhs < qmprop; }
+    inline bool operator>(QMPropertyEnum rhs) const { return rhs > qmprop; }
+    inline bool operator==(QMProperty rhs) const { return rhs.qmprop == qmprop; }
+    inline bool operator<(QMProperty rhs) const { return rhs.qmprop < qmprop; }
+    inline bool operator>(QMProperty rhs) const { return rhs.qmprop > qmprop; }
+private:
+    QMPropertyEnum qmprop{};
+};
+
+class QMPropertyVector:
+    public QMProperty
+{
+public:
+  QMPropertyVector(QMPropertyEnum p, std::vector<int> in_idx) : QMProperty{p}, idx{in_idx} {}
+private:
+  const std::vector<int> idx;
+};
+
+
+class PropMap : 
+    public std::map<QMProperty, std::vector<double>*>
+{
+public:
+  PropMap() : std::map<QMProperty, std::vector<double>*>{} {};
   
   std::vector<double>& get(QMProperty key) {
     auto itr = find(key);
@@ -40,66 +56,18 @@ public:
   }
 };
 
-class PropVec : public std::vector<QMReq>{
-public:
-  PropVec() : std::vector<QMReq> {} {};
-  
-  bool includes(QMProperty key){
-    auto it = std::find_if(begin(), end(),
-			   [&] (const QMReq &p)->bool{
-			     return p.prop == key;});
-    return it != end();
-  }
-  
-  std::vector<double>& getmem(QMProperty key){
-    auto it = std::find_if(begin(), end(),
-			   [&] (const QMReq &p)->bool{
-			     return p.prop == key;});
-    if(it == end()){
-      throw std::invalid_argument("Bad Key!");
-    }
-    else return it->r;
-  }
-
-  const std::vector<int>& getidx(QMProperty key){
-    auto it = std::find_if(begin(), end(),
-			   [&] (const QMReq &p)->bool{
-			     return p.prop == key;});
-    if(it == end()){
-      throw std::invalid_argument("Bad Key!");
-    }
-    else return it->idx;
-  }
-};
+QMProperty get_property(QMPropertyEnum prop) { return QMProperty{prop}; }
+QMProperty get_property(QMPropertyEnum prop, std::vector<int> idx) { return QMPropertyVector(prop, idx); }
 
 int main(void){
-  std::vector<double> u, v, w;
+  std::vector<double> u{1, 2, 3}; 
+  std::vector<double> v{4, 5, 6};
+  std::vector<int> grads{1, 2, 3};
   
   PropMap props{};
-  props.emplace(QMProperty::qmgradient, &v);
-  props.emplace(QMProperty::mmgradient, &u);
+  props.emplace(QMPropertyEnum::energies, &v);
+  props.emplace(get_property(QMPropertyEnum::qmgradient, grads), &u);
 
-  PropVec props_v {};
-  props_v.push_back(QMReq(QMProperty::qmgradient, v));
-  props_v.push_back(QMReq(QMProperty::mmgradient, u, {1, 2, 3}));
-  props_v.push_back(QMReq(QMProperty::energies,   w, {0, 2, 3}));
-
-  const std::vector<QMProperty> list_of_props= {QMProperty::qmgradient,
-						QMProperty::mmgradient,
-						QMProperty::energies,
-						QMProperty::nacvector,
-						QMProperty::nacvector_imag,
-						QMProperty::wfoverlap};
-  for (const QMProperty p: list_of_props){
-    std::cout << (int) p << ": ";
-    if (props_v.includes(p)){
-      std::cout << props_v.includes(p) << " :: ";
-      for (const auto &i: props_v.getidx(p)){
-	std::cout << i << " " ;
-      }
-    }
-    std::cout << std::endl;
-  }
   
   return 0;
 }
