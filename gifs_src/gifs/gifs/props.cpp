@@ -1,6 +1,7 @@
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <functional>
 #include <iostream>
 
 /*
@@ -27,9 +28,22 @@ public:
     inline bool operator==(QMProperty rhs) const { return rhs.qmprop == qmprop; }
     inline bool operator<(QMProperty rhs) const { return rhs.qmprop < qmprop; }
     inline bool operator>(QMProperty rhs) const { return rhs.qmprop > qmprop; }
-private:
+
     QMPropertyEnum qmprop{};
 };
+
+namespace std
+{
+    template<> struct hash<QMProperty>
+    {
+        std::size_t operator()(QMProperty const& prop) const noexcept
+        {
+            return std::hash<QMPropertyEnum>{}(prop.qmprop);
+        }
+
+    };
+}
+
 
 class QMPropertyVector:
     public QMProperty
@@ -42,17 +56,17 @@ private:
 
 
 class PropMap : 
-    public std::map<QMProperty, std::vector<double>*>
+    public std::unordered_map<QMProperty, std::vector<double>*>
 {
 public:
-  PropMap() : std::map<QMProperty, std::vector<double>*>{} {};
+  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {};
   
-  std::vector<double>& get(QMProperty key) {
+  std::vector<double>* get(QMProperty key) {
     auto itr = find(key);
     if(itr == end()){
       throw std::invalid_argument("Bad Key!");
     }
-    else return *(itr->second);
+    else return itr->second;
   }
 };
 
@@ -68,6 +82,11 @@ int main(void){
   props.emplace(QMPropertyEnum::energies, &v);
   props.emplace(get_property(QMPropertyEnum::qmgradient, grads), &u);
 
+  std::vector<double>* out = props.get(QMPropertyEnum::energies);
+  std::cout << v[1] << "\n";
+  (*out)[1] = 3;
+  std::cout << v[1] << "\n";
+  std::cout << (*out)[1] << "\n";
   
   return 0;
 }
