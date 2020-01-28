@@ -37,9 +37,9 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 
 void QM_QChem::get_properties(PropMap &props){
-  std::vector<double>& g_qm=props.get(QMProperty::qmgradient);
-  std::vector<double>& g_mm=props.get(QMProperty::mmgradient);
-  std::vector<double>& e=props.get(QMProperty::energies);
+  std::vector<double>& g_qm = *(props.get(QMProperty::qmgradient));
+  std::vector<double>& g_mm = *(props.get(QMProperty::mmgradient));
+  std::vector<double>& e = *(props.get(QMProperty::energies));
 
   (void) g_mm;
   (void) e;

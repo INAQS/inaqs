@@ -19,12 +19,21 @@ enum class QMProperty{
 };
 
 
-class PropMap :
-  public std::unordered_map<QMProperty, std::vector<double>*>
+class PropMap
 {
 public:
-  PropMap() : std::unordered_map<QMProperty, std::vector<double>*>{} {};
-  std::vector<double>& get(QMProperty key);
+  PropMap() : prop{} {};
+
+  std::vector<double>* get(QMProperty key);
+  const std::vector<int>* get_idx(QMProperty key) const;
+  inline std::vector<double>& operator[](QMProperty key) { return *prop[key]; }  //get(key)
+  
+  void emplace(QMProperty p, std::vector<double>* vec);
+  void emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec);
+  
+private:
+  std::unordered_map<QMProperty, std::vector<double>*> prop{};
+  std::unordered_map<QMProperty, std::vector<int>> prop_vec{};
 };
 
 #endif
