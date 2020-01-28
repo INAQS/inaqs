@@ -17,67 +17,56 @@ enum class QMProperty {
     wfoverlap,
 };
 
-class  QMPropertyWrap
+
+class PropMap
 {
 public:
-    QMPropertyWrap(QMProperty in_prop) : qmprop{in_prop} {}
-
-    inline bool operator==(QMProperty rhs) const { return rhs == qmprop; }
-    inline bool operator<(QMProperty rhs) const { return rhs < qmprop; }
-    inline bool operator>(QMProperty rhs) const { return rhs > qmprop; }
-    inline bool operator==(QMPropertyWrap rhs) const { return rhs.qmprop == qmprop; }
-    inline bool operator<(QMPropertyWrap rhs) const { return rhs.qmprop < qmprop; }
-    inline bool operator>(QMPropertyWrap rhs) const { return rhs.qmprop > qmprop; }
-
-    QMProperty qmprop{};
-    virtual const std::vector<int>* get_idx(void) const {return nullptr;} 
-};
-
-namespace std
-{
-    template<> struct hash<QMPropertyWrap>
-    {
-        std::size_t operator()(QMPropertyWrap const& prop) const noexcept
-        {
-            return std::hash<QMProperty>{}(prop.qmprop);
-        }
-    };
-}
-
-
-class QMPropertyVector:
-    public QMPropertyWrap
-{
-public:
-  QMPropertyVector(QMProperty p, std::vector<int> in_idx) : QMPropertyWrap{p}, idx{in_idx} {}
-  virtual const std::vector<int>* get_idx(void) const {return &idx;} 
-private:
-  const std::vector<int> idx;
-};
-
-
-class PropMap : 
-    public std::unordered_map<QMPropertyWrap, std::vector<double>*>
-{
-public:
-  PropMap() : std::unordered_map<QMPropertyWrap, std::vector<double>*>{} {};
+  PropMap() : prop{} {};
   
-  std::vector<double>* get(QMPropertyWrap key) {
-    auto itr = find(key);
-    if(itr == end()){
+  std::vector<double>* get(QMProperty key) {
+    auto itr = prop.find(key);
+    if(itr == prop.end()){
       throw std::invalid_argument("Bad Key!");
     }
     else return itr->second;
   }
+
+
+  void emplace(QMProperty p, std::vector<double>* vec) { prop.emplace(p, vec); }
+  void emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec) { prop.emplace(p, vec); prop_vec.emplace(p, iv); }
+  //
+  inline std::vector<double>& operator[](QMProperty key) { return *prop[key]; } 
+  //
+  const std::vector<int>* get_idx(QMProperty key) const { 
+      auto itr = prop_vec.find(key);
+      if (itr == prop_vec.end()) {
+          return nullptr; 
+      }
+      return &itr->second;
+  }
+private:
+    std::unordered_map<QMProperty, std::vector<double>*> prop{};
+    std::unordered_map<QMProperty, std::vector<int>> prop_vec{}; 
 };
 
-QMPropertyWrap mkprop(QMProperty prop) { return QMPropertyWrap{prop}; }
-QMPropertyWrap mkprop(QMProperty prop, std::vector<int> idx) { return QMPropertyVector(prop, idx); }
 
 int main(void){
   std::vector<double> u{1, 2, 3}; 
   std::vector<double> v{4, 5, 6};
   std::vector<int> grads{1, 2, 3};
+  std::vector<int> index{1, 2, 3};
+  
+  PropMap props{};
+  props.emplace(QMProperty::qmgradient, grads, &u);
+ 
+  std::cout << props[QMProperty::qmgradient][1] << '\n';
+  std::cout << props.get_idx(QMProperty::qmgradient)->size() << '\n';
+
+  /*
+
+  const std::vector<int>* idx = pv.get_idx();
+  std::cout << (idx == nullptr) << "\n";
+  //std::cout << "size: " << (*idx).size() << std::endl;
   
   PropMap props{};
   props.emplace(mkprop(QMProperty::qmgradient, grads), &u);
@@ -99,9 +88,10 @@ int main(void){
       std::cout << "but didn't find idx!" << std::endl;
     }
     else{
-      std::cout << "size: " << (*id).size() << std::endl;
+//      std::cout << "size: " << (*id).size() << std::endl;
     }
   }
   
+  */
   return 0;
 }
