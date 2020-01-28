@@ -20,5 +20,38 @@ const std::vector<int>* PropMap::get_idx(QMProperty key) const {
   return &itr->second;
 }
 
-void PropMap::emplace(QMProperty p, std::vector<double>* vec) { prop.emplace(p, vec); }
-void PropMap::emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec) { prop.emplace(p, vec); prop_vec.emplace(p, iv); }
+bool PropMap::has(QMProperty key) const{
+  return prop.end() != prop.find(key); 
+}
+
+bool PropMap::has_idx(QMProperty key) const{
+  return prop_vec.end() != prop_vec.find(key); 
+}
+
+const std::vector<QMProperty> PropMap::keys(void) const {
+  std::vector<QMProperty> qv;
+  for (auto p: prop){
+    qv.push_back(p.first);
+  }
+
+  return qv;
+}
+
+void PropMap::emplace(QMProperty p, std::vector<double>* vec) {
+  if (has(p) || has_idx(p)){
+    throw std::invalid_argument("Property already in Map!");
+  }
+  else{
+    prop.emplace(p, vec);
+  }
+}
+
+void PropMap::emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec) {
+  if (has(p) || has_idx(p)){
+    throw std::invalid_argument("Property already in Map!");
+  }
+  else{
+    prop.emplace(p, vec);
+    prop_vec.emplace(p, iv);
+  }
+}

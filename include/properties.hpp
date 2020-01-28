@@ -26,10 +26,15 @@ public:
 
   std::vector<double>* get(QMProperty key);
   const std::vector<int>* get_idx(QMProperty key) const;
-  inline std::vector<double>& operator[](QMProperty key) { return *prop[key]; }  //get(key)
+  inline std::vector<double>& operator[](QMProperty key) { return *get(key); }  //get(key)
   
   void emplace(QMProperty p, std::vector<double>* vec);
   void emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec);
+
+  bool has(QMProperty key) const;
+  bool has_idx(QMProperty key) const;
+
+  const std::vector<QMProperty> keys(void) const;
   
 private:
   std::unordered_map<QMProperty, std::vector<double>*> prop{};
