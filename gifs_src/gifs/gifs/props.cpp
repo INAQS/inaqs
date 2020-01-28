@@ -40,7 +40,6 @@ namespace std
         {
             return std::hash<QMPropertyEnum>{}(prop.qmprop);
         }
-
     };
 }
 
