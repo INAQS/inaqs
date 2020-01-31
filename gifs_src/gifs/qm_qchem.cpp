@@ -38,77 +38,56 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 void QM_QChem::get_properties(PropMap &props){
   const std::vector<int> *idx;
-  bool ground_energy = false, excited_energy = false;
-
-  // Wavefunction overlap
-  if (props.has(QMProperty::wfoverlap)){ // FIXME: need to think about sequencing here
-    throw std::invalid_argument("WF-overlap not implemented!");
-  }
-
-  // NAC vector
-  if (props.has(QMProperty::nacvector_imag)){ // require real nac as well
-    throw std::invalid_argument("Imaginary NAC not implemented!");
-  }
-  else if (props.has(QMProperty::nacvector)){
-    idx = props.get_idx(QMProperty::nacvector);
-    size_t A = (*idx)[0]; size_t B = (*idx)[1];
-    get_nac_vector(*props.get(QMProperty::nacvector), A, B);
-  }
-
-  // Gradients
-  if (props.has(QMProperty::mmgradient)){
-    if (props.has_idx(QMProperty::qmgradient)){
-      idx = props.get_idx(QMProperty::qmgradient);
-      for (auto i: *idx){ //FIXME: each gradient will be overwritten
-	get_excited_gradient(props.get(QMProperty::qmgradient),
-			     props.get(QMProperty::mmgradient),
-			     (size_t) i);
-	excited_energy = true;
-      }
-    }
-    else{
-      get_ground_gradient(props.get(QMProperty::qmgradient),
-			  props.get(QMProperty::mmgradient));
-    }
-    ground_energy = true;
-  }
-  else if (props.has(QMProperty::qmgradient)){ // QM but no MM
-    if (props.has_idx(QMProperty::qmgradient)){
-      idx = props.get_idx(QMProperty::qmgradient);
-      for (auto i: *idx){ //FIXME: each gradient will be overwritten
-	get_excited_gradient(props.get(QMProperty::qmgradient), NULL, (size_t) i);
-	excited_energy = true;
-      }
-    }
-    else{
-      get_ground_gradient(props.get(QMProperty::qmgradient), NULL);
-    }
-    ground_energy = true;
-  }
   
-  // Energies 
-  if (props.has(QMProperty::energies)){
-    if (props.has_idx(QMProperty::energies)){
-      if (excited_energy){
-	parse_energies(*props.get(QMProperty::energies));
+  for (QMProperty p: props.keys()){
+    switch(p){
+      
+    case QMProperty::wfoverlap:
+      throw std::invalid_argument("WF-overlap not implemented!");
+      break;
+      
+    case QMProperty::nacvector_imag:
+      throw std::invalid_argument("Imaginary NAC not implemented!");
+      break;
+      
+    case QMProperty::nacvector:{
+      idx = props.get_idx(QMProperty::nacvector);
+      size_t A = (*idx)[0]; size_t B = (*idx)[1];
+      get_nac_vector(*props.get(QMProperty::nacvector), A, B);
+      break;
+    }
+      
+    case QMProperty::mmgradient: //explicit fall-through
+    case QMProperty::qmgradient:
+      if (props.has_idx(QMProperty::qmgradient)){
+	for (auto i: *props.get_idx(QMProperty::qmgradient)){ //FIXME: ERROR: each gradient will be overwritten
+	  get_excited_gradient(props.get(QMProperty::qmgradient),
+			       props.get(QMProperty::mmgradient),
+			       (size_t) i);
+	}
       }
       else{
+	get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
+			    props.get(QMProperty::mmgradient));
+      }
+      break;
+      
+    case QMProperty::energies: // FIXME: eliminate extra calls to q-chem by parsing rather than recomputing
+      if (props.has_idx(QMProperty::energies)){
 	get_all_energies(props.get(QMProperty::energies));
       }
-    }
-    else{
-      if (ground_energy){
-	std::vector<double> e = {};
-	parse_energies(e);
-	(*props.get(QMProperty::energies))[0] = e[0];
-      }
       else{
-	get_ground_energy(props.get(QMProperty::energies));
+	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
       }
+      break;
+
+    default: // Compile with the default case commented out and the compiler will detect any handled properties
+      throw std::invalid_argument("Unknown QMProperty!");
+      break;
     }
   }
-  
 }
+
 
 void QM_QChem::get_ground_energy(std::vector<double> *e){
   // Build job

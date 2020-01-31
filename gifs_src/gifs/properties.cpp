@@ -7,7 +7,7 @@
 std::vector<double>* PropMap::get(QMProperty key) {
   auto itr = prop.find(key);
   if(itr == prop.end()){
-    throw std::invalid_argument("Bad Key!");
+    return nullptr;
   }
   else return itr->second;
 }
