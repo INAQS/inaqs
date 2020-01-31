@@ -9,13 +9,12 @@
   requested of a QMInterface.
 */
 enum class QMProperty{
-    qmgradient,
-    mmgradient,
-    energies,
     nacvector,
     nacvector_imag,
     wfoverlap,
-    
+    qmgradient,
+    mmgradient,
+    energies,
 };
 
 

@@ -13,6 +13,7 @@ public:
   QMInterface(const std::vector<int> &qmid, int charge, int mult);
   void update(const std::vector<double> &crdqm, const std::vector<double> &crdmm, const std::vector<double> &chgmm);
   inline size_t nqm() const noexcept { return NQM; };
+  inline int call_idx() const noexcept { return qm_call_idx; };
   
   virtual void get_properties(PropMap &props) =0;
   virtual ~QMInterface(){};
@@ -28,6 +29,9 @@ protected:
   size_t NMM;
   std::vector<double> crd_mm;      // NMM*3
   std::vector<double> chg_mm;      // NMM
+
+private:
+  int qm_call_idx = 0; // tracks each call to update;
 };
 
 #endif

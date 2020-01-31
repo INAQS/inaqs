@@ -37,6 +37,13 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 
 void QM_QChem::get_properties(PropMap &props){
+  // std::vector<double>& g_qm = *(props.get(QMProperty::qmgradient));
+  // std::vector<double>& g_mm = *(props.get(QMProperty::mmgradient));
+  // std::vector<double>& e = *(props.get(QMProperty::energies));
+
+  // get_gradient_energies(g_qm, g_mm, e);
+  // return;
+  
   const std::vector<int> *idx;
   
   for (QMProperty p: props.keys()){
@@ -54,30 +61,35 @@ void QM_QChem::get_properties(PropMap &props){
       idx = props.get_idx(QMProperty::nacvector);
       size_t A = (*idx)[0]; size_t B = (*idx)[1];
       get_nac_vector(*props.get(QMProperty::nacvector), A, B);
+      e_call_idx = call_idx(); ee_call_idx = call_idx();
       break;
     }
       
-    case QMProperty::mmgradient: //explicit fall-through
+    case QMProperty::mmgradient: //explicit fall-through; assume we need qm if we have mm
     case QMProperty::qmgradient:
       if (props.has_idx(QMProperty::qmgradient)){
 	for (auto i: *props.get_idx(QMProperty::qmgradient)){ //FIXME: ERROR: each gradient will be overwritten
 	  get_excited_gradient(props.get(QMProperty::qmgradient),
 			       props.get(QMProperty::mmgradient),
 			       (size_t) i);
+	  e_call_idx = call_idx(); ee_call_idx = call_idx();
 	}
       }
       else{
 	get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
 			    props.get(QMProperty::mmgradient));
+	e_call_idx = call_idx();
       }
       break;
       
     case QMProperty::energies: // FIXME: eliminate extra calls to q-chem by parsing rather than recomputing
       if (props.has_idx(QMProperty::energies)){
 	get_all_energies(props.get(QMProperty::energies));
+	e_call_idx = call_idx(); ee_call_idx = call_idx();
       }
       else{
 	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
+	e_call_idx = call_idx();
       }
       break;
 
@@ -90,32 +102,32 @@ void QM_QChem::get_properties(PropMap &props){
 
 
 void QM_QChem::get_ground_energy(std::vector<double> *e){
-  // Build job
-  std::ofstream input = get_input_handle();
-  write_rem_section(input, {{"jobtype","sp"}});
-  write_molecule_section(input);
-  input.close();
+  // Build job if we need to
+  if (e_call_idx != call_idx()){
+    std::ofstream input = get_input_handle();
+    write_rem_section(input, {{"jobtype","sp"}});
+    write_molecule_section(input);
+    input.close();
+    exec_qchem();
+  }
   
-  exec_qchem();
-
-  std::vector<double> result = {};
-  parse_energies(result);
-  (*e)[0] = result[0];
+  parse_energies(*e);
 }
 
 // Gets all energies: ground + excited states
 void QM_QChem::get_all_energies(std::vector<double> *e){
-  std::ofstream input = get_input_handle();
-  write_rem_section(input,
-		    {{"jobtype","sp"},
-		     {"cis_n_roots", std::to_string(excited_states)},
-		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-		     {"cis_triplets", "false"}  //be configurable
-		    });
-  write_molecule_section(input);
-  input.close();
-
-  exec_qchem();
+  if (ee_call_idx != call_idx()){
+    std::ofstream input = get_input_handle();
+    write_rem_section(input,
+		      {{"jobtype","sp"},
+		       {"cis_n_roots", std::to_string(excited_states)},
+		       {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+		       {"cis_triplets", "false"}  //be configurable
+		      });
+    write_molecule_section(input);
+    input.close();
+    exec_qchem();
+  }
 
   parse_energies(*e);
 }
@@ -123,19 +135,22 @@ void QM_QChem::get_all_energies(std::vector<double> *e){
 
 void QM_QChem::get_ground_gradient(std::vector<double> *g_qm,
 				   std::vector<double> *g_mm){
-
-  // Build job
-  std::ofstream input = get_input_handle();
-  write_rem_section(input, {{"jobtype","force"}});
-  write_molecule_section(input);
-  input.close();
+  static int last_idx = -1; //FIXME: this is a kludge and we should do better; perhaps at the switch/case level
+  if (last_idx != call_idx()){
+    // Build job
+    std::ofstream input = get_input_handle();
+    write_rem_section(input, {{"jobtype","force"}});
+    write_molecule_section(input);
+    input.close();
   
-  exec_qchem();
+    exec_qchem();
 
-  parse_qm_gradient(*g_qm);
-  if (g_mm && NMM > 0){
-    parse_mm_gradient(*g_mm);
+    parse_qm_gradient(*g_qm);
+    if (g_mm && NMM > 0){
+      parse_mm_gradient(*g_mm);
+    }
   }
+  last_idx = call_idx();
 }
 
 void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
@@ -259,7 +274,7 @@ void QM_QChem::parse_nac_vector(std::vector<double> &nac){
 void QM_QChem::parse_energies(std::vector<double> &e){
   readQFMan(FILE_ENERGY, e, 1, FILE_POS_CRNT_TOTAL_ENERGY);
 
-  if (excited_states > 0){
+  if (excited_states > 0 && e.size() > 1){
     double e_ground = e[0];
 
     readQFMan(FILE_SET_ENERGY, e);
@@ -374,6 +389,8 @@ void QM_QChem::exec_qchem(void){
     throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + qc_log_file);
   }
   first_call = false;
+  static int i = 0;
+  //std::cout << i++ << " :: " << call_idx() << std::endl;
 }
 
 

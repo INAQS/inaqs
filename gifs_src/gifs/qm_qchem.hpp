@@ -45,6 +45,9 @@ private:
   const std::string basis_set;
   const size_t excited_states;
   bool first_call = true;
+
+  int e_call_idx = -1;  // call index for ground and (e)xcited energy
+  int ee_call_idx = -1;
 };
 
 /* Some useful FMan Files */

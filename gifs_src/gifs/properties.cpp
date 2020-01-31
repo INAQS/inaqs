@@ -1,4 +1,5 @@
 #include "properties.hpp"
+#include <algorithm>
 
 /*
   List of all possible properties that could be produced by or
@@ -33,7 +34,7 @@ const std::vector<QMProperty> PropMap::keys(void) const {
   for (auto p: prop){
     qv.push_back(p.first);
   }
-
+  std::sort(qv.begin(), qv.end());
   return qv;
 }
 

@@ -16,4 +16,5 @@ void QMInterface::update(const std::vector<double> &crdqm, const std::vector<dou
   crd_qm = crdqm;
   crd_mm = crdmm;
   chg_mm = chgmm;
+  qm_call_idx++;
 }
