@@ -35,15 +35,8 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   //setenv("OMP_NUM_THREADS", "4", 0);
 }
 
-
 void QM_QChem::get_properties(PropMap &props){
-  // std::vector<double>& g_qm = *(props.get(QMProperty::qmgradient));
-  // std::vector<double>& g_mm = *(props.get(QMProperty::mmgradient));
-  // std::vector<double>& e = *(props.get(QMProperty::energies));
-
-  // get_gradient_energies(g_qm, g_mm, e);
-  // return;
-  
+  bool first_pass = true;
   const std::vector<int> *idx;
   
   for (QMProperty p: props.keys()){
@@ -67,18 +60,21 @@ void QM_QChem::get_properties(PropMap &props){
       
     case QMProperty::mmgradient: //explicit fall-through; assume we need qm if we have mm
     case QMProperty::qmgradient:
-      if (props.has_idx(QMProperty::qmgradient)){
-	for (auto i: *props.get_idx(QMProperty::qmgradient)){ //FIXME: ERROR: each gradient will be overwritten
-	  get_excited_gradient(props.get(QMProperty::qmgradient),
-			       props.get(QMProperty::mmgradient),
-			       (size_t) i);
-	  e_call_idx = call_idx(); ee_call_idx = call_idx();
+      if(first_pass){
+	if (props.has_idx(QMProperty::qmgradient)){
+	  for (auto i: *props.get_idx(QMProperty::qmgradient)){ //FIXME: ERROR: each gradient will be overwritten
+	    get_excited_gradient(props.get(QMProperty::qmgradient),
+				 props.get(QMProperty::mmgradient),
+				 (size_t) i);
+	    e_call_idx = call_idx(); ee_call_idx = call_idx();
+	  }
 	}
-      }
-      else{
-	get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
-			    props.get(QMProperty::mmgradient));
-	e_call_idx = call_idx();
+	else{
+	  get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
+			      props.get(QMProperty::mmgradient));
+	  e_call_idx = call_idx();
+	}
+	first_pass = false;
       }
       break;
       
@@ -135,22 +131,18 @@ void QM_QChem::get_all_energies(std::vector<double> *e){
 
 void QM_QChem::get_ground_gradient(std::vector<double> *g_qm,
 				   std::vector<double> *g_mm){
-  static int last_idx = -1; //FIXME: this is a kludge and we should do better; perhaps at the switch/case level
-  if (last_idx != call_idx()){
-    // Build job
-    std::ofstream input = get_input_handle();
-    write_rem_section(input, {{"jobtype","force"}});
-    write_molecule_section(input);
-    input.close();
+  // Build job
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, {{"jobtype","force"}});
+  write_molecule_section(input);
+  input.close();
   
-    exec_qchem();
+  exec_qchem();
 
-    parse_qm_gradient(*g_qm);
-    if (g_mm && NMM > 0){
-      parse_mm_gradient(*g_mm);
-    }
+  parse_qm_gradient(*g_qm);
+  if (g_mm && NMM > 0){
+    parse_mm_gradient(*g_mm);
   }
-  last_idx = call_idx();
 }
 
 void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
@@ -390,7 +382,7 @@ void QM_QChem::exec_qchem(void){
   }
   first_call = false;
   static int i = 0;
-  //std::cout << i++ << " :: " << call_idx() << std::endl;
+  std::cout << call_idx() << " :: " << i++ << std::endl;
 }
 
 
