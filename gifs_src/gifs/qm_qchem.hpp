@@ -16,6 +16,12 @@ private:
   void get_excited_gradient( std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e, size_t surface);
   void get_nac_vector(std::vector<double> &nac, size_t A, size_t B);
 
+  void get_ground_gradient (std::vector<double> *g_qm, std::vector<double> *g_mm);
+  void get_excited_gradient(std::vector<double> *g_qm, std::vector<double> *g_mm, size_t surface);
+
+  void get_ground_energy(std::vector<double> *e);
+  void get_all_energies(std::vector<double> *e);
+  
   void exec_qchem(void);
   void write_molecule_section(std::ostream &ifile);
   void write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options);

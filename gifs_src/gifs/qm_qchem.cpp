@@ -37,15 +37,152 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 
 void QM_QChem::get_properties(PropMap &props){
-  std::vector<double>& g_qm = *(props.get(QMProperty::qmgradient));
-  std::vector<double>& g_mm = *(props.get(QMProperty::mmgradient));
-  std::vector<double>& e = *(props.get(QMProperty::energies));
+  const std::vector<int> *idx;
+  bool ground_energy = false, excited_energy = false;
 
-  (void) g_mm;
-  (void) e;
-  get_gradient_energies(g_qm, g_mm, e);
-  //get_excited_gradient(g_qm, g_mm, e, 2);
-  //get_nac_vector(g_qm, 1, 2);
+  // Wavefunction overlap
+  if (props.has(QMProperty::wfoverlap)){ // FIXME: need to think about sequencing here
+    throw std::invalid_argument("WF-overlap not implemented!");
+  }
+
+  // NAC vector
+  if (props.has(QMProperty::nacvector_imag)){ // require real nac as well
+    throw std::invalid_argument("Imaginary NAC not implemented!");
+  }
+  else if (props.has(QMProperty::nacvector)){
+    idx = props.get_idx(QMProperty::nacvector);
+    size_t A = (*idx)[0]; size_t B = (*idx)[1];
+    get_nac_vector(*props.get(QMProperty::nacvector), A, B);
+  }
+
+  // Gradients
+  if (props.has(QMProperty::mmgradient)){
+    if (props.has_idx(QMProperty::qmgradient)){
+      idx = props.get_idx(QMProperty::qmgradient);
+      for (auto i: *idx){ //FIXME: each gradient will be overwritten
+	get_excited_gradient(props.get(QMProperty::qmgradient),
+			     props.get(QMProperty::mmgradient),
+			     (size_t) i);
+	excited_energy = true;
+      }
+    }
+    else{
+      get_ground_gradient(props.get(QMProperty::qmgradient),
+			  props.get(QMProperty::mmgradient));
+    }
+    ground_energy = true;
+  }
+  else if (props.has(QMProperty::qmgradient)){ // QM but no MM
+    if (props.has_idx(QMProperty::qmgradient)){
+      idx = props.get_idx(QMProperty::qmgradient);
+      for (auto i: *idx){ //FIXME: each gradient will be overwritten
+	get_excited_gradient(props.get(QMProperty::qmgradient), NULL, (size_t) i);
+	excited_energy = true;
+      }
+    }
+    else{
+      get_ground_gradient(props.get(QMProperty::qmgradient), NULL);
+    }
+    ground_energy = true;
+  }
+  
+  // Energies 
+  if (props.has(QMProperty::energies)){
+    if (props.has_idx(QMProperty::energies)){
+      if (excited_energy){
+	parse_energies(*props.get(QMProperty::energies));
+      }
+      else{
+	get_all_energies(props.get(QMProperty::energies));
+      }
+    }
+    else{
+      if (ground_energy){
+	std::vector<double> e = {};
+	parse_energies(e);
+	(*props.get(QMProperty::energies))[0] = e[0];
+      }
+      else{
+	get_ground_energy(props.get(QMProperty::energies));
+      }
+    }
+  }
+  
+}
+
+void QM_QChem::get_ground_energy(std::vector<double> *e){
+  // Build job
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, {{"jobtype","sp"}});
+  write_molecule_section(input);
+  input.close();
+  
+  exec_qchem();
+
+  std::vector<double> result = {};
+  parse_energies(result);
+  (*e)[0] = result[0];
+}
+
+// Gets all energies: ground + excited states
+void QM_QChem::get_all_energies(std::vector<double> *e){
+  std::ofstream input = get_input_handle();
+  write_rem_section(input,
+		    {{"jobtype","sp"},
+		     {"cis_n_roots", std::to_string(excited_states)},
+		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+		     {"cis_triplets", "false"}  //be configurable
+		    });
+  write_molecule_section(input);
+  input.close();
+
+  exec_qchem();
+
+  parse_energies(*e);
+}
+
+
+void QM_QChem::get_ground_gradient(std::vector<double> *g_qm,
+				   std::vector<double> *g_mm){
+
+  // Build job
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, {{"jobtype","force"}});
+  write_molecule_section(input);
+  input.close();
+  
+  exec_qchem();
+
+  parse_qm_gradient(*g_qm);
+  if (g_mm && NMM > 0){
+    parse_mm_gradient(*g_mm);
+  }
+}
+
+void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
+				    std::vector<double> *g_mm,
+				    size_t surface){
+  if (surface > excited_states){
+    throw std::invalid_argument("Requested surface not computed!");
+  }
+  
+  std::ofstream input = get_input_handle();
+  write_rem_section(input,
+		    {{"jobtype","force"},
+		     {"cis_n_roots", std::to_string(excited_states)},
+		     {"cis_state_deriv", std::to_string(surface)},
+		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+		     {"cis_triplets", "false"}  //be configurable
+		    });
+  write_molecule_section(input);
+  input.close();
+
+  exec_qchem();
+
+  parse_qm_gradient(*g_qm);
+  if (g_mm && NMM > 0){
+    parse_mm_gradient(*g_mm);
+  }  
 }
 
 
