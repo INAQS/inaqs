@@ -24,17 +24,17 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   excited_states(0)
 {
   /*
-    FIXME: Threading should be done in a configurable fashion
-    set the number of threads, but don't overwrite if the flag is set elsewhere
+    FIXME: Threading should be done in a configurable fashion set the
+    number of threads, but don't overwrite if the flag is set
+    elsewhere
   */
   setenv("QCTHREADS", "4", 0);
 
   /*
-    FIXME: Setting $QCTHREADS seems sufficient on the subotnik
-    cluster, but perhaps this is unique to our setup. Need to check
-    with Evgeny to be sure.
+    Setting $QCTHREADS seems sufficient on the Subotnik cluster, but
+    perhaps this is unique to our setup. Need to check with Evgeny to
+    be sure. Changes to $OMP_NUM_THREADS seem to have no effect.
   */
-  //setenv("OMP_NUM_THREADS", "4", 0);
 }
 
 void QM_QChem::get_properties(PropMap &props){
@@ -60,8 +60,7 @@ void QM_QChem::get_properties(PropMap &props){
     }
       
     case QMProperty::mmgradient:
-      // if we need mm, then we will do qm, which catches both
-      break;
+      break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:
       if (props.has_idx(QMProperty::qmgradient)){
 	const std::vector<int> &surf_idx = *props.get_idx(QMProperty::qmgradient);
