@@ -390,8 +390,6 @@ void QM_QChem::exec_qchem(void){
     throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + qc_log_file);
   }
   first_call = false;
-  static int i = 0;
-  std::cout << call_idx() << " :: " << i++ << std::endl;
 }
 
 
