@@ -9,8 +9,10 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <limits>
+#include <algorithm>
 #include "qm_qchem.hpp"
 #include "properties.hpp"
+
 
 
 QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
@@ -36,7 +38,6 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 }
 
 void QM_QChem::get_properties(PropMap &props){
-  bool first_pass = true;
   const std::vector<int> *idx;
   
   for (QMProperty p: props.keys()){
@@ -58,34 +59,40 @@ void QM_QChem::get_properties(PropMap &props){
       break;
     }
       
-    case QMProperty::mmgradient: //explicit fall-through; assume we need qm if we have mm
-    case QMProperty::qmgradient:
-      if(first_pass){
-	if (props.has_idx(QMProperty::qmgradient)){
-	  for (auto i: *props.get_idx(QMProperty::qmgradient)){ //FIXME: ERROR: each gradient will be overwritten
-	    get_excited_gradient(props.get(QMProperty::qmgradient),
-				 props.get(QMProperty::mmgradient),
-				 (size_t) i);
-	    e_call_idx = call_idx(); ee_call_idx = call_idx();
-	  }
-	}
-	else{
-	  get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
-			      props.get(QMProperty::mmgradient));
-	  e_call_idx = call_idx();
-	}
-	first_pass = false;
-      }
+    case QMProperty::mmgradient:
+      // if we need mm, then we will do qm, which catches both
       break;
-      
-    case QMProperty::energies: // FIXME: eliminate extra calls to q-chem by parsing rather than recomputing
-      if (props.has_idx(QMProperty::energies)){
-	get_all_energies(props.get(QMProperty::energies));
+    case QMProperty::qmgradient:
+      if (props.has_idx(QMProperty::qmgradient)){
+	const std::vector<int> &surf_idx = *props.get_idx(QMProperty::qmgradient);
+	std::vector<double> &qm_gradients = *props.get(QMProperty::qmgradient);
+	std::vector<double> &mm_gradients = *props.get(QMProperty::mmgradient);
+	for (size_t i = 0; i < surf_idx.size(); i++){ // FIXME: would like to do this without copying
+	  std::vector<double> qmg(qm_gradients.begin() + i*3*NQM, qm_gradients.begin() + (i+1)*3*NQM);
+	  std::vector<double> mmg(mm_gradients.begin() + i*3*NMM, mm_gradients.begin() + (i+1)*3*NMM);
+	  
+	  get_excited_gradient(&qmg, &mmg, (size_t) surf_idx[i]);
+	  
+	  std::copy(qmg.begin(), qmg.end(), qm_gradients.begin() + i*3*NQM);
+	  std::copy(mmg.begin(), mmg.end(), mm_gradients.begin() + i*3*NMM);
+	}
 	e_call_idx = call_idx(); ee_call_idx = call_idx();
       }
       else{
-	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
+	get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
+			    props.get(QMProperty::mmgradient));
 	e_call_idx = call_idx();
+      }
+      break;
+
+    case QMProperty::energies:
+      // FIXME: clean-up the way we avoid an extra call for energy
+      // (currently: sorting + e(e)_call_idx flags)
+      if (props.has_idx(QMProperty::energies)){
+	get_all_energies(props.get(QMProperty::energies));
+      }
+      else{
+	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
       }
       break;
 
@@ -195,7 +202,9 @@ void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
 void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
 				    std::vector<double> &g_mm,
 				    std::vector<double> &e, size_t surface){
-  //FIXME: need to verify surface <= excited_states
+  if (surface > excited_states){
+    throw std::invalid_argument("Requested surface is greater than the number of excited states!");
+  }
   
   std::ofstream input = get_input_handle();
   write_rem_section(input,
@@ -416,7 +425,9 @@ void QM_QChem::write_rem_section(std::ostream &os, const std::map<std::string, s
   }  
 
   /*
-    FIXME: need to make sure passed options take precedence
+    FIXME: make sure passed options take precedence?  Could do this by
+    inserting the defaults into the passed options rather than the
+    other way around.
   */
   
   // merge in options; usually will include jobtype 
