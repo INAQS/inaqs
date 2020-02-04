@@ -66,7 +66,7 @@ void QM_QChem::get_properties(PropMap &props){
 	const std::vector<int> &surf_idx = *props.get_idx(QMProperty::qmgradient);
 	std::vector<double> &qm_gradients = *props.get(QMProperty::qmgradient);
 	std::vector<double> &mm_gradients = *props.get(QMProperty::mmgradient);
-	for (size_t i = 0; i < surf_idx.size(); i++){ // FIXME: would like to do this without copying
+	for (size_t i = 0; i < surf_idx.size(); i++){ // FIXME: would like to do this without copying; do vector "views" exist?
 	  std::vector<double> qmg(qm_gradients.begin() + i*3*NQM, qm_gradients.begin() + (i+1)*3*NQM);
 	  std::vector<double> mmg(mm_gradients.begin() + i*3*NMM, mm_gradients.begin() + (i+1)*3*NMM);
 	  
@@ -95,7 +95,7 @@ void QM_QChem::get_properties(PropMap &props){
       }
       break;
 
-    default: // Compile with the default case commented out and the compiler will detect any handled properties
+    default: // Compile with the default case commented out and the compiler will detect neglected properties
       throw std::invalid_argument("Unknown QMProperty!");
       break;
     }
