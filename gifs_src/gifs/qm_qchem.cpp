@@ -40,7 +40,7 @@ void QM_QChem::get_properties(PropMap &props){
     switch(p){
       
     case QMProperty::wfoverlap:
-      throw std::invalid_argument("WF-overlap not implemented!");
+      get_wf_overlap(*props.get(QMProperty::wfoverlap));
       break;
       
     case QMProperty::nacvector_imag:
@@ -100,20 +100,27 @@ void QM_QChem::get_properties(PropMap &props){
 
 //FIXME: make sure this is only computed on demand => modify q-chem
 void QM_QChem::get_wf_overlap(std::vector<double> &U){ //FIXME: use an armadillo matrix
-  static int call = 0;
-  if (call != call_idx()){ //FIXME: make sure this is the right thing to do
+  static int overlap_call = 0;
+  if (overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
+    overlap_call = call_idx();
     std::ofstream input = get_input_handle();
+    //FIXME: should compose CIS functionality rather than duplicating
     write_rem_section(input,
 		      {{"jobtype","sp"},
-		       {"namd_lowestsurface","1"}}); //FIXME: parametrize lowest surface
+		       {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
+		       {"dump_wf_overlap", "1"},
+		       {"cis_n_roots", std::to_string(excited_states)},
+		       {"cis_singlets", "true"},    //Fixme: singlet/triplet selection should
+		       {"cis_triplets", "false"}}); //be configurable
     write_molecule_section(input);
     input.close();
     exec_qchem();
-    call = call_idx();
   }
   else{
-    //don't recompute
+    overlap_call = call_idx();
+    //don't recompute 
   }
+  
   size_t count = readQFMan(FILE_WF_OVERLAP, U);
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse wavefunction overlap");

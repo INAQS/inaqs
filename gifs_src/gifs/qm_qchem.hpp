@@ -53,7 +53,7 @@ private:
 
 /* Some useful FMan Files */
 
-#define FILE_SET_ENERGY       72    // Excitation energies CIS states
+#define FILE_SET_ENERGY       72    // CIS state *excitation* energies 
 #define FILE_ENERGY           99    // 
 #define FILE_NUCLEAR_GRADIENT 131   //
 #define FILE_EFIELD           329   // 
