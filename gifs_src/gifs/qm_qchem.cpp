@@ -1,12 +1,8 @@
 #include <vector>
-#include <map>
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <stdexcept>
-#include <iomanip>
-#include <cstdlib>
 #include <sys/stat.h>
 #include <limits>
 #include <algorithm>
