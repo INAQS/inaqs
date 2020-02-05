@@ -5,56 +5,37 @@
 #include <armadillo>
 
 
-BOMD::BOMD(size_t nqm, const int *qmid){
-  qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1, 0);
-  qm_grd.resize(3, nqm);
-  energy.resize(1);
+// BOMD::BOMD(size_t nqm, const int *qmid){
+//   qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1, 0);
+//   qm_grd.resize(3, nqm, 1);
+//   energy.resize(1);
+BOMD::BOMD(std::vector<int.& qmids,
+           std::vector<double>& qm_crd, 
+           std::vector<double>& mm_crd, 
+           std::vector<double>& mm_chg, 
+           std::vector<double>& in_qm_grd,
+           std::vector<double>& in_mm_grd) :
+    qm_grd{in_qm_grd}, mm_grd{in_mm_grd}, energy{}
+{
+  qm = new QM_QChem(qmids, qm_crd, mm_crd, mm_chg, 0, 1);
+>>>>>>> b87ce38... updated interface
 };
 
 
-template<typename T>
-T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_chg, T* f, T* fshift)
+double BOMD::get_gradient()
 {
-  std::vector<double> qm_crd_v(qm_crd, qm_crd + 3*qm->nqm());
-  std::vector<double> mm_crd_v(mm_crd, mm_crd + 3*nmm);
-  std::vector<double> mm_chg_v(mm_chg, mm_chg + nmm);
-
-  for(auto &x: qm_crd_v){x /= BOHR2NM;} // nm -> a0
-  for(auto &x: mm_crd_v){x /= BOHR2NM;} // nm -> a0
-  
-  qm->update(qm_crd_v, mm_crd_v, mm_chg_v);
-
-  mm_grd.resize(3, nmm);
+    qm->update();
 
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);
     props.emplace(QMProperty::mmgradient, &mm_grd);
     props.emplace(QMProperty::energies, &energy);
-
+    //
     qm->get_properties(props);
-
-    // Unit conversion back qm->mm
-    {
-      int i = 0, j = 0;
-
-      for (auto& fqm: qm_grd) {
-        j = i++;
-        f[j] = HARTREE_BOHR2MD*fqm;
-        fshift[j] = f[j];
-      }
-
-      for (auto& fmm: mm_grd) {
-        j = i++;
-        f[j] = HARTREE_BOHR2MD*fmm;
-        fshift[j] = f[j];
-      }
-    }
-    // Return in "MD" units of KJ/mole 
-    return HARTREE2KJ * AVOGADRO * energy[0];
+    //
+    return energy[0];
 };
 
-template double BOMD::get_gradient(const double* qm_crd, size_t nmm, const double* mm_crd, const double* mm_chg, double* f, double* fshift);
-template float BOMD::get_gradient(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift);
 
 template<typename T>
 void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
@@ -62,5 +43,7 @@ void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
   (void) masses;
   (void) velocities;
 };
+
+
 template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
 template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);

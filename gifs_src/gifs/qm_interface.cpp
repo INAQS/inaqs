@@ -2,19 +2,25 @@
 #include "properties.hpp"
 #include "qm_interface.hpp"
 
-QMInterface::QMInterface(const std::vector<int> &qmid, int charge, int mult):
-  qm_charge(charge), qm_multiplicity(mult){
-  NQM = qmid.size();
+QMInterface::QMInterface(std::vector<int>& in_qmids, 
+                         std::vector<double>& in_qm_crd, 
+                         std::vector<double>& in_mm_crd, 
+                         std::vector<double>& in_mm_chg, 
+                         int charge, 
+                         int mult) :
+    atomids{in_qmids}, crd_qm{in_qm_crd}, 
+    crd_mm{in_mm_crd}, chg_mm{in_mm_chg}, 
+    qm_charge(charge), qm_multiplicity(mult)
+{
+  NQM = atomids.size();
   NMM = 0;
-  atomids = qmid;
   
   crd_qm.resize(3 * NQM);
-}
+};
 
-void QMInterface::update(const std::vector<double> &crdqm, const std::vector<double> &crdmm, const std::vector<double> &chgmm){
-  NMM = chgmm.size();
-  crd_qm = crdqm;
-  crd_mm = crdmm;
-  chg_mm = chgmm;
+
+void QMInterface::update()
+{
+  NMM = chg_mm.size();
   qm_call_idx++;
 }

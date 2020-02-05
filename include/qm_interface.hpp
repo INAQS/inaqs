@@ -10,8 +10,8 @@
 
 class QMInterface{
 public:
-  QMInterface(const std::vector<int> &qmid, int charge, int mult);
-  void update(const std::vector<double> &crdqm, const std::vector<double> &crdmm, const std::vector<double> &chgmm);
+  QMInterface(std::vector<int>& qmids, std::vector<double>& qm_crd, std::vector<double>& mm_crd, std::vector<double>& mm_chg, int charge, int mult);
+  void update();
   inline size_t nqm() const noexcept { return NQM; };
   inline int call_idx() const noexcept { return qm_call_idx; };
   
@@ -23,12 +23,12 @@ protected:
   size_t NQM;             // const, actually NQM+NLink
   int qm_charge, qm_multiplicity;
   //  fixed size
-  std::vector<int> atomids;        // NQM
-  std::vector<double> crd_qm;      // NQM*3
+  std::vector<int>& atomids;        // NQM
+  std::vector<double>& crd_qm;      // NQM*3
   // flexible
   size_t NMM;
-  std::vector<double> crd_mm;      // NMM*3
-  std::vector<double> chg_mm;      // NMM
+  std::vector<double>& crd_mm;      // NMM*3
+  std::vector<double>& chg_mm;      // NMM
 
 private:
   int qm_call_idx = 0; // tracks each call to update;
