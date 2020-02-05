@@ -102,6 +102,29 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
+//FIXME: make sure this is only computed on demand => modify q-chem
+void QM_QChem::get_wf_overlap(std::vector<double> &U){ //FIXME: use an armadillo matrix
+  static int call = 0;
+  if (call != call_idx()){ //FIXME: make sure this is the right thing to do
+    std::ofstream input = get_input_handle();
+    write_rem_section(input,
+		      {{"jobtype","sp"},
+		       {"namd_lowestsurface","1"}}); //FIXME: parametrize lowest surface
+    write_molecule_section(input);
+    input.close();
+    exec_qchem();
+    call = call_idx();
+  }
+  else{
+    //don't recompute
+  }
+  size_t count = readQFMan(FILE_WF_OVERLAP, U);
+  if (count != excited_states * excited_states){
+    throw std::runtime_error("Unable to parse wavefunction overlap");
+  }
+  
+}
+
 
 void QM_QChem::get_ground_energy(std::vector<double> *e){
   // Build job if we need to
@@ -486,6 +509,7 @@ size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
   return readQFMan(filenum, v, v.max_size(), 0);
 }
 
+//FIXME: readQFMan should also be able to take an armadillo matrix/whatever/...
 
 /*
   Same as above except we read N elements starting from offset.

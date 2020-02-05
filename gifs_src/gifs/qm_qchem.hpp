@@ -15,6 +15,7 @@ private:
   void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
   void get_excited_gradient( std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e, size_t surface);
   void get_nac_vector(std::vector<double> &nac, size_t A, size_t B);
+  void get_wf_overlap(std::vector<double> &U);
 
   void get_ground_gradient (std::vector<double> *g_qm, std::vector<double> *g_mm);
   void get_excited_gradient(std::vector<double> *g_qm, std::vector<double> *g_mm, size_t surface);
@@ -57,6 +58,7 @@ private:
 #define FILE_NUCLEAR_GRADIENT 131   //
 #define FILE_EFIELD           329   // 
 #define FILE_DERCOUP          967   // Derrivative coupling 
+#define FILE_WF_OVERLAP       398   // wavefunction overlap
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11
