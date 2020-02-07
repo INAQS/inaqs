@@ -6,14 +6,33 @@
 #include <vector>
 #include <map>
 
+// using RK__T = std::map<std::string, std::string>;
+// class REMKeys: public RK__T {
+//   using RK__T::RK__T;
+  
+// public:
+//   REMKeys& operator+=(const REMKeys& rhs){
+//     this->insert(rhs.begin(), rhs.end());
+//     return *this;
+//   }
+ 
+//   friend REMKeys operator+(REMKeys lhs, const REMKeys& rhs){
+//     lhs += rhs;
+//     return lhs;
+//   }
+// };
+
+using REMKeys = std::map<std::string, std::string>;
+
 class QM_QChem: public QMInterface{
 public:
   QM_QChem(const std::vector<int> &qmid, int charge, int mult);
   void get_properties(PropMap &props);
   
 private:
-  void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
-  void get_excited_gradient( std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e, size_t surface);
+  // void get_gradient_energies(std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e);
+  // void get_excited_gradient( std::vector<double> &g_qm, std::vector<double> &g_mm, std::vector<double> &e, size_t surface);
+  
   void get_nac_vector(std::vector<double> &nac, size_t A, size_t B);
   void get_wf_overlap(std::vector<double> &U);
 
@@ -22,17 +41,17 @@ private:
 
   void get_ground_energy(std::vector<double> *e);
   void get_all_energies(std::vector<double> *e);
-  
-  void exec_qchem(void);
-  void write_molecule_section(std::ostream &ifile);
-  void write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options);
+
   std::ofstream get_input_handle(void);
+  void write_molecule_section(std::ostream &ifile);
+  void write_rem_section(std::ostream &os, const REMKeys &options);
+  REMKeys excited_rem(void);
+  void exec_qchem(void);
 
   void parse_qm_gradient(std::vector<double> &g_qm);
-  void parse_energies(std::vector<double> &e);
   void parse_mm_gradient(std::vector<double> &g_mm);
-  void parse_nac_vector(std::vector<double> &nac);
-  size_t readQFMan(int filenum, std::vector<double> &v);
+  void parse_energies(std::vector<double> &e);
+  
   size_t readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset);
 
   const std::string get_qcprog(void);

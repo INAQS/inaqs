@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <stdexcept>
 #include <sys/stat.h>
@@ -20,12 +21,11 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   excited_states(0)
 {
   /*
-    FIXME: Threading should be done in a configurable fashion set the
-    number of threads, but don't overwrite if the flag is set
+    Set the number of threads, but don't overwrite if the flag is set
     elsewhere
   */
+  // FIXME: Threading should be done in a configurable fashion
   setenv("QCTHREADS", "4", 0);
-
   /*
     Setting $QCTHREADS seems sufficient on the Subotnik cluster, but
     perhaps this is unique to our setup. Need to check with Evgeny to
@@ -33,8 +33,34 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   */
 }
 
+void print2(std::vector<double> M, size_t cols){
+  size_t rows = (size_t) M.size()/cols;
+  if (rows * cols != M.size()){
+    std::cerr << "Warning: not a matrix" << std::endl;
+  }
+
+  for (size_t i = 0; i < rows; i++){
+    for (size_t j = 0; j < cols; j++){
+      std::cout << std::fixed << std::setprecision(5) << M[i*cols + j] << "  ";
+    }
+    std::cout << std::endl;
+  }
+}
+
+
 void QM_QChem::get_properties(PropMap &props){
   const std::vector<int> *idx;
+
+  // std::vector<double> U (excited_states * excited_states);
+  // get_wf_overlap(U);
+  // print2(U, excited_states);
+  // std::cout << std::endl;
+
+  // std::vector<double> D (3 * (NMM + NQM));
+  // get_nac_vector(D, 1, 2);
+  // print2(D, 3);
+  // std::cout << std::endl;
+  
   
   for (QMProperty p: props.keys()){
     switch(p){
@@ -98,40 +124,37 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
-//FIXME: make sure this is only computed on demand => modify q-chem
 void QM_QChem::get_wf_overlap(std::vector<double> &U){ //FIXME: use an armadillo matrix
   static int overlap_call = 0;
   if (overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
-    overlap_call = call_idx();
+    REMKeys k = excited_rem();
+    k.insert({{"jobtype","sp"},
+    	      {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
+    	      {"dump_wf_overlap", "1"}});
+
     std::ofstream input = get_input_handle();
-    //FIXME: should compose CIS functionality rather than duplicating
-    write_rem_section(input,
-		      {{"jobtype","sp"},
-		       {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
-		       {"dump_wf_overlap", "1"},
-		       {"cis_n_roots", std::to_string(excited_states)},
-		       {"cis_singlets", "true"},    //Fixme: singlet/triplet selection should
-		       {"cis_triplets", "false"}}); //be configurable
+    write_rem_section(input, k);
     write_molecule_section(input);
     input.close();
     exec_qchem();
   }
   else{
-    overlap_call = call_idx();
     //don't recompute 
   }
   
-  size_t count = readQFMan(FILE_WF_OVERLAP, U);
+  overlap_call = call_idx();
+  
+  size_t count = readQFMan(FILE_WF_OVERLAP, U, excited_states*excited_states, FILE_POS_BEGIN);
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse wavefunction overlap");
-  }
-  
+  }  
 }
 
 
 void QM_QChem::get_ground_energy(std::vector<double> *e){
   // Build job if we need to
   if (e_call_idx != call_idx()){
+    e_call_idx = call_idx();
     std::ofstream input = get_input_handle();
     write_rem_section(input, {{"jobtype","sp"}});
     write_molecule_section(input);
@@ -145,13 +168,12 @@ void QM_QChem::get_ground_energy(std::vector<double> *e){
 // Gets all energies: ground + excited states
 void QM_QChem::get_all_energies(std::vector<double> *e){
   if (ee_call_idx != call_idx()){
+    ee_call_idx = call_idx();
+    REMKeys k = excited_rem();
+    k.insert({{"jobtype","sp"}});
+    
     std::ofstream input = get_input_handle();
-    write_rem_section(input,
-		      {{"jobtype","sp"},
-		       {"cis_n_roots", std::to_string(excited_states)},
-		       {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-		       {"cis_triplets", "false"}  //be configurable
-		      });
+    write_rem_section(input, k);
     write_molecule_section(input);
     input.close();
     exec_qchem();
@@ -183,15 +205,13 @@ void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
   if (surface > excited_states){
     throw std::invalid_argument("Requested surface not computed!");
   }
+
+  REMKeys k = excited_rem();
+  k.insert({{"jobtype","force"},
+	    {"cis_state_deriv", std::to_string(surface)}});
   
   std::ofstream input = get_input_handle();
-  write_rem_section(input,
-		    {{"jobtype","force"},
-		     {"cis_n_roots", std::to_string(excited_states)},
-		     {"cis_state_deriv", std::to_string(surface)},
-		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-		     {"cis_triplets", "false"}  //be configurable
-		    });
+  write_rem_section(input, k);
   write_molecule_section(input);
   input.close();
 
@@ -204,64 +224,15 @@ void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
 }
 
 
-void QM_QChem::get_gradient_energies(std::vector<double> &g_qm,
-				     std::vector<double> &g_mm,
-				     std::vector<double> &e){
-
-  // Build job
-  std::ofstream input = get_input_handle();
-  write_rem_section(input, {{"jobtype","force"}});
-  write_molecule_section(input);
-  input.close();
-  
-  exec_qchem();
-
-  parse_energies(e);
-  parse_qm_gradient(g_qm);
-  if (NMM > 0){
-    parse_mm_gradient(g_mm);
-  }
-}
-
-
-void QM_QChem::get_excited_gradient(std::vector<double> &g_qm,
-				    std::vector<double> &g_mm,
-				    std::vector<double> &e, size_t surface){
-  if (surface > excited_states){
-    throw std::invalid_argument("Requested surface is greater than the number of excited states!");
-  }
-  
-  std::ofstream input = get_input_handle();
-  write_rem_section(input,
-		    {{"jobtype","force"},
-		     {"cis_n_roots", std::to_string(excited_states)},
-		     {"cis_state_deriv", std::to_string(surface)},
-		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-		     {"cis_triplets", "false"}  //be configurable
-		    });
-  write_molecule_section(input);
-  input.close();
-
-  exec_qchem();
-
-  parse_energies(e);
-  parse_qm_gradient(g_qm);
-  if (NMM > 0){
-    parse_mm_gradient(g_mm);
-  }  
-}
-
-
 void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
+
+  REMKeys k = excited_rem();
+  k.insert({{"jobtype","sp"},
+	    {"calc_nac", "true"},
+	    {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
+  
   std::ofstream input = get_input_handle();
-  write_rem_section(input,
-		    {{"jobtype","sp"},
-		     {"calc_nac", "true"},
-		     {"cis_n_roots", std::to_string(excited_states)},
-		     {"cis_der_numstate", "2"}, //Always, in our case, between 2 states
-		     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-		     {"cis_triplets", "false"}  //be configurable
-		    });
+  write_rem_section(input, k);
 
   /*
     Section format:
@@ -285,16 +256,12 @@ void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
 
   exec_qchem();
 
-  parse_nac_vector(nac);  
-}
-
-
-void QM_QChem::parse_nac_vector(std::vector<double> &nac){
-  size_t count = readQFMan(FILE_DERCOUP, nac);
+  size_t count = readQFMan(FILE_DERCOUP, nac, 3 * (NMM + NQM), FILE_POS_BEGIN);
   if (count != 3 * (NMM + NQM)){
     throw std::runtime_error("Unable to parse NAC vector!");
   }
 }
+
 
 
 void QM_QChem::parse_energies(std::vector<double> &e){
@@ -303,23 +270,31 @@ void QM_QChem::parse_energies(std::vector<double> &e){
   if (excited_states > 0 && e.size() > 1){
     double e_ground = e[0];
 
-    readQFMan(FILE_SET_ENERGY, e);
+    size_t count = readQFMan(FILE_SET_ENERGY, e, excited_states, FILE_POS_BEGIN);
+    if (count != excited_states){
+      throw std::runtime_error("Unable to parse energies!");
+    }
+    
     /* Energies for higher states given in terms of exitations so we
-       must add in the ground */
+       must add in the ground. We also need to shift the values so the
+       ground state is at the begining. */
+
+    // for (size_t i = excited_states - 1; i > 0; i--){
+    //   e[i] = e[i-1] + e_ground;
+    // }
+    // e[0] = e_ground;
+
+    e.pop_back();
     e.emplace(e.begin(), 0.0);
     for (auto & ei: e){
       ei += e_ground;
     }
   }
-
-  if (e.size() != excited_states + 1){
-    throw std::runtime_error("Unable to parse energies!");
-  }
 }
 
 
 void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
-  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm);
+  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm, 3*NQM, FILE_POS_BEGIN);
   if (count != 3 * NQM){
     throw std::runtime_error("Unable to parse QM gradient!");
   }
@@ -427,10 +402,20 @@ std::ofstream QM_QChem::get_input_handle(){
   return os;
 }
 
+REMKeys QM_QChem::excited_rem(void){
+  REMKeys excited
+    {
+     {"cis_n_roots", std::to_string(excited_states)},
+     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
+     {"cis_triplets", "false"}  //be configurable
+    };
 
-void QM_QChem::write_rem_section(std::ostream &os, const std::map<std::string, std::string> &options){
+  return excited;
+}
+
+void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   // Default options 
-  std::map<std::string, std::string> rem_keys
+  REMKeys rem_keys
     {
      {"method",        exchange_method},
      {"basis",         basis_set},
@@ -503,21 +488,19 @@ void QM_QChem::write_molecule_section(std::ostream &os){
 }
 
 
-/*
-  Given a q-qchem file number (see qm_qchem.hpp for examples), reads
-  the file from the scratch directory into the vector v, the contents
-  of which are destroyed.
-*/
-size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v){
-  return readQFMan(filenum, v, v.max_size(), 0);
-}
 
 //FIXME: readQFMan should also be able to take an armadillo matrix/whatever/...
 
 /*
-  Same as above except we read N elements starting from offset.
+  Given a q-qchem file number (see qm_qchem.hpp for examples), read N
+  elements from the file (in the scratch directory) starting from the
+  offset into the vector v, the contents of which are overwritten.
 */
 size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset){
+  if (v.size() < N){
+    throw std::out_of_range("Destination vector of insufficient size");
+  }
+  
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
   std::ifstream ifile;
   ifile.open(path, std::ios::in | std::ios::binary);
@@ -526,23 +509,17 @@ size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t
     throw std::ios_base::failure("Error: cannot read from " + path);
   }
 
-  /*
-    clear vector before reading so we aren't polluted by previous
-    elements; probably a small performance hit here, but 1) it doesn't
-    matter (this isn't our bottle-neck) and 2) it makes the code a lot
-    clearer.
-  */
-  v.clear();
   char buffer[sizeof(double)];
   size_t i = 0;
+  size_t count = 0;
   while(ifile.read(buffer, sizeof(double))){
     double * d = (double *) buffer;
     if ((i >= offset) && (i < offset+N)){
-      v.push_back(*d);
+      v[count++] = *d;
     }
     i++;
   }
   ifile.close();
 
-  return i;
+  return count;
 }
