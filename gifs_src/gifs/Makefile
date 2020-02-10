@@ -13,7 +13,7 @@ CPPFLAGS = -std=c++11 -O0 -Werror -Wall -Wextra -g
 SRCS := $(wildcard *.cpp)
 OBJS := $(SRCS:%.cpp=%.o)
 
-INCLUDE := -I../../include
+INCLUDE := -I../../include -I../../aramadillo/include
 LIBDIR := ../../lib
 LIB := libgifs.so
 LIBRARY := $(LIBDIR)/$(LIB)
