@@ -2,7 +2,7 @@
 #define __PROPERTIES_HPP
 
 #include <unordered_map>
-#include <vector>
+#include <armadillo>
 
 /*
   List of all possible properties that could be produced by or
@@ -23,12 +23,12 @@ class PropMap
 public:
   PropMap() : prop{} {};
 
-  std::vector<double>* get(QMProperty key);
-  const std::vector<int>* get_idx(QMProperty key) const;
-  inline std::vector<double>& operator[](QMProperty key) { return *get(key); }  //get(key)
+  arma::cube* get(QMProperty key);
+  const arma::uvec* get_idx(QMProperty key) const;
+  inline arma::cube& operator[](QMProperty key) { return *get(key); }  //get(key)
   
-  void emplace(QMProperty p, std::vector<double>* vec);
-  void emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec);
+  void emplace(QMProperty p, arma::cube* vec);
+  void emplace(QMProperty p, arma::uvec iv, arma::cube* vec);
 
   bool has(QMProperty key) const;
   bool has_idx(QMProperty key) const;
@@ -36,8 +36,8 @@ public:
   const std::vector<QMProperty> keys(void) const;
   
 private:
-  std::unordered_map<QMProperty, std::vector<double>*> prop{};
-  std::unordered_map<QMProperty, std::vector<int>> prop_vec{};
+  std::unordered_map<QMProperty, arma::cube*> prop{};
+  std::unordered_map<QMProperty, arma::uvec> prop_vec{};
 };
 
 #endif

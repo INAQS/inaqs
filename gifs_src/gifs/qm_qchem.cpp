@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "qm_qchem.hpp"
 #include "properties.hpp"
+#include <armadillo>
 
 
 
@@ -33,89 +34,83 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   */
 }
 
-void print2(std::vector<double> M, size_t cols){
-  size_t rows = (size_t) M.size()/cols;
-  if (rows * cols != M.size()){
-    std::cerr << "Warning: not a matrix" << std::endl;
-  }
-
-  for (size_t i = 0; i < rows; i++){
-    for (size_t j = 0; j < cols; j++){
-      std::cout << std::fixed << std::setprecision(5) << M[i*cols + j] << "  ";
-    }
-    std::cout << std::endl;
-  }
-}
-
 
 void QM_QChem::get_properties(PropMap &props){
-  const std::vector<int> *idx;
-
-  // std::vector<double> U (excited_states * excited_states);
-  // get_wf_overlap(U);
-  // print2(U, excited_states);
+  std::cout << ":: [" << call_idx() << "]" << std::endl;
+  // arma::cube U (excited_states, excited_states,1);
+  // get_wf_overlap(&U);
+  // U.slice(0).print();
   // std::cout << std::endl;
 
-  // std::vector<double> D (3 * (NMM + NQM));
-  // get_nac_vector(D, 1, 2);
-  // print2(D, 3);
+  // arma::cube D (3, (NMM + NQM),1);
+  // get_nac_vector(&D, 1, 2);
+  // D.slice(0).t().print();
   // std::cout << std::endl;
-  
-  
+
   for (QMProperty p: props.keys()){
     switch(p){
-      
+
     case QMProperty::wfoverlap:
-      get_wf_overlap(*props.get(QMProperty::wfoverlap));
+      get_wf_overlap(props.get(QMProperty::wfoverlap));
       break;
-      
+
     case QMProperty::nacvector_imag:
       throw std::invalid_argument("Imaginary NAC not implemented!");
       break;
-      
+
     case QMProperty::nacvector:{
-      idx = props.get_idx(QMProperty::nacvector);
-      size_t A = (*idx)[0]; size_t B = (*idx)[1];
-      get_nac_vector(*props.get(QMProperty::nacvector), A, B);
+      const arma::uvec &idx = *props.get_idx(QMProperty::nacvector);
+      size_t A = idx[0]; size_t B = idx[1];
+      get_nac_vector(props.get(QMProperty::nacvector), A, B);
       e_call_idx = call_idx(); ee_call_idx = call_idx();
       break;
     }
-      
+
     case QMProperty::mmgradient:
       break; // if we need mm, then we will do qm, which catches both
-    case QMProperty::qmgradient:
-      if (props.has_idx(QMProperty::qmgradient)){
-	const std::vector<int> &surf_idx = *props.get_idx(QMProperty::qmgradient);
-	std::vector<double> &qm_gradients = *props.get(QMProperty::qmgradient);
-	std::vector<double> &mm_gradients = *props.get(QMProperty::mmgradient);
-	for (size_t i = 0; i < surf_idx.size(); i++){ // FIXME: would like to do this without copying; do vector "views" exist?
-	  std::vector<double> qmg(qm_gradients.begin() + i*3*NQM, qm_gradients.begin() + (i+1)*3*NQM);
-	  std::vector<double> mmg(mm_gradients.begin() + i*3*NMM, mm_gradients.begin() + (i+1)*3*NMM);
-	  
-	  get_excited_gradient(&qmg, &mmg, (size_t) surf_idx[i]);
-	  
-	  std::copy(qmg.begin(), qmg.end(), qm_gradients.begin() + i*3*NQM);
-	  std::copy(mmg.begin(), mmg.end(), mm_gradients.begin() + i*3*NMM);
-	}
-	e_call_idx = call_idx(); ee_call_idx = call_idx();
+    case QMProperty::qmgradient:{
+      arma::cube *g_qm_c = props.get(QMProperty::qmgradient);
+      arma::cube *g_mm_c = props.get(QMProperty::mmgradient);
+      
+      if (props.has_idx(QMProperty::qmgradient)){//excited states
+        const arma::uvec &surf_idx = *props.get_idx(QMProperty::qmgradient);
+        for (size_t i = 0; i < surf_idx.size(); i++){
+	  arma::mat &g_qm = g_qm_c->slice(i);
+	  if (props.has(QMProperty::mmgradient)){
+	    arma::mat &g_mm = g_mm_c->slice(i);
+	    get_excited_gradient(&g_qm, &g_mm, surf_idx[i]);
+	  }
+	  else{
+	    get_excited_gradient(&g_qm, nullptr, surf_idx[i]);
+	  }
+        }
+       	e_call_idx = call_idx(); ee_call_idx = call_idx();
       }
-      else{
-	get_ground_gradient(props.get(QMProperty::qmgradient), // FIXME: combine ground/excited calls
-			    props.get(QMProperty::mmgradient));
+      else{ // ground states only
+	arma::mat &g_qm = g_qm_c->slice(0);
+	if (props.has(QMProperty::mmgradient)){
+	  arma::mat &g_mm = g_mm_c->slice(0);
+	  get_ground_gradient(&g_qm, &g_mm);
+	}
+	else{
+	  get_ground_gradient(&g_qm, nullptr);
+	}
 	e_call_idx = call_idx();
       }
       break;
+    }
 
-    case QMProperty::energies:
+    case QMProperty::energies:{
       // FIXME: clean-up the way we avoid an extra call for energy
       // (currently: sorting + e(e)_call_idx flags)
       if (props.has_idx(QMProperty::energies)){
-	get_all_energies(props.get(QMProperty::energies));
+      	get_all_energies(props.get(QMProperty::energies));
       }
       else{
-	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
+      	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
       }
       break;
+    }
 
     default: // Compile with the default case commented out and the compiler will detect neglected properties
       throw std::invalid_argument("Unknown QMProperty!");
@@ -124,9 +119,9 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
-void QM_QChem::get_wf_overlap(std::vector<double> &U){ //FIXME: use an armadillo matrix
-  static int overlap_call = 0;
-  if (overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
+void QM_QChem::get_wf_overlap(arma::cube *U){  
+  static int last_overlap_call = -1;
+  if (last_overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
     	      {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
@@ -142,16 +137,16 @@ void QM_QChem::get_wf_overlap(std::vector<double> &U){ //FIXME: use an armadillo
     //don't recompute 
   }
   
-  overlap_call = call_idx();
+  last_overlap_call = call_idx();
   
-  size_t count = readQFMan(FILE_WF_OVERLAP, U, excited_states*excited_states, FILE_POS_BEGIN);
+  size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse wavefunction overlap");
   }  
 }
 
 
-void QM_QChem::get_ground_energy(std::vector<double> *e){
+void QM_QChem::get_ground_energy(arma::cube *e){
   // Build job if we need to
   if (e_call_idx != call_idx()){
     e_call_idx = call_idx();
@@ -161,12 +156,12 @@ void QM_QChem::get_ground_energy(std::vector<double> *e){
     input.close();
     exec_qchem();
   }
-  
-  parse_energies(*e);
+
+  parse_energies(e);
 }
 
 // Gets all energies: ground + excited states
-void QM_QChem::get_all_energies(std::vector<double> *e){
+void QM_QChem::get_all_energies(arma::cube *e){
   if (ee_call_idx != call_idx()){
     ee_call_idx = call_idx();
     REMKeys k = excited_rem();
@@ -179,12 +174,11 @@ void QM_QChem::get_all_energies(std::vector<double> *e){
     exec_qchem();
   }
 
-  parse_energies(*e);
+  parse_energies(e);
 }
 
 
-void QM_QChem::get_ground_gradient(std::vector<double> *g_qm,
-				   std::vector<double> *g_mm){
+void QM_QChem::get_ground_gradient(arma::mat *g_qm, arma::mat *g_mm){
   // Build job
   std::ofstream input = get_input_handle();
   write_rem_section(input, {{"jobtype","force"}});
@@ -193,15 +187,13 @@ void QM_QChem::get_ground_gradient(std::vector<double> *g_qm,
   
   exec_qchem();
 
-  parse_qm_gradient(*g_qm);
+  parse_qm_gradient(g_qm);
   if (g_mm && NMM > 0){
-    parse_mm_gradient(*g_mm);
+    parse_mm_gradient(g_mm);
   }
 }
 
-void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
-				    std::vector<double> *g_mm,
-				    size_t surface){
+void QM_QChem::get_excited_gradient(arma::mat *g_qm, arma::mat *g_mm, arma::uword surface){
   if (surface > excited_states){
     throw std::invalid_argument("Requested surface not computed!");
   }
@@ -217,14 +209,15 @@ void QM_QChem::get_excited_gradient(std::vector<double> *g_qm,
 
   exec_qchem();
 
-  parse_qm_gradient(*g_qm);
+  (void) g_qm; (void) g_mm;
+  parse_qm_gradient(g_qm);
   if (g_mm && NMM > 0){
-    parse_mm_gradient(*g_mm);
+    parse_mm_gradient(g_mm);
   }  
 }
 
 
-void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
+void QM_QChem::get_nac_vector(arma::cube *nac, size_t A, size_t B){
 
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
@@ -256,7 +249,7 @@ void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
 
   exec_qchem();
 
-  size_t count = readQFMan(FILE_DERCOUP, nac, 3 * (NMM + NQM), FILE_POS_BEGIN);
+  size_t count = readQFMan(FILE_DERCOUP, nac->memptr(), 3 * (NMM + NQM), FILE_POS_BEGIN);
   if (count != 3 * (NMM + NQM)){
     throw std::runtime_error("Unable to parse NAC vector!");
   }
@@ -264,13 +257,16 @@ void QM_QChem::get_nac_vector(std::vector<double> &nac, size_t A, size_t B){
 
 
 
-void QM_QChem::parse_energies(std::vector<double> &e){
-  readQFMan(FILE_ENERGY, e, 1, FILE_POS_CRNT_TOTAL_ENERGY);
+void QM_QChem::parse_energies(arma::cube *e_cube){
+  //Bit of a nasty hack
+  std::vector<double> e(e_cube->memptr(),e_cube->memptr() + e_cube->n_elem);
+  
+  readQFMan(FILE_ENERGY, e.data(), 1, FILE_POS_CRNT_TOTAL_ENERGY);
 
   if (excited_states > 0 && e.size() > 1){
     double e_ground = e[0];
 
-    size_t count = readQFMan(FILE_SET_ENERGY, e, excited_states, FILE_POS_BEGIN);
+    size_t count = readQFMan(FILE_SET_ENERGY, e.data(), excited_states, FILE_POS_BEGIN);
     if (count != excited_states){
       throw std::runtime_error("Unable to parse energies!");
     }
@@ -293,8 +289,8 @@ void QM_QChem::parse_energies(std::vector<double> &e){
 }
 
 
-void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
-  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm, 3*NQM, FILE_POS_BEGIN);
+void QM_QChem::parse_qm_gradient(arma::mat *g_qm){
+  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm->memptr(), 3*NQM, FILE_POS_BEGIN);
   if (count != 3 * NQM){
     throw std::runtime_error("Unable to parse QM gradient!");
   }
@@ -306,21 +302,27 @@ void QM_QChem::parse_qm_gradient(std::vector<double> &g_qm){
   efield is the negative of the field, which it may be. We need to
   return a gradient.
 */
-void QM_QChem::parse_mm_gradient(std::vector<double> &g_mm){
+void QM_QChem::parse_mm_gradient(arma::mat *g_mm){
   /* Set a ceiling on the number of doubles we read-in because the
      number of MM atoms can fluctuate during a simulation. */
-  readQFMan(FILE_EFIELD, g_mm, 3*NMM, FILE_POS_BEGIN);
+  size_t count = readQFMan(FILE_EFIELD, g_mm->memptr(), 3*NMM, FILE_POS_BEGIN);
 
-  if (g_mm.size() != 3 * NMM){
+  if (count != 3 * NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
   }
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
-    g_mm[3*i + 0] *= q;
-    g_mm[3*i + 1] *= q;
-    g_mm[3*i + 2] *= q;
+    arma::vec f = g_mm->unsafe_col(i);
+    f *= q;
   }
+  
+  // for (size_t i = 0; i < NMM; i++){
+  //   const double q = chg_mm[i];
+  //   g_mm[3*i + 0] *= q;
+  //   g_mm[3*i + 1] *= q;
+  //   g_mm[3*i + 2] *= q;
+  // }
   /*
     This method replaced parsing efield.dat, which has the following
     format:
@@ -383,7 +385,7 @@ const std::string QM_QChem::get_qcscratch(void){
 
 
 void QM_QChem::exec_qchem(void){
-  std::string cmd = "cd " + qc_scratch_directory + "; " +
+  std::string cmd = "cd " + qc_scratch_directory + "; " + // WD->$QCSCRATCH
     qc_executable + " " + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
   int status = std::system(cmd.c_str());
   if (status){
@@ -403,6 +405,10 @@ std::ofstream QM_QChem::get_input_handle(){
 }
 
 REMKeys QM_QChem::excited_rem(void){
+  if (! (excited_states > 0)){
+    throw std::logic_error("Cannot request multi-state property with out excited states.");
+  }
+
   REMKeys excited
     {
      {"cis_n_roots", std::to_string(excited_states)},
@@ -452,7 +458,6 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
 void QM_QChem::write_molecule_section(std::ostream &os){
   /*
     format of $molecule & $externall_charges sections:
-
     $molecule
     [charge] [multiplicity]
     [atomic-number] [x-coord] [y-coord] [x-coord]
@@ -488,19 +493,13 @@ void QM_QChem::write_molecule_section(std::ostream &os){
 }
 
 
-
-//FIXME: readQFMan should also be able to take an armadillo matrix/whatever/...
-
 /*
   Given a q-qchem file number (see qm_qchem.hpp for examples), read N
   elements from the file (in the scratch directory) starting from the
-  offset into the vector v, the contents of which are overwritten.
+  offset into memptr, which must point to a block of memory with at
+  least N elements.
 */
-size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t offset){
-  if (v.size() < N){
-    throw std::out_of_range("Destination vector of insufficient size");
-  }
-  
+size_t QM_QChem::readQFMan(int filenum, double * memptr, size_t N, size_t offset){  
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
   std::ifstream ifile;
   ifile.open(path, std::ios::in | std::ios::binary);
@@ -513,9 +512,9 @@ size_t QM_QChem::readQFMan(int filenum, std::vector<double> &v, size_t N, size_t
   size_t i = 0;
   size_t count = 0;
   while(ifile.read(buffer, sizeof(double))){
-    double * d = (double *) buffer;
-    if ((i >= offset) && (i < offset+N)){
-      v[count++] = *d;
+    if ((i >= offset) && (i < offset + N)){
+      double * d = (double *) buffer;
+      *(memptr + count++) = *d;
     }
     i++;
   }

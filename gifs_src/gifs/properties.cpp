@@ -1,11 +1,12 @@
 #include "properties.hpp"
 #include <algorithm>
+#include <armadillo>
 
 /*
   List of all possible properties that could be produced by or
   requested of a QMInterface.
 */
-std::vector<double>* PropMap::get(QMProperty key) {
+arma::cube* PropMap::get(QMProperty key) {
   auto itr = prop.find(key);
   if(itr == prop.end()){
     return nullptr;
@@ -13,7 +14,7 @@ std::vector<double>* PropMap::get(QMProperty key) {
   else return itr->second;
 }
 
-const std::vector<int>* PropMap::get_idx(QMProperty key) const { 
+const arma::uvec* PropMap::get_idx(QMProperty key) const { 
   auto itr = prop_vec.find(key);
   if (itr == prop_vec.end()) {
     return nullptr; 
@@ -38,7 +39,7 @@ const std::vector<QMProperty> PropMap::keys(void) const {
   return qv;
 }
 
-void PropMap::emplace(QMProperty p, std::vector<double>* vec) {
+void PropMap::emplace(QMProperty p, arma::cube* vec) {
   if (has(p) || has_idx(p)){
     throw std::invalid_argument("Property already in Map!");
   }
@@ -47,7 +48,7 @@ void PropMap::emplace(QMProperty p, std::vector<double>* vec) {
   }
 }
 
-void PropMap::emplace(QMProperty p, std::vector<int> iv, std::vector<double>* vec) {
+void PropMap::emplace(QMProperty p, arma::uvec iv, arma::cube* vec) {
   if (has(p) || has_idx(p)){
     throw std::invalid_argument("Property already in Map!");
   }

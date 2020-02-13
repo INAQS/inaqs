@@ -2,11 +2,13 @@
 #include "constants.hpp"
 #include "bomd.hpp"
 #include "qm_qchem.hpp"
+#include <armadillo>
+
 
 BOMD::BOMD(size_t nqm, const int *qmid){
   qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1);
-  qm_grd.resize(nqm * 3);
-  energy.resize(1);
+  qm_grd.resize(3, nqm, 1);
+  energy.resize(1,1,1);
 };
 
 
@@ -22,7 +24,7 @@ T BOMD::get_gradient(const T* qm_crd, size_t nmm, const T* mm_crd, const T* mm_c
   
   qm->update(qm_crd_v, mm_crd_v, mm_chg_v);
 
-  mm_grd.resize(nmm*3);
+  mm_grd.resize(3, nmm, 1);
 
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);

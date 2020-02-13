@@ -2,6 +2,7 @@
 #define GIFS_SH_BOMD_CORE_H
 
 #include <vector>
+#include <armadillo>
 #include "qm_interface.hpp"
 
 class BOMD
@@ -19,12 +20,12 @@ public:
     void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 protected:
-    QMInterface* qm{nullptr};
-    // fixed size
-    std::vector<double> qm_grd;
-    // flexible size
-    std::vector<double> mm_grd;
-    std::vector<double> energy;
+  QMInterface* qm{nullptr};
+  // fixed size
+  arma::cube qm_grd;
+  // flexible size
+  arma::cube mm_grd;
+  arma::cube energy;
 };
 
 
