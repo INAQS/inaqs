@@ -15,14 +15,16 @@ public:
   void get_properties(PropMap &props);
   
 private:  
-  void get_nac_vector(arma::cube *nac, size_t A, size_t B);
-  void get_wf_overlap(arma::cube *U);
+  void get_nac_vector(arma::mat *nac, size_t A, size_t B);
+  void get_wf_overlap(arma::mat *U);
 
-  void get_ground_gradient (arma::mat *g_qm, arma::mat *g_mm);
-  void get_excited_gradient(arma::mat *g_qm, arma::mat *g_mm, arma::uword surface);
+  void get_gradient(arma::mat &g_qm, arma::uword surface);
+  void get_gradient(arma::mat &g_qm);
+  void get_gradient(arma::mat &g_qm, arma::mat &g_mm);
+  void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
 
-  void get_ground_energy(arma::cube *e);
-  void get_all_energies(arma::cube *e);
+  void get_ground_energy(arma::vec *e);
+  void get_all_energies(arma::vec *e);
 
   std::ofstream get_input_handle(void);
   void write_molecule_section(std::ostream &ifile);
@@ -30,9 +32,9 @@ private:
   REMKeys excited_rem(void);
   void exec_qchem(void);
 
-  void parse_qm_gradient(arma::mat *g_qm);
-  void parse_mm_gradient(arma::mat *g_mm);
-  void parse_energies(arma::cube *e_cube);
+  void parse_qm_gradient(arma::mat &g_qm);
+  void parse_mm_gradient(arma::mat &g_mm);
+  void parse_energies(arma::vec &e);
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
   

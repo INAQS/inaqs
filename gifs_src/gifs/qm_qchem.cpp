@@ -19,7 +19,7 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;
   basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
-  excited_states(0)
+  excited_states(3)
 {
   /*
     Set the number of threads, but don't overwrite if the flag is set
@@ -37,15 +37,15 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 void QM_QChem::get_properties(PropMap &props){
   std::cout << ":: [" << call_idx() << "]" << std::endl;
-  // arma::cube U (excited_states, excited_states,1);
-  // get_wf_overlap(&U);
-  // U.slice(0).print();
-  // std::cout << std::endl;
+  arma::mat U (excited_states, excited_states);
+  get_wf_overlap(&U);
+  U.print();
+  std::cout << std::endl;
 
-  // arma::cube D (3, (NMM + NQM),1);
-  // get_nac_vector(&D, 1, 2);
-  // D.slice(0).t().print();
-  // std::cout << std::endl;
+  arma::mat D (3, (NMM + NQM));
+  get_nac_vector(&D, 1, 2);
+  D.t().print();
+  std::cout << std::endl;
 
   for (QMProperty p: props.keys()){
     switch(p){
@@ -69,31 +69,27 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::mmgradient:
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:{
-      arma::cube *g_qm_c = props.get(QMProperty::qmgradient);
-      arma::cube *g_mm_c = props.get(QMProperty::mmgradient);
+      arma::cube *g_qm = props.get(QMProperty::qmgradient);
+      arma::cube *g_mm = props.get(QMProperty::mmgradient);
       
       if (props.has_idx(QMProperty::qmgradient)){//excited states
         const arma::uvec &surf_idx = *props.get_idx(QMProperty::qmgradient);
         for (size_t i = 0; i < surf_idx.size(); i++){
-	  arma::mat &g_qm = g_qm_c->slice(i);
 	  if (props.has(QMProperty::mmgradient)){
-	    arma::mat &g_mm = g_mm_c->slice(i);
-	    get_excited_gradient(&g_qm, &g_mm, surf_idx[i]);
+	    get_gradient(g_qm->slice(i), g_mm->slice(i), surf_idx[i]);
 	  }
 	  else{
-	    get_excited_gradient(&g_qm, nullptr, surf_idx[i]);
+	    get_gradient(g_qm->slice(i), surf_idx[i]);
 	  }
         }
        	e_call_idx = call_idx(); ee_call_idx = call_idx();
       }
       else{ // ground states only
-	arma::mat &g_qm = g_qm_c->slice(0);
 	if (props.has(QMProperty::mmgradient)){
-	  arma::mat &g_mm = g_mm_c->slice(0);
-	  get_ground_gradient(&g_qm, &g_mm);
+	  get_gradient(g_qm->slice(0), g_mm->slice(0));
 	}
 	else{
-	  get_ground_gradient(&g_qm, nullptr);
+	  get_gradient(g_qm->slice(0));
 	}
 	e_call_idx = call_idx();
       }
@@ -119,7 +115,7 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
-void QM_QChem::get_wf_overlap(arma::cube *U){  
+void QM_QChem::get_wf_overlap(arma::mat *U){  
   static int last_overlap_call = -1;
   if (last_overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
     REMKeys k = excited_rem();
@@ -146,7 +142,7 @@ void QM_QChem::get_wf_overlap(arma::cube *U){
 }
 
 
-void QM_QChem::get_ground_energy(arma::cube *e){
+void QM_QChem::get_ground_energy(arma::vec *e){
   // Build job if we need to
   if (e_call_idx != call_idx()){
     e_call_idx = call_idx();
@@ -157,11 +153,11 @@ void QM_QChem::get_ground_energy(arma::cube *e){
     exec_qchem();
   }
 
-  parse_energies(e);
+  parse_energies(*e);
 }
 
 // Gets all energies: ground + excited states
-void QM_QChem::get_all_energies(arma::cube *e){
+void QM_QChem::get_all_energies(arma::vec *e){
   if (ee_call_idx != call_idx()){
     ee_call_idx = call_idx();
     REMKeys k = excited_rem();
@@ -174,51 +170,51 @@ void QM_QChem::get_all_energies(arma::cube *e){
     exec_qchem();
   }
 
-  parse_energies(e);
+  parse_energies(*e);
 }
 
 
-void QM_QChem::get_ground_gradient(arma::mat *g_qm, arma::mat *g_mm){
-  // Build job
-  std::ofstream input = get_input_handle();
-  write_rem_section(input, {{"jobtype","force"}});
-  write_molecule_section(input);
-  input.close();
-  
-  exec_qchem();
-
-  parse_qm_gradient(g_qm);
-  if (g_mm && NMM > 0){
-    parse_mm_gradient(g_mm);
-  }
+void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm){
+  get_gradient(g_qm, g_mm, 0);
+  parse_mm_gradient(g_mm);
 }
 
-void QM_QChem::get_excited_gradient(arma::mat *g_qm, arma::mat *g_mm, arma::uword surface){
+void QM_QChem::get_gradient(arma::mat &g_qm){
+  get_gradient(g_qm, 0);
+}
+
+void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface){
+  get_gradient(g_qm, surface);
+  parse_mm_gradient(g_mm);
+}
+
+void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
   if (surface > excited_states){
     throw std::invalid_argument("Requested surface not computed!");
   }
 
-  REMKeys k = excited_rem();
-  k.insert({{"jobtype","force"},
-	    {"cis_state_deriv", std::to_string(surface)}});
-  
   std::ofstream input = get_input_handle();
-  write_rem_section(input, k);
+  REMKeys keys = {{"jobtype","force"}};
+
+  if (surface != 0){
+    REMKeys ex = excited_rem();
+    keys.insert(ex.begin(), ex.end());
+    keys.insert({{"cis_state_deriv", std::to_string(surface)}});
+  }
+  
+  write_rem_section(input, keys);  
   write_molecule_section(input);
   input.close();
 
   exec_qchem();
 
-  (void) g_qm; (void) g_mm;
   parse_qm_gradient(g_qm);
-  if (g_mm && NMM > 0){
-    parse_mm_gradient(g_mm);
-  }  
 }
 
 
-void QM_QChem::get_nac_vector(arma::cube *nac, size_t A, size_t B){
-
+//FIXME: Q-Chem crashes when computing MM NAC
+//FIXME: Should we be split mm/qm nac?
+void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
 	    {"calc_nac", "true"},
@@ -257,40 +253,31 @@ void QM_QChem::get_nac_vector(arma::cube *nac, size_t A, size_t B){
 
 
 
-void QM_QChem::parse_energies(arma::cube *e_cube){
-  //Bit of a nasty hack
-  std::vector<double> e(e_cube->memptr(),e_cube->memptr() + e_cube->n_elem);
-  
-  readQFMan(FILE_ENERGY, e.data(), 1, FILE_POS_CRNT_TOTAL_ENERGY);
+void QM_QChem::parse_energies(arma::vec &e){  
+  readQFMan(FILE_ENERGY, e.memptr(), 1, FILE_POS_CRNT_TOTAL_ENERGY);
 
-  if (excited_states > 0 && e.size() > 1){
+  if (excited_states > 0 && e.n_elem > 1){
     double e_ground = e[0];
 
-    size_t count = readQFMan(FILE_SET_ENERGY, e.data(), excited_states, FILE_POS_BEGIN);
+    if (!(e.n_elem >= excited_states + 1)){
+      throw std::range_error("Insufficient space for all excited states in vec e!");
+    }
+    
+    size_t count = readQFMan(FILE_SET_ENERGY, e.memptr() + 1, excited_states, FILE_POS_BEGIN);
     if (count != excited_states){
       throw std::runtime_error("Unable to parse energies!");
     }
-    
-    /* Energies for higher states given in terms of exitations so we
-       must add in the ground. We also need to shift the values so the
-       ground state is at the begining. */
-
-    // for (size_t i = excited_states - 1; i > 0; i--){
-    //   e[i] = e[i-1] + e_ground;
-    // }
-    // e[0] = e_ground;
-
-    e.pop_back();
-    e.emplace(e.begin(), 0.0);
-    for (auto & ei: e){
-      ei += e_ground;
-    }
+        
+    // Energies for higher states given in terms of exitations so we
+    // must add in the ground.
+    e += e_ground;
+    e[0] = e_ground;
   }
 }
 
 
-void QM_QChem::parse_qm_gradient(arma::mat *g_qm){
-  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm->memptr(), 3*NQM, FILE_POS_BEGIN);
+void QM_QChem::parse_qm_gradient(arma::mat &g_qm){
+  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm.memptr(), 3*NQM, FILE_POS_BEGIN);
   if (count != 3 * NQM){
     throw std::runtime_error("Unable to parse QM gradient!");
   }
@@ -302,10 +289,10 @@ void QM_QChem::parse_qm_gradient(arma::mat *g_qm){
   efield is the negative of the field, which it may be. We need to
   return a gradient.
 */
-void QM_QChem::parse_mm_gradient(arma::mat *g_mm){
+void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
   /* Set a ceiling on the number of doubles we read-in because the
      number of MM atoms can fluctuate during a simulation. */
-  size_t count = readQFMan(FILE_EFIELD, g_mm->memptr(), 3*NMM, FILE_POS_BEGIN);
+  size_t count = readQFMan(FILE_EFIELD, g_mm.memptr(), 3*NMM, FILE_POS_BEGIN);
 
   if (count != 3 * NMM){
     throw std::runtime_error("Unable to parse MM gradient!");
@@ -313,8 +300,9 @@ void QM_QChem::parse_mm_gradient(arma::mat *g_mm){
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
-    arma::vec f = g_mm->unsafe_col(i);
-    f *= q;
+    g_mm.col(i) *= q;
+    // arma::vec f = g_mm->unsafe_col(i);
+    // f *= q;
   }
   
   // for (size_t i = 0; i < NMM; i++){

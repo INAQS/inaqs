@@ -25,7 +25,7 @@ protected:
   arma::cube qm_grd;
   // flexible size
   arma::cube mm_grd;
-  arma::cube energy;
+  arma::vec energy;
 };
 
 
