@@ -6,7 +6,7 @@
   List of all possible properties that could be produced by or
   requested of a QMInterface.
 */
-arma::cube* PropMap::get(QMProperty key) {
+ArmaWrap PropMap::get(QMProperty key) {
   auto itr = prop.find(key);
   if(itr == prop.end()){
     return nullptr;
@@ -39,7 +39,7 @@ const std::vector<QMProperty> PropMap::keys(void) const {
   return qv;
 }
 
-void PropMap::emplace(QMProperty p, arma::cube* vec) {
+void PropMap::emplace(QMProperty p, ArmaWrap vec) {
   if (has(p) || has_idx(p)){
     throw std::invalid_argument("Property already in Map!");
   }
@@ -48,7 +48,7 @@ void PropMap::emplace(QMProperty p, arma::cube* vec) {
   }
 }
 
-void PropMap::emplace(QMProperty p, arma::uvec iv, arma::cube* vec) {
+void PropMap::emplace(QMProperty p, arma::uvec iv, ArmaWrap vec) {
   if (has(p) || has_idx(p)){
     throw std::invalid_argument("Property already in Map!");
   }
