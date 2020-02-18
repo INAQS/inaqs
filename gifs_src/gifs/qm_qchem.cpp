@@ -12,13 +12,13 @@
 
 
 
-QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
+QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
   QMInterface(qmid, charge, mult),
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;
   basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
-  excited_states(3)
+  excited_states(excited_states)
 {
   /*
     Set the number of threads, but don't overwrite if the flag is set

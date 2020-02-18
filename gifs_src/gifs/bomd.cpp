@@ -6,7 +6,7 @@
 
 
 BOMD::BOMD(size_t nqm, const int *qmid){
-  qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1);
+  qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1, 0);
   qm_grd.resize(3, nqm, 1);
   energy.resize(1);
 };

@@ -11,9 +11,9 @@ using REMKeys = std::map<std::string, std::string>;
 
 class QM_QChem: public QMInterface{
 public:
-  QM_QChem(const std::vector<int> &qmid, int charge, int mult);
+  QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states);
   void get_properties(PropMap &props);
-  
+
 private:  
   void get_nac_vector(arma::mat *nac, size_t A, size_t B);
   void get_wf_overlap(arma::mat *U);
