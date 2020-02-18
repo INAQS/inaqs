@@ -478,8 +478,8 @@ void QM_QChem::write_molecule_section(std::ostream &os){
 /*
   Given a q-qchem file number (see qm_qchem.hpp for examples), read N
   elements from the file (in the scratch directory) starting from the
-  offset into memptr, which must point to a block of memory with at
-  least N elements.
+  offset into memptr, which must point to a block of memory with space
+  for at least N doubles.
 */
 size_t QM_QChem::readQFMan(int filenum, double * memptr, size_t N, size_t offset){  
   std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
