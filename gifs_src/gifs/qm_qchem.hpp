@@ -19,8 +19,6 @@ private:
   void get_wf_overlap(arma::mat *U);
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
-  void get_gradient(arma::mat &g_qm);
-  void get_gradient(arma::mat &g_qm, arma::mat &g_mm);
   void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
 
   void get_ground_energy(arma::vec *e);

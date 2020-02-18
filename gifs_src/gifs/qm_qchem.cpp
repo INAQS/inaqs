@@ -5,7 +5,6 @@
 #include <fstream>
 #include <stdexcept>
 #include <sys/stat.h>
-#include <limits>
 #include <algorithm>
 #include "qm_qchem.hpp"
 #include "properties.hpp"
@@ -36,16 +35,23 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult):
 
 
 void QM_QChem::get_properties(PropMap &props){
-  std::cout << ":: [" << call_idx() << "]" << std::endl;
-  arma::mat U (excited_states, excited_states);
-  get_wf_overlap(&U);
-  U.print();
-  std::cout << std::endl;
+  // std::cout << ":: [" << call_idx() << "]" << std::endl;
+  
+  // arma::mat U (excited_states, excited_states);
+  // get_wf_overlap(&U);
+  // U.print();
+  // std::cout << std::endl;
 
-  arma::mat D (3, (NMM + NQM));
-  get_nac_vector(&D, 1, 2);
-  D.t().print();
-  std::cout << std::endl;
+  // arma::mat D (3, (NMM + NQM));
+  // get_nac_vector(&D, 1, 2);
+  // D.t().print();
+  // std::cout << std::endl;
+
+  // arma::vec ee(excited_states + 1);
+  // get_all_energies(&ee);
+  // ee.print();
+  // std::cout << std::endl;
+  
 
   for (QMProperty p: props.keys()){
     switch(p){
@@ -86,10 +92,10 @@ void QM_QChem::get_properties(PropMap &props){
       }
       else{ // ground states only
 	if (props.has(QMProperty::mmgradient)){
-	  get_gradient(g_qm->slice(0), g_mm->slice(0));
+	  get_gradient(g_qm->slice(0), g_mm->slice(0), 0);
 	}
 	else{
-	  get_gradient(g_qm->slice(0));
+	  get_gradient(g_qm->slice(0), 0);
 	}
 	e_call_idx = call_idx();
       }
@@ -115,9 +121,13 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
+
+/*
+  FIXME: Use another REM variable to save PREV_GEO
+*/
 void QM_QChem::get_wf_overlap(arma::mat *U){  
   static int last_overlap_call = -1;
-  if (last_overlap_call != call_idx()){ //FIXME: make sure this is the right thing to do
+  if (last_overlap_call != call_idx()){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
     	      {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
@@ -174,19 +184,11 @@ void QM_QChem::get_all_energies(arma::vec *e){
 }
 
 
-void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm){
-  get_gradient(g_qm, g_mm, 0);
-  parse_mm_gradient(g_mm);
-}
-
-void QM_QChem::get_gradient(arma::mat &g_qm){
-  get_gradient(g_qm, 0);
-}
-
 void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface){
   get_gradient(g_qm, surface);
   parse_mm_gradient(g_mm);
 }
+
 
 void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
   if (surface > excited_states){
@@ -212,8 +214,8 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 }
 
 
-//FIXME: Q-Chem crashes when computing MM NAC
-//FIXME: Should we be split mm/qm nac?
+// FIXME: Mid-Feb QC trunk + Qi's additions crash when computing MM NAC
+// Should we split mm/qm nac?
 void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
@@ -301,16 +303,7 @@ void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
     g_mm.col(i) *= q;
-    // arma::vec f = g_mm->unsafe_col(i);
-    // f *= q;
   }
-  
-  // for (size_t i = 0; i < NMM; i++){
-  //   const double q = chg_mm[i];
-  //   g_mm[3*i + 0] *= q;
-  //   g_mm[3*i + 1] *= q;
-  //   g_mm[3*i + 2] *= q;
-  // }
   /*
     This method replaced parsing efield.dat, which has the following
     format:
@@ -353,9 +346,6 @@ const std::string QM_QChem::get_qcscratch(void){
     std::cerr << "Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
   }
   else if (qc_str[0] != '/'){
-    /*
-      FIXME: *Q-Chem* will crash if QCSCRATCH=""
-    */
     std::cerr << "Warning, $QCSCRATCH is not an absolute path; instead using " << scratch_path << std::endl;
   }
   else{
@@ -368,12 +358,16 @@ const std::string QM_QChem::get_qcscratch(void){
     mkdir(scratch_path.c_str(), 0700);
   }
 
+  /* Set $QCSCRATCH; this fixes a corner case where Q-Chem will crash
+     if QCSCRATCH="" */
+  setenv("QCSCRATCH", scratch_path.c_str(), true);
+
   return scratch_path;
 }
 
 
 void QM_QChem::exec_qchem(void){
-  std::string cmd = "cd " + qc_scratch_directory + "; " + // WD->$QCSCRATCH
+  std::string cmd = "cd " + qc_scratch_directory + "; " + // change WD->$QCSCRATCH
     qc_executable + " " + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
   int status = std::system(cmd.c_str());
   if (status){
@@ -394,7 +388,7 @@ std::ofstream QM_QChem::get_input_handle(){
 
 REMKeys QM_QChem::excited_rem(void){
   if (! (excited_states > 0)){
-    throw std::logic_error("Cannot request multi-state property with out excited states.");
+    throw std::logic_error("Cannot request multi-state property without excited states.");
   }
 
   REMKeys excited
@@ -427,7 +421,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   }  
 
   /*
-    FIXME: make sure passed options take precedence?  Could do this by
+    Make sure passed options take precedence?  Could do this by
     inserting the defaults into the passed options rather than the
     other way around.
   */
