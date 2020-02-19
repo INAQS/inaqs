@@ -7,7 +7,13 @@
 
 class FSSH: public BOMD{
 public:
-  explicit FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc);
+  //explicit FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc);
+  explicit FSSH(arma::uvec& atomicnumbers,  // need to parse our config
+		arma::mat& qm_crd, 
+		arma::mat& mm_crd, 
+		arma::vec& mm_chg, 
+		arma::mat& qm_grd,
+		arma::mat& mm_grd);
   virtual ~FSSH() {};
 
   double update_gradient(void);

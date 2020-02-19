@@ -9,6 +9,13 @@ double FSSH::gen_rand(void){
   return uniform_distribution(mt64_generator);
 }
 
+// FSSH::FSSH(arma::uvec& atomicnumbers,
+// 	   arma::mat& qm_crd, 
+// 	   arma::mat& mm_crd, 
+// 	   arma::vec& mm_chg, 
+// 	   arma::mat& qm_grd,
+// 	   arma::mat& mm_grd):
+//   BOMD(atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd){
 
 // FIXME: need to parse our config
 FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc):

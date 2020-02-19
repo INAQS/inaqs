@@ -3,7 +3,6 @@
 
 #include "conversion.hpp"
 
-static 
 Conversion 
 Conversion::from_elementary(double mass, double length, double time) {
     const double internal_crd_length = 1e-10;          // m, Angstrom

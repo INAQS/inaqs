@@ -39,10 +39,8 @@ public:
     arma::uword nlink{0};
 private:
     LinkAtoms(arma::umat in_idxs, arma::vec in_factors, arma::vec in_dist):
-              global_idx{in_idxs}, factors{in_factors}, 
-              dist{in_dist}, nlink{in_factors.size()}, 
-              crd(3, nlink), frc(3, nlink), local_idx(2, nlink)
-              {}
+      nlink{in_factors.size()}, factors{in_factors},  dist{in_dist},
+      crd(3, nlink), frc(3, nlink), global_idx{in_idxs}, local_idx(2, nlink) {}
     //
     template<typename T>
     inline double 

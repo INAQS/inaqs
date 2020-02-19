@@ -12,8 +12,15 @@
 #include <unordered_map>
 
 
-QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
-  QMInterface(qmid, charge, mult),
+//QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
+QM_QChem::QM_QChem(arma::uvec& in_qmids, 
+		   arma::mat& in_qm_crd, 
+		   arma::mat& in_mm_crd, 
+		   arma::vec& in_mm_chg, 
+		   int charge, 
+		   int mult,
+		   int excited_states):
+  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states),
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;

@@ -11,13 +11,12 @@ BOMD::BOMD(arma::uvec& atomicnumbers,
            arma::vec& mm_chg, 
            arma::mat& qm_grd,
            arma::mat& mm_grd) :
-    qm_grd{in_qm_grd}, mm_grd{in_mm_grd}, energy(1)
+    qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
 {
-  qm = new QM_QChem(atomicnumbers, qm_crd, mm_crd, mm_chg, 0, 1);
+  qm = new QM_QChem(atomicnumbers, qm_crd, mm_crd, mm_chg, 0, 1, 0);
 };
 
 
-virtual 
 double 
 BOMD::update_gradient()
 {
@@ -35,7 +34,6 @@ BOMD::update_gradient()
 
 
 template<typename T>
-virtual
 void 
 BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
   (void) total_gradient;
@@ -44,5 +42,5 @@ BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
 };
 
 
-template virtual void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template virtual void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);
+template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
+template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);

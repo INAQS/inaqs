@@ -11,7 +11,13 @@ using REMKeys = std::map<std::string, std::string>;
 
 class QM_QChem: public QMInterface{
 public:
-  QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states);
+  QM_QChem(arma::uvec& in_qmids, 
+	   arma::mat& in_qm_crd, 
+	   arma::mat& in_mm_crd, 
+	   arma::vec& in_mm_chg, 
+	   int charge, 
+	   int mult,
+	   int excited_states);
   void get_properties(PropMap &props);
 
 private:  
@@ -45,7 +51,6 @@ private:
   const std::string qc_log_file = "GQSH.out";
   const std::string exchange_method;
   const std::string basis_set;
-  const size_t excited_states;
   bool first_call = true;
 
   enum class S{

@@ -83,7 +83,13 @@ GifsImpl::GifsImpl(size_t in_nqm, const int * ian)
     const double length_unit = 1e-9; 
     const double time_unit = 1e-12;
     //
-    bomd = new BOMD(in_nqm, in_qmid);
+    //bomd = new BOMD(in_nqm, in_qmid);
+    BOMD = new BOMD(qm_atomicnumbers,
+		    qm_crd, 
+		    mm_crd, 
+		    mm_chg, 
+		    qm_grd,  //FIXME: MFSJM: Where are these gradients living?
+		    mm_grd);
     // 
     conv = Conversion::from_elementary(mass_unit, length_unit, time_unit);
     // no link atoms

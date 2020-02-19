@@ -21,9 +21,9 @@ public:
     static GifsImpl* get_instance();
     // methods
     template<typename T>
-    T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index, 
-                             size_t in_nmm, const T* in_mm_crd, const T* in_mm_chg, 
-                             T* in_qm_frc, T* in_mm_frc);
+    T update_gradient(const T* in_qm_crd, const size_t* local_index, 
+		      size_t in_nmm, const T* in_mm_crd, const T* in_mm_chg, 
+		      T* in_qm_frc, T* in_mm_frc);
     //
     template<typename T> 
     void rescale_velocities(T* total_gradient, T* masses, T* velocities);

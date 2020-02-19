@@ -39,6 +39,7 @@ class File
         }
         // init file with existing open file and position
         explicit File(const int fileno, const int pos) {
+	  (void) pos;
             fh_ =  fdopen(fileno, "r");
             if (fh_ == NULL) exit(EXIT_FAILURE);
         }
@@ -81,7 +82,7 @@ class FileHandle
 class ConfigReader
 {
 public:
-    explicit ConfigReader(std::string block): ints{}, name{block} {}
+  explicit ConfigReader(std::string block): name{block}, ints{} {}
     // add entry by type
     void add_entry(std::string name, int def) { ints.emplace(name, def); }
     void add_entry(std::string name, double def) { floats.emplace(name, def); }

@@ -20,8 +20,8 @@ public:
     //
     virtual ~BOMD() {delete qm;}
     //
-    template<typename T>
-    virtual void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    template<typename T> // templates cannot be virtual
+    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 protected:
   // // fixed size
