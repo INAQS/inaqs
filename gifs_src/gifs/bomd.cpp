@@ -5,24 +5,21 @@
 #include <armadillo>
 
 
-// BOMD::BOMD(size_t nqm, const int *qmid){
-//   qm = new QM_QChem(std::vector<int>(qmid, qmid + nqm), 0, 1, 0);
-//   qm_grd.resize(3, nqm, 1);
-//   energy.resize(1);
-BOMD::BOMD(std::vector<int.& qmids,
-           std::vector<double>& qm_crd, 
-           std::vector<double>& mm_crd, 
-           std::vector<double>& mm_chg, 
-           std::vector<double>& in_qm_grd,
-           std::vector<double>& in_mm_grd) :
-    qm_grd{in_qm_grd}, mm_grd{in_mm_grd}, energy{}
+BOMD::BOMD(arma::uvec& atomicnumbers,
+           arma::mat& qm_crd, 
+           arma::mat& mm_crd, 
+           arma::vec& mm_chg, 
+           arma::mat& qm_grd,
+           arma::mat& mm_grd) :
+    qm_grd{in_qm_grd}, mm_grd{in_mm_grd}, energy(1)
 {
-  qm = new QM_QChem(qmids, qm_crd, mm_crd, mm_chg, 0, 1);
->>>>>>> b87ce38... updated interface
+  qm = new QM_QChem(atomicnumbers, qm_crd, mm_crd, mm_chg, 0, 1);
 };
 
 
-double BOMD::get_gradient()
+virtual 
+double 
+BOMD::update_gradient()
 {
     qm->update();
 
@@ -38,12 +35,14 @@ double BOMD::get_gradient()
 
 
 template<typename T>
-void BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
+virtual
+void 
+BOMD::rescale_velocities(T* total_gradient, T* masses, T* velocities) {
   (void) total_gradient;
   (void) masses;
   (void) velocities;
 };
 
 
-template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);
+template virtual void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
+template virtual void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);

@@ -6,21 +6,22 @@
 class LinkAtoms
 {
 public:
-    static LinkAtoms with_const_factors(arma::umat global_idx, arma::vec factors)
+
+    static LinkAtoms with_const_factors(const arma::umat global_idx, arma::vec factors)
     {
         return LinkAtoms(global_idx, factors, arma::vec{});
     };
     //
-    static LinkAtoms with_const_length(arma::umat global_idx, arma::vec dist)
+    static LinkAtoms with_const_length(const arma::umat global_idx, arma::vec dist)
     {
         arma::vec fac(dist.size());
         return LinkAtoms(global_idx, fac, dist);
     };
     //
     arma::mat& get_frc() { return frc; }
-    const arma::mat& get_crd() { return crd; }
+    arma::mat& get_crd() { return crd; }
     //
-    inline void set_local_idx(arma::uword* indices) {
+    inline void set_local_idx(const arma::uword* indices) {
         auto itr = local_idx.begin();
         for (size_t idx=0; idx<nlink; ++idx) {
             *itr++ = indices[idx*2];
@@ -33,6 +34,9 @@ public:
     // assume local coords!
     template<typename T>
     void update_crd(T* qmcrd, T* mmcrd);
+    //
+public:
+    arma::uword nlink{0};
 private:
     LinkAtoms(arma::umat in_idxs, arma::vec in_factors, arma::vec in_dist):
               global_idx{in_idxs}, factors{in_factors}, 
@@ -54,7 +58,6 @@ private:
     //
 protected:
      //
-    arma::uword nlink{0};
     arma::vec factors{};
     arma::vec dist{};
     // 

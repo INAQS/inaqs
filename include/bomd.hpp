@@ -2,7 +2,6 @@
 #define GIFS_SH_BOMD_CORE_H
 
 
-#include <vector>
 #include <armadillo>
 #include "qm_interface.hpp"
 
@@ -10,19 +9,19 @@
 class BOMD
 {
 public:
-    explicit BOMD(std::vector<int>& qmids,
-                  std::vector<double>& qm_crd, 
-                  std::vector<double>& mm_crd, 
-                  std::vector<double>& mm_chg, 
-                  std::vector<double>& qm_grd,
-                  std::vector<double>& mm_grd);
+    explicit BOMD(arma::uvec& atomicnumbers,
+                  arma::mat& qm_crd, 
+                  arma::mat& mm_crd, 
+                  arma::vec& mm_chg, 
+                  arma::mat& qm_grd,
+                  arma::mat& mm_grd);
     //
-    double get_gradient();
+    virtual double update_gradient();
     //
     virtual ~BOMD() {delete qm;}
     //
     template<typename T>
-    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    virtual void rescale_velocities(T* total_gradient, T* masses, T* velocities);
 
 protected:
   // // fixed size
@@ -32,10 +31,11 @@ protected:
   // arma::vec energy;
     QMInterface* qm{nullptr};
     // fixed size
-    std::vector<double>& qm_grd;
+    arma::mat& qm_grd;
     // flexible size
-    std::vector<double>& mm_grd;
-    std::vector<double> energy{};
+    arma::mat& mm_grd;
+    //
+    arma::vec energy{};
 };
 
 
