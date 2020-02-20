@@ -102,6 +102,10 @@ void QM_QChem::get_properties(PropMap &props){
 	surfaces = *props.get_idx(QMProperty::qmgradient_multi);
       }
 
+      if (g_qm->n_slices != surfaces.n_elem){
+	throw std::range_error("Insufficient space for requested gradients!");
+      }
+      
       arma::uword i=0;
       for (arma::uword surface: surfaces){
 	if (props.has(QMProperty::mmgradient_multi)){
@@ -119,13 +123,17 @@ void QM_QChem::get_properties(PropMap &props){
     }
       
     case QMProperty::energies:{
+      arma::vec * energies = props.get(QMProperty::energies); 
       // FIXME: clean-up the way we avoid an extra call for energy
       // (currently: sorting + e(e)_call_idx flags)
       if (props.has_idx(QMProperty::energies)){
-      	get_all_energies(props.get(QMProperty::energies));
+	if (energies->n_elem != excited_states + 1){
+	  throw std::range_error("Insufficient space for all energies!");
+	}
+      	get_all_energies(energies);
       }
       else{
-      	get_ground_energy(props.get(QMProperty::energies)); // FIXME: combine ground/excited calls
+      	get_ground_energy(energies); // FIXME: combine ground/excited calls
       }
       break;
     }
