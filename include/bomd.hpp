@@ -22,9 +22,9 @@ public:
 protected:
   QMInterface* qm{nullptr};
   // fixed size
-  arma::cube qm_grd;
+  arma::mat qm_grd;
   // flexible size
-  arma::cube mm_grd;
+  arma::mat mm_grd;
   arma::vec energy;
 };
 

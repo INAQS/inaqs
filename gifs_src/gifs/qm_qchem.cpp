@@ -75,33 +75,45 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::mmgradient:
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:{
-      arma::cube *g_qm = props.get(QMProperty::qmgradient);
-      arma::cube *g_mm = props.get(QMProperty::mmgradient);
-      
-      if (props.has_idx(QMProperty::qmgradient)){//excited states
-        const arma::uvec &surf_idx = *props.get_idx(QMProperty::qmgradient);
-        for (size_t i = 0; i < surf_idx.size(); i++){
-	  if (props.has(QMProperty::mmgradient)){
-	    get_gradient(g_qm->slice(i), g_mm->slice(i), surf_idx[i]);
-	  }
-	  else{
-	    get_gradient(g_qm->slice(i), surf_idx[i]);
-	  }
-        }
-       	e_call_idx = call_idx(); ee_call_idx = call_idx();
+      arma::mat *g_qm = props.get(QMProperty::qmgradient);
+      arma::mat *g_mm = props.get(QMProperty::mmgradient);
+      arma::uword surface = 0; //assume ground state
+      e_call_idx = call_idx();
+      if (props.has_idx(QMProperty::qmgradient)){
+	surface = (*props.get_idx(QMProperty::qmgradient))[0];
+	if (surface){ee_call_idx = call_idx();}
       }
-      else{ // ground states only
-	if (props.has(QMProperty::mmgradient)){
-	  get_gradient(g_qm->slice(0), g_mm->slice(0), 0);
-	}
-	else{
-	  get_gradient(g_qm->slice(0), 0);
-	}
-	e_call_idx = call_idx();
-      }
+      if (g_mm){ get_gradient(*g_qm, *g_mm, surface);}
+      else{      get_gradient(*g_qm, surface);}
       break;
     }
 
+    case QMProperty::mmgradient_multi:
+      break; // if we need mm, then we will do qm, which catches both
+    case QMProperty::qmgradient_multi:{
+      arma::cube *g_qm = props.get(QMProperty::qmgradient);
+      arma::cube *g_mm = props.get(QMProperty::mmgradient);
+
+      arma::uvec surfaces = arma::regspace<arma::uvec>(0,excited_states); //assume all
+      if (props.has_idx(QMProperty::qmgradient)){ // specific states
+	surfaces = *props.get_idx(QMProperty::qmgradient);
+      }
+
+      arma::uword i=0;
+      for (arma::uword surface: surfaces){
+	if (props.has(QMProperty::mmgradient)){
+	  get_gradient(g_qm->slice(i), g_mm->slice(i), surface);
+	}
+	else{
+	  get_gradient(g_qm->slice(i), surface);
+	}
+
+	i++;
+      }
+      e_call_idx = call_idx(); ee_call_idx = call_idx();   
+      break;
+    }
+      
     case QMProperty::energies:{
       // FIXME: clean-up the way we avoid an extra call for energy
       // (currently: sorting + e(e)_call_idx flags)

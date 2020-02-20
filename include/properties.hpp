@@ -9,12 +9,14 @@
   requested of a QMInterface.
 */
 enum class QMProperty{
-    nacvector,
-    nacvector_imag,
-    wfoverlap,
-    qmgradient,
-    mmgradient,
-    energies,
+   nacvector,        // mat
+   nacvector_imag,   // mat
+   wfoverlap,        // mat
+   qmgradient,       // mat
+   mmgradient,       // mat
+   qmgradient_multi, // cube
+   mmgradient_multi, // cube
+   energies,         // vec
 };
 
 /*
@@ -24,7 +26,7 @@ enum class QMProperty{
   if invalid conversions are attempted.
 
   To add support for another type:
-  * Add a member
+  * Add a pointer member
   * Add a constructor
   * Add an operator
   * Update the function std::string kind(void) with the new type
@@ -40,7 +42,7 @@ public:
   operator arma::vec  *() const {return notnull(v);};
   operator arma::mat  *() const {return notnull(m);};
   operator arma::cube *() const {return notnull(c);};
-
+  
 private:
   // Member types
   arma::vec  * v = nullptr;
@@ -57,12 +59,10 @@ private:
   }
   
   std::string kind(void) const{
-    std::string kind;
-    if      (v){kind = "vec";}
-    else if (m){kind = "mat";}
-    else if (c){kind = "cube";}
-    else       {kind = "uninitialized wrapper";}
-    return kind; 
+    if      (v){return "vec";}
+    else if (m){return "mat";}
+    else if (c){return "cube";}
+    else       {return "uninitialized wrapper";}
   }
 };
 
@@ -73,7 +73,6 @@ public:
   PropMap() : prop{} {};
   ArmaWrap get(QMProperty key);
   const arma::uvec* get_idx(QMProperty key) const;
-  //inline arma::cube& operator[](QMProperty key) { return *get(key); }  //get(key)
   
   void emplace(QMProperty p, ArmaWrap vec);
   void emplace(QMProperty p, arma::uvec iv, ArmaWrap vec);
