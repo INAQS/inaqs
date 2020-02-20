@@ -76,32 +76,36 @@ void QM_QChem::get_properties(PropMap &props){
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:{
       arma::mat *g_qm = props.get(QMProperty::qmgradient);
-      arma::mat *g_mm = props.get(QMProperty::mmgradient);
       arma::uword surface = 0; //assume ground state
       e_call_idx = call_idx();
       if (props.has_idx(QMProperty::qmgradient)){
 	surface = (*props.get_idx(QMProperty::qmgradient))[0];
 	if (surface){ee_call_idx = call_idx();}
       }
-      if (g_mm){ get_gradient(*g_qm, *g_mm, surface);}
-      else{      get_gradient(*g_qm, surface);}
+      
+      if (props.has(QMProperty::mmgradient)){
+	arma::mat *g_mm = props.get(QMProperty::mmgradient);
+	get_gradient(*g_qm, *g_mm, surface);
+      }
+      else{
+	get_gradient(*g_qm, surface);
+      }
       break;
     }
 
     case QMProperty::mmgradient_multi:
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient_multi:{
-      arma::cube *g_qm = props.get(QMProperty::qmgradient);
-      arma::cube *g_mm = props.get(QMProperty::mmgradient);
-
+      arma::cube *g_qm = props.get(QMProperty::qmgradient_multi);
       arma::uvec surfaces = arma::regspace<arma::uvec>(0,excited_states); //assume all
-      if (props.has_idx(QMProperty::qmgradient)){ // specific states
-	surfaces = *props.get_idx(QMProperty::qmgradient);
+      if (props.has_idx(QMProperty::qmgradient_multi)){ // specific states
+	surfaces = *props.get_idx(QMProperty::qmgradient_multi);
       }
 
       arma::uword i=0;
       for (arma::uword surface: surfaces){
-	if (props.has(QMProperty::mmgradient)){
+	if (props.has(QMProperty::mmgradient_multi)){
+	  arma::cube *g_mm = props.get(QMProperty::mmgradient_multi);
 	  get_gradient(g_qm->slice(i), g_mm->slice(i), surface);
 	}
 	else{
