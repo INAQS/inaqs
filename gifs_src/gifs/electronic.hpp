@@ -3,12 +3,25 @@
 
 #include <armadillo>
 
-namespace electronic{
-  /*
-    For systems of the form $i \hbar \dot{c} = H c$, advances c using
-    a 4th order Runge-Kutta integrator
-  */
-  arma::cx_vec rk4_advance(const arma::cx_mat &H, const arma::cx_vec &c, double dt);
-}
+class Electronic{
+public:
+  Electronic(const arma::cx_mat &cs) : amplitudes (cs) {reserve();};
+  Electronic(const arma::cx_vec &c) : amplitudes (c) {reserve();};
+  Electronic(arma::uword NStates): Electronic(NStates, 1) {reserve();};
+  Electronic(arma::uword NStates, arma::uword NSets) {amplitudes.set_size(NStates, NSets); reserve();};
+
+  void set(const arma::cx_mat &cs) {amplitudes = cs;};
+  void set(const arma::cx_vec &c) {amplitudes.col(0) = c;};
+
+  arma::cx_vec get(void) const;
+  
+  void advance(const arma::cx_mat &H, double dt);
+  
+private:
+  void reserve(void);
+
+  arma::cx_mat amplitudes;
+  arma::cx_mat k1, k2, k3, k4;  
+};
 
 #endif

@@ -1,5 +1,6 @@
 CPP = g++
 CPPFLAGS = -std=c++11 -O0 -Werror -Wall -Wextra -g
+#CPPFLAGS += -fanalyzer # only with gcc v. 10+
 #CPPFLAGS += -fsanitize=address
 
 # The address sanitizer is an excellent way to find memory errors, but
@@ -13,7 +14,7 @@ CPPFLAGS = -std=c++11 -O0 -Werror -Wall -Wextra -g
 SRCS := $(wildcard *.cpp)
 OBJS := $(SRCS:%.cpp=%.o)
 
-INCLUDE := -I../../include -I../../aramadillo/include
+INCLUDE := -I../../include -I../../armadillo/include
 LIBDIR := ../../lib
 LIB := libgifs.so
 LIBRARY := $(LIBDIR)/$(LIB)

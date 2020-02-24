@@ -30,9 +30,12 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
 
   // FIXME: want to configure multiple states
   // FIXME: should be able to configure (multiple) state(s)
-  c.set_size(nstates, 1);
-  c.zeros();
-  c(active_state,0) = 1.0;
+  arma::cx_vec c_ (nstates, arma::fill::zeros);
+  c_(active_state) = 1.0;
+  c.set(c_);
+  // c.set_size(nstates, 1);
+  // c.zeros();
+  // c(active_state,0) = 1.0;
   
   std::random_device rd;
   mt64_generator.seed(rd()); //FIXME: should be able to pass random seed
@@ -70,7 +73,8 @@ void FSSH::electonic_evolution(void){
   hopping = false; // FIXME: reset in velocity_rescale
   for (size_t nt = 0; nt < n_steps; nt++){
     // propagate all states simutaneously
-    c = electronic::rk4_advance(V - I*T, c, dtq);
+    //c = electronic::rk4_advance(V - I*T, c, dtq);
+    c.advance(V - I*T, dtq);
     
     // check for a hop unless we've already had one
     if (! hopping){

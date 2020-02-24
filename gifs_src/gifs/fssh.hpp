@@ -2,6 +2,7 @@
 #define __GIFS_FSSH_HPP
 
 #include "bomd.hpp"
+#include "electronic.hpp"
 #include <armadillo>
 
 class FSSH: public BOMD{
@@ -14,7 +15,8 @@ protected:
   void attempt_hop(void);
   double gen_rand(void);
 
-  arma::cx_mat c;
+  //arma::cx_mat c;
+  Electronic c;
   arma::mat U;
   arma::mat T, V;
 
