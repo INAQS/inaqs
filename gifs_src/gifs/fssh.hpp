@@ -6,22 +6,23 @@
 
 class FSSH: public BOMD{
 public:
-  explicit FSSH(int nqm, const int * qmid); // need to parse our config
+  explicit FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc);
   virtual ~FSSH() {};
   
 protected:
-  void main(void);
+  void electonic_evolution(void);
+  void attempt_hop(void);
   double gen_rand(void);
 
-  arma::cx_vec c;
+  arma::cx_mat c;
   arma::mat U;
   arma::mat T, V;
 
-  double dtc;
+  const double dtc;
   double dtq;
-  
-  size_t min_state;
-  size_t excited_states;
+
+  const size_t min_state;
+  const size_t excited_states;
   size_t active_state;
   size_t target_state;
   bool hopping = false;

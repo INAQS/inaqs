@@ -4,9 +4,11 @@
 #include <armadillo>
 
 namespace electronic{
-  arma::cx_vec propagate_c(arma::cx_vec c, arma::cx_vec diag);
-  arma::cx_vec propagate_c(arma::cx_vec c, arma::cx_vec diag, arma::cx_mat off);
-  arma::cx_vec rk4_step(arma::cx_mat H, arma::cx_vec c, double dt);
+  /*
+    For systems of the form $i \hbar \dot{c} = H c$, advances c using
+    a 4th order Runge-Kutta integrator
+  */
+  arma::cx_vec rk4_advance(const arma::cx_mat &H, const arma::cx_vec &c, double dt);
 }
 
 #endif
