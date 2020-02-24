@@ -43,8 +43,88 @@ FileHandle::find_line(const std::string& key) {
     return line;
 };
 
+Data::Data(const Data& rhs) {
+    type = rhs.type;
+    switch (type) {
+        case types::INT:
+            integer = rhs.integer;
+            break;
+        case types::DOUBLE:
+            dbl = rhs.dbl;
+            break;
+        case types::STRING:
+            str = rhs.str;
+            break;
+        default:
+            type = types::NONE;
+            break;
+    }
+
+}
+void
+Data::set_from_string(const std::string& value) 
+{
+    switch (type) {
+        case types::INT:
+            integer = std::stoi(value);
+            break;
+        case types::DOUBLE:
+            dbl = std::stod(value);
+            break;
+        case types::STRING:
+            str = value.c_str();
+            break;
+        default:
+            break;
+    }
+};
+
+
+bool
+Data::get_data(double& out) {
+    if (type != types::DOUBLE) {
+        return false;
+    } 
+    out = dbl;
+    return true;
+    
+};
+
+std::string
+Data::get_type() {
+    switch (type) {
+        case (types::INT):
+            return "int";
+        case (types::DOUBLE): 
+            return "double";
+        case (types::STRING): 
+            return "break";
+        default:
+            return "unknown";
+    }
+};
+
+bool
+Data::get_data(int& out) {
+    if (type != types::INT) {
+        return false;
+    }
+    out = integer;
+    return true;
+}
+
+bool
+Data::get_data(std::string& out)
+{
+    if (type != types::STRING) {
+        return false;
+    }
+    out = std::string(str);
+    return true;
+}
+
 int
-ConfigReader::parse(FileHandle& file) 
+ConfigBlockReader::parse(FileHandle& file) 
 {
     // reset file pointer
     file.rewind_fh();
@@ -81,16 +161,11 @@ ConfigReader::parse(FileHandle& file)
 
 };
 
-
 void 
-ConfigReader::parse_line(const std::string& key, const std::string& value) 
+ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
 {
-    if (key_in_map(key, ints)) {
-        parse_int(key, value);
-    } else if (key_in_map(key, floats)) {
-        parse_floats(key, value);
-    } else if (key_in_map(key, strings)) {
-        parse_string(key, value);
+    if (key_in_map(key, data)) {
+        data[key].set_from_string(value);
     } else {
     }
 };

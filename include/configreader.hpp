@@ -2,6 +2,7 @@
 #define FILEHANDLER_H_
 
 #include <unordered_map>
+#include <vector>
 #include <string>
 
 
@@ -78,32 +79,71 @@ class FileHandle
         File file;
 };
 
-
-class ConfigReader
+class Data
 {
 public:
-  explicit ConfigReader(std::string block): name{block}, ints{} {}
+    explicit Data(int input) : integer{input}, type{data_type::INT} {}
+    explicit Data(double input) : dbl{input}, type{data_type::DOUBLE} {}
+    explicit Data(std::string input) : str{input}, type{data_type::STRING} {}
+    Data(): type{data_type::NONE} {}
+    ~Data(){}
+    Data(const Data& rhs);
+    // copy operation
+    bool get_data(double& out); 
+    bool get_data(int& out); 
+    bool get_data(std::string& out); 
+    // move operation
+
+    /*
+    void move_data(double& out); 
+    void move_data(int& out); 
+    void move_data(std::vector<int>& out); 
+    void move_data(std::vector<double>& out); 
+    void move_data(std::string& out); 
+    */
+    void set_from_string(const std::string& validation);
+private:
+    std::string get_type();
+    union
+    {
+        double dbl;
+        int integer;
+        std::string str{};
+    };
+
+    enum class data_type {
+        INT,
+        DOUBLE,
+        STRING, 
+        NONE
+    };
+    data_type type{};
+    using types = Data::data_type;
+};
+
+
+class ConfigBlockReader
+{
+public:
+    explicit ConfigBlockReader(std::string block): name{block}, data{} {}
     // add entry by type
-    void add_entry(std::string name, int def) { ints.emplace(name, def); }
-    void add_entry(std::string name, double def) { floats.emplace(name, def); }
-    void add_entry(std::string name, std::string def) { strings.emplace(name, def); }
+    void add_entry(const std::string name, const int def) { data.emplace(name, Data{def}); }
+    void add_entry(const std::string name, const double def) { data.emplace(name, Data{def}); }
+    void add_entry(const std::string name, const std::string def) { data.emplace(name, Data{def}); }
     // parse file
     int parse(FileHandle& file);
     // get results
-    inline int get_int(const std::string& key) { return ints[key]; }
-    inline double get_double(const std::string& key) { return floats[key]; }
-    inline std::string get_string(const std::string& key) { return strings[key]; }
+    inline bool get_data(const std::string& key, int& val) { return data[key].get_data(val); }
+    inline bool get_data(const std::string& key, double& val) { return data[key].get_data(val); }
+    inline bool get_data(const std::string& key, std::string& val) { return data[key].get_data(val); }
+
+    Data operator[](const std::string& key) {return data[key];}
 
 private:
     void parse_line(const std::string& key, const std::string& value); 
-    void parse_string(const std::string& key, const std::string& value) { strings[key] = trim(value); }
-    void parse_floats(const std::string& key, const std::string& value) { floats[key] = std::stod(value); }
-    void parse_int(const std::string& key, const std::string& value) { ints[key] = std::stoi(value); }
 
     std::string name{};
-    std::unordered_map<std::string, int> ints{};
-    std::unordered_map<std::string, double> floats{};
-    std::unordered_map<std::string, std::string> strings{};
+    std::unordered_map<std::string, Data> data;
 };
 
 
