@@ -44,6 +44,7 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     las->update_crd(in_qm_crd, in_mm_crd);
     // copy coordinates 
     size_t nqm_withoutlink = nqm-las->nlink;
+    // assumes linkatoms are below coordinate section
     conv->transform_coords_to_au(in_qm_crd, in_qm_crd+3*nqm_withoutlink, qm_crd.begin());
     conv->transform_coords_to_au(in_mm_crd, in_mm_crd+3*nmm, mm_crd.begin()); 
     // linkatoms coords
@@ -53,10 +54,10 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     double energy = bomd->update_gradient();
     // update linkatom
     auto& la_frc = las->get_frc();
-    conv->transform_coords_to_au(qm_frc.begin()+3*nqm_withoutlink, qm_frc.end(), la_frc.begin());
+    conv->transform_au_to_forces(qm_frc.begin()+3*nqm_withoutlink, qm_frc.end(), la_frc.begin());
     // transform back forces
-    conv->transform_coords_to_au(qm_frc.begin(), qm_frc.end()-3*las->nlink, in_qm_frc);
-    conv->transform_coords_to_au(mm_frc.begin(), mm_frc.end(), in_mm_frc);
+    conv->transform_au_to_forces(qm_frc.begin(), qm_frc.end()-3*las->nlink, in_qm_frc);
+    conv->transform_au_to_forces(mm_frc.begin(), mm_frc.end(), in_mm_frc);
     // copy linkatom forces
     std::copy(la_frc.begin(), la_frc.end(), in_qm_frc+3*nqm_withoutlink);
     // return energy
