@@ -7,6 +7,7 @@
   \dot{c} = H c$, advances c using a 4th order Runge-Kutta integrator
 */
 void Electronic::advance(const arma::cx_mat &H, double dt){
+  // FIXME: JES: should we be inter-/extra-polating H from the last time step? 
   k1 = dt * (std::complex<double> (-1, 1)) * H * amplitudes;
   k2 = dt * (std::complex<double> (-1, 1)) * H * (amplitudes + (k1 / 2));
   k3 = dt * (std::complex<double> (-1, 1)) * H * (amplitudes - (k1 / 3) + k2);
@@ -23,7 +24,3 @@ void Electronic::reserve(void){
   k4.set_size(s);
 }
 
-//FIXME: verify that this isn't returning a copy
-arma::cx_vec Electronic::get(void) const{
-  return amplitudes.col(0);
-}
