@@ -10,7 +10,9 @@ double FSSH::gen_rand(void){
 
 // FIXME: need to parse our config
 FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc):
-  BOMD(nqm, qmid), dtc {dtc}, min_state {min_state}, excited_states {excited_states}, active_state {active_state}
+  BOMD(nqm, qmid), dtc {dtc},
+  min_state {min_state}, excited_states {excited_states}, active_state {active_state},
+  c {excited_states + 1 - min_state}
 {
   int nstates = excited_states + 1 - min_state;
   if (nstates < 2){
@@ -20,7 +22,7 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
   if ((active_state < min_state) || (excited_states < active_state)){
     throw std::range_error("Active state not in the range of computed states!");
   }
-  
+
   // FIXME: some objects have excited + ground states, others have
   // excited + ground - minimum; this will screw up indexing.
   U.set_size(nstates);
@@ -70,27 +72,36 @@ void FSSH::electonic_evolution(void){
   const std::complex<double> I(0,1);
   
   // propagate electronic coefficients (for each set of amplitudes)
-  hopping = false; // FIXME: reset in velocity_rescale
   for (size_t nt = 0; nt < n_steps; nt++){
     // propagate all states simutaneously
-    //c = electronic::rk4_advance(V - I*T, c, dtq);
     c.advance(V - I*T, dtq);
-    
+
     // check for a hop unless we've already had one
     if (! hopping){
       const arma::uword a = active_state;
 
-      // transition probabilities; eq. 12 has the conjugate on the wrong element; see Tully (1990). 
-      arma::vec g = -2 * arma::real(arma::conj(c.col(0)) * c(a,0) * T.col(a)) * dtq / std::norm(c(a,0));
+      // transition probabilities; eq. 12 has the conjugate on the wrong element; see Tully (1990).
+      arma::vec g = -2 * arma::real(arma::conj(c()) * c(a) * T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
-      g.elem( find(g < 0) ).zeros();
+      g.elem( arma::find(g < 0) ).zeros();
+      
+      /*
+	FIXME: c.f. Tylly (1990) step 3, which says: from state 1, a
+	switch to state 2 will occur if zeta < g12. A switch to state
+	3 will occur if g12 < zeta < g12 + g13, etc.
+
+	What's going on here? Do we need to compute all partial
+	cummulative sums? How does this affect transitions "down"?
+      */
       
       // index of largest transition probability
-      arma::uword j = g.index_max(); 
-      if (g[j] > gen_rand()){
-	// will update these in the velocity_rescale call
-	hopping = true;
-	target_state = j;
+      arma::uword j = g.index_max();
+      const double zeta = gen_rand();
+
+      if (zeta < g[j]){
+      	// will update these in the velocity_rescale call
+      	hopping = true;
+      	target_state = j;
       }
     }
   }
@@ -103,7 +114,12 @@ void FSSH::attempt_hop(void){
     return;
   }
 
+  arma::uword NQM = qm_grd.n_cols;
+  arma::uword NMM = mm_grd.n_cols;
   
+  nac.set_size(3, NQM+NMM);
+  PropMap props{};
+  props.emplace(QMProperty::nacvector, {active_state, target_state}, &qm_grd);
   
   
   hopping = false;

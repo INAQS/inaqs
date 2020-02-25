@@ -15,8 +15,6 @@ protected:
   void attempt_hop(void);
   double gen_rand(void);
 
-  //arma::cx_mat c;
-  Electronic c;
   arma::mat U;
   arma::mat T, V;
 
@@ -29,6 +27,11 @@ protected:
   size_t target_state;
   bool hopping = false;
 
+  //arma::cx_mat c;
+  Electronic c;
+
+  arma::mat nac;
+  
   std::mt19937_64 mt64_generator;
 };
 
