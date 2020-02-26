@@ -215,6 +215,7 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surfac
 
 
 void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
+  static int qc_sentinel = -1;
   if (surface > excited_states){
     throw std::invalid_argument("Requested surface not computed!");
   }
@@ -226,6 +227,14 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
     REMKeys ex = excited_rem();
     keys.insert(ex.begin(), ex.end());
     keys.insert({{"cis_state_deriv", std::to_string(surface)}});
+    if (call_idx() == qc_sentinel){
+      keys.insert({{"skip_setman", "1"},
+	           {"skip_scfman", "1"}});
+    }
+    else{
+      keys.insert({{"cis_rlx_dns", "1"}});
+    }
+    qc_sentinel = call_idx();
   }
   
   write_rem_section(input, keys);  
@@ -326,7 +335,8 @@ void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
-    g_mm.col(i) *= q;
+    // FILE_EFIELD really contains the field so we ned a negative to get the gradient.
+    g_mm.col(i) *= -1.0 * q;
   }
   /*
     This method replaced parsing efield.dat, which has the following

@@ -48,6 +48,8 @@ private:
   const size_t excited_states;
   bool first_call = true;
 
+  enum class FistCall{};
+
   int e_call_idx = -1;  // call index for ground and (e)xcited energy
   int ee_call_idx = -1;
 };
