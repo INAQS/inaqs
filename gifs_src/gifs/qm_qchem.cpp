@@ -9,7 +9,7 @@
 #include "qm_qchem.hpp"
 #include "properties.hpp"
 #include <armadillo>
-
+#include <unordered_map>
 
 
 QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
@@ -68,7 +68,7 @@ void QM_QChem::get_properties(PropMap &props){
       const arma::uvec &idx = *props.get_idx(QMProperty::nacvector);
       size_t A = idx[0]; size_t B = idx[1];
       get_nac_vector(props.get(QMProperty::nacvector), A, B);
-      e_call_idx = call_idx(); ee_call_idx = call_idx();
+      called(S::energy); called(S::ex_energy);
       break;
     }
 
@@ -77,10 +77,10 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::qmgradient:{
       arma::mat *g_qm = props.get(QMProperty::qmgradient);
       arma::uword surface = 0; //assume ground state
-      e_call_idx = call_idx();
+      called(S::energy);
       if (props.has_idx(QMProperty::qmgradient)){
 	surface = (*props.get_idx(QMProperty::qmgradient))[0];
-	if (surface){ee_call_idx = call_idx();}
+	if (surface){called(S::ex_energy);}
       }
       
       if (props.has(QMProperty::mmgradient)){
@@ -118,7 +118,7 @@ void QM_QChem::get_properties(PropMap &props){
 
 	i++;
       }
-      e_call_idx = call_idx(); ee_call_idx = call_idx();   
+      called(S::energy); called(S::ex_energy);
       break;
     }
       
@@ -150,8 +150,7 @@ void QM_QChem::get_properties(PropMap &props){
   FIXME: Use another REM variable to save PREV_GEO
 */
 void QM_QChem::get_wf_overlap(arma::mat *U){  
-  static int last_overlap_call = -1;
-  if (last_overlap_call != call_idx()){
+  if (! called(S::wfoverlap)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
     	      {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
@@ -167,8 +166,6 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
     //don't recompute 
   }
   
-  last_overlap_call = call_idx();
-  
   size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse wavefunction overlap");
@@ -178,8 +175,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
 
 void QM_QChem::get_ground_energy(arma::vec *e){
   // Build job if we need to
-  if (e_call_idx != call_idx()){
-    e_call_idx = call_idx();
+  if (! called(S::energy)){
     std::ofstream input = get_input_handle();
     write_rem_section(input, {{"jobtype","sp"}});
     write_molecule_section(input);
@@ -192,8 +188,7 @@ void QM_QChem::get_ground_energy(arma::vec *e){
 
 // Gets all energies: ground + excited states
 void QM_QChem::get_all_energies(arma::vec *e){
-  if (ee_call_idx != call_idx()){
-    ee_call_idx = call_idx();
+  if (! called(S::ex_energy)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"}});
     
@@ -215,7 +210,6 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surfac
 
 
 void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
-  static int qc_sentinel = -1;
   if (surface > excited_states){
     throw std::invalid_argument("Requested surface not computed!");
   }
@@ -227,14 +221,13 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
     REMKeys ex = excited_rem();
     keys.insert(ex.begin(), ex.end());
     keys.insert({{"cis_state_deriv", std::to_string(surface)}});
-    if (call_idx() == qc_sentinel){
+    if (called(S::ex_grad)){
       keys.insert({{"skip_setman", "1"},
 	           {"skip_scfman", "1"}});
     }
     else{
       keys.insert({{"cis_rlx_dns", "1"}});
     }
-    qc_sentinel = call_idx();
   }
   
   write_rem_section(input, keys);  
@@ -508,6 +501,16 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   }
 }
 
+bool QM_QChem::called(S s){
+  static std::unordered_map<S, int> calls;
+  if(call_idx() == calls[s]){
+    return true;
+  }
+  else{
+    calls[s] = call_idx();
+  }
+  return false;
+}
 
 /*
   Given a q-qchem file number (see qm_qchem.hpp for examples), read N

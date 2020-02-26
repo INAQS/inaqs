@@ -48,10 +48,16 @@ private:
   const size_t excited_states;
   bool first_call = true;
 
-  enum class FistCall{};
+  enum class S{
+    energy,
+    ex_energy,
+    ex_grad,
+    wfoverlap,
+  };
 
-  int e_call_idx = -1;  // call index for ground and (e)xcited energy
-  int ee_call_idx = -1;
+  //FIXME: when switching to the new interface, verify that call_idx()
+  //will always return a value > 0
+  bool called(S s);
 };
 
 /* Some useful FMan Files */
