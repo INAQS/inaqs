@@ -12,7 +12,7 @@ public:
   
 protected:
   void electonic_evolution(void);
-  void attempt_hop(void);
+  void hop_and_scale(arma::vec vel, arma::vec inv_mass);
   double gen_rand(void);
 
   arma::mat U;
@@ -27,7 +27,6 @@ protected:
   size_t target_state;
   bool hopping = false;
 
-  //arma::cx_mat c;
   Electronic c;
 
   arma::mat nac;

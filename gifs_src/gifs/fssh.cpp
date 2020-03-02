@@ -2,6 +2,7 @@
 #include "electronic.hpp"
 #include <armadillo>
 #include <complex>
+#include <cmath>
 
 double FSSH::gen_rand(void){
   static std::uniform_real_distribution<> uniform_distribution(0.0, 1.0);
@@ -30,7 +31,6 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
   T.set_size(nstates);
   V.set_size(nstates);
 
-  // FIXME: want to configure multiple states
   // FIXME: should be able to configure (multiple) state(s)
   arma::cx_vec c_ (nstates, arma::fill::zeros);
   c_(active_state) = 1.0;
@@ -57,7 +57,7 @@ void FSSH::electonic_evolution(void){
   qm->get_properties(props);
 
   // FIXME: need to match previous phases and orthogonalize U first
-  // We could monitor the magnitude of the imaginary component
+  // FIXME: Q-Chem should dump U earlier
   T = real(arma::logmat(U)) / dtc;
     
   arma::mat V = diagmat(energy.subvec(min_state, excited_states));
@@ -107,20 +107,65 @@ void FSSH::electonic_evolution(void){
   }
 }
 
+/*
+  FIXME: e_conserved will need to be provided on the GROMACS side to
+  determine if we need a gradient update. It may also be that, instead
+  of a bool, we need to request an energy difference (and a tolerance)
+  so that we can verify that the update succeeds.
+
+  Such checking should occur in a distinct function that will be
+  called before hop_and_scale.
+ */
+
+
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-void FSSH::attempt_hop(void){
-  // just in-case this gets called when it shouldn't
+void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
   if (! hopping){
-    return;
+    throw std::logic_error("Should not be attempting a hop right now!");
   }
 
+  // FIXME: MFSJM: does this accord with your plan to deal with link atoms?
   arma::uword NQM = qm_grd.n_cols;
   arma::uword NMM = mm_grd.n_cols;
-  
-  nac.set_size(3, NQM+NMM);
+
+  if (inv_mass.n_elem != NQM + NMM){
+    throw std::range_error("inverse mass of improper length!");
+  }
+
+  nac.set_size(3, NQM + NMM);  // below, a readonly view of nac as a vector
+  const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
+
   PropMap props{};
-  props.emplace(QMProperty::nacvector, {active_state, target_state}, &qm_grd);
+  //FIXME: Make sure you don't need to add min_state to the below
+  props.emplace(QMProperty::nacvector, {active_state, target_state}, &nac);
+  qm->get_properties(props);
+
+  // Unlike all other state-properties, must use min_state as floor for indexing into energy
+  double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
   
+  // 3N mass vector
+  arma::vec m (3 * (NQM + NMM), arma::fill::ones);
+  for (arma::uword i = 0; i < inv_mass.n_elem; i++){
+    double mi = 1.0 / inv_mass(i);
+    m.subvec(3 * i, 3*(i+1)) *= mi;
+  }
+
+  double vmd = arma::as_scalar((vel % m)  * nacv.t());
+  double dmd = arma::as_scalar((nacv % m) * nacv.t());
+
+  double discriminant = (vmd/dmd)*(vmd/dmd) - 2*deltaE/dmd;
+  if (discriminant <= 0){   // frustrated hop
+    if (true){ // FIXME: should be velocity reversal criterion
+      arma::vec nacu = arma::normalise(nacv);
+      vel = vel - 2.0 * (nacu * nacu.t()) * vel;
+    }
+  }
+  else{  // hop will succeed    
+    double alpha = std::sqrt(discriminant) - (vmd/dmd);
+    // alpha has dimension of Time/Mass
+    vel = vel + alpha * nacv;
+    active_state = target_state;
+  }
   
   hopping = false;
 }
