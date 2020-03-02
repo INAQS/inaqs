@@ -18,6 +18,11 @@ QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excit
   qc_executable(get_qcprog()),
   exchange_method("HF"), // FIXME: Method/basis should be configurable;
   basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
+  /*
+    FIXME: Q-Chem can decide to change the number of excited states it
+    computes!! Usually this will be to a larger number of states
+    --Y.S.
+  */
   excited_states(excited_states)
 {
   /*
@@ -436,7 +441,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"basis",         basis_set},
      {"sym_ignore",    "true"},
      {"qm_mm",         "true"},
-     {"input_bohr",    "true"}
+     {"input_bohr",    "true"} // .../libgen/PointCharges.C works for MM charges
     };
   
   if (first_call ){
