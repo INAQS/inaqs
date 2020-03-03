@@ -157,11 +157,12 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
   if (discriminant <= 0){   // frustrated hop
     if (true){ // FIXME: should be velocity reversal criterion
       arma::vec nacu = arma::normalise(nacv);
-      vel = vel - 2.0 * (nacu * nacu.t()) * vel;
+      vel = vel - 2.0 * nacu * nacu.t() * vel;
     }
   }
-  else{  // hop will succeed    
-    double alpha = std::sqrt(discriminant) - (vmd/dmd);
+  else{  // hop succeeds
+    // test the sign of vmd to pick the root yeilding the smallest value of alpha
+    doulbe alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
     // alpha has dimension of Time/Mass
     vel = vel + alpha * nacv;
     active_state = target_state;
