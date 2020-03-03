@@ -20,6 +20,9 @@ public:
   const arma::cx_mat get(void) const { return amplitudes; }
   
   void advance(const arma::cx_mat &H, double dt);
+
+  static void phase_match(arma::mat &U);
+  static void phase_match(arma::cx_mat &U);
   
 private:
   void reserve(void);

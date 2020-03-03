@@ -24,3 +24,16 @@ void Electronic::reserve(void){
   k4.set_size(s);
 }
 
+/*
+  Implements Zeyu Zhou et al. JCTC 2020, 16, 835--846
+*/
+
+//FIXME: need implementation
+void Electronic::phase_match(arma::mat &U){
+  (void) U;
+}
+
+void Electronic::phase_match(arma::cx_mat &U){
+  (void) U;
+  throw std::invalid_argument("complex phase matching not implemented");
+}

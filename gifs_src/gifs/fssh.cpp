@@ -56,8 +56,8 @@ void FSSH::electonic_evolution(void){
   props.emplace(QMProperty::wfoverlap,  &U);
   qm->get_properties(props);
 
-  // FIXME: need to match previous phases and orthogonalize U first
-  // FIXME: Q-Chem should dump U earlier
+  // FIXME: need to actually implement phase-matching and orthogonalization
+  Electronic::phase_match(U);
   T = real(arma::logmat(U)) / dtc;
     
   arma::mat V = diagmat(energy.subvec(min_state, excited_states));
@@ -132,7 +132,7 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
     throw std::range_error("inverse mass of improper length!");
   }
 
-  nac.set_size(3, NQM + NMM);  // below, a readonly view of nac as a vector
+  nac.set_size(3, NQM + NMM);  // below: a dirty, readonly view of nac as a vector
   const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
 
   PropMap props{};
@@ -162,7 +162,7 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
   }
   else{  // hop succeeds
     // test the sign of vmd to pick the root yeilding the smallest value of alpha
-    doulbe alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
+    double alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
     // alpha has dimension of Time/Mass
     vel = vel + alpha * nacv;
     active_state = target_state;
