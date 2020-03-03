@@ -56,7 +56,6 @@ void FSSH::electonic_evolution(void){
   props.emplace(QMProperty::wfoverlap,  &U);
   qm->get_properties(props);
 
-  // FIXME: need to actually implement phase-matching and orthogonalization
   Electronic::phase_match(U);
   T = real(arma::logmat(U)) / dtc;
     
@@ -129,7 +128,7 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
   arma::uword NMM = mm_grd.n_cols;
 
   if (inv_mass.n_elem != NQM + NMM){
-    throw std::range_error("inverse mass of improper length!");
+    throw std::range_error("inverse mass of improper size!");
   }
 
   nac.set_size(3, NQM + NMM);  // below: a dirty, readonly view of nac as a vector
