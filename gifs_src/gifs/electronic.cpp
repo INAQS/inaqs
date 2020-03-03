@@ -44,6 +44,8 @@ void Electronic::unitarize(arma::mat &U){
 
   Approximately minimizes Tr[log(U)^2] via jacobi sweeps while
   enforcing det(U) == 1
+
+  Results agree with the matricies in the paper's Appendix D
 */
 void Electronic::phase_match(arma::mat &U){
   // Step 1: det(U) == 1

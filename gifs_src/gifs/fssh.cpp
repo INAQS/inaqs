@@ -41,6 +41,8 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
   
   std::random_device rd;
   mt64_generator.seed(rd()); //FIXME: should be able to pass random seed
+  //FIXME: attempting to set the armadillo random seed errors: ‘arma_rng’ has not been declared
+  //arma_rng::set_seed_random(); //arma_rng::set_seed(rd());
 }; 
 
 // For use in the update_gradient() call; Jain step 4
