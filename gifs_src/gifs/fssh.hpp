@@ -12,8 +12,9 @@ public:
   
 protected:
   void electonic_evolution(void);
-  void hop_and_scale(arma::vec vel, arma::vec inv_mass);
+  void hop_and_scale(arma::vec &vel, arma::vec &inv_mass);
   double gen_rand(void);
+  arma::uword sample_discrete(const arma::vec &p);
 
   arma::mat U;
   arma::mat T, V;

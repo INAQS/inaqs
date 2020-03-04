@@ -9,6 +9,7 @@ double FSSH::gen_rand(void){
   return uniform_distribution(mt64_generator);
 }
 
+
 // FIXME: need to parse our config
 FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc):
   BOMD(nqm, qmid), dtc {dtc},
@@ -44,6 +45,34 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
   //FIXME: attempting to set the armadillo random seed errors: ‘arma_rng’ has not been declared
   //arma_rng::set_seed_random(); //arma_rng::set_seed(rd());
 }; 
+
+
+/*
+  For a discrete probability distribution Pi = p(i), returns the index
+  of an element randomly selected by sampling the distribution.
+
+  Examples:
+  * sample_discrete({0.5, 0.5}) returns 0 or 1 with probability 0.5
+  * sample_discrete({0.0, 0.0, 1.0}) returns 2 with probability 1.0
+
+  Note:
+  While there does exist std::discrete_distribution, I think that the
+  below implementation is superior in that it does not require
+  instantiating a new distribution for every round.
+*/
+arma::uword FSSH::sample_discrete(const arma::vec &p){
+  /*
+    Sanity checks; require:
+    * Pi >= 0 forall i 
+    * Sum(Pi) == 1
+  */
+  if (arma::any(p < 0)){throw std::logic_error("P cannot have negative elements!");}
+  if (std::abs(arma::sum(p) - 1) > 1e-8){ throw std::logic_error("P is not normed!");}
+
+  const double zeta = gen_rand();
+  return as_scalar(arma::find(arma::cumsum(p) > zeta, 1));
+}
+
 
 // For use in the update_gradient() call; Jain step 4
 void FSSH::electonic_evolution(void){
@@ -85,21 +114,14 @@ void FSSH::electonic_evolution(void){
       arma::vec g = -2 * arma::real(arma::conj(c()) * c(a) * T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
-      
-      /*
-	FIXME: c.f. Tylly (1990) step 3, which says: from state 1, a
-	switch to state 2 will occur if zeta < g12. A switch to state
-	3 will occur if g12 < zeta < g12 + g13, etc.
 
-	What's going on here? Do we need to compute all partial
-	cummulative sums? How does this affect transitions "down"?
-      */
-      
-      // index of largest transition probability
-      arma::uword j = g.index_max();
-      const double zeta = gen_rand();
+      // FIXME: is this norming the correct thing to do? Should we rather be monitoring the norm of g?
+      // ensure that g is normed by adding any residual desnity to the active state.
+      g(a) += 1.0 - arma::sum(g);
 
-      if (zeta < g[j]){
+      // randomly select an element from the discrete distribution represented by g
+      arma::uword j = sample_discrete(g);
+      if (a != j){
       	// will update these in the velocity_rescale call
       	hopping = true;
       	target_state = j;
@@ -120,12 +142,13 @@ void FSSH::electonic_evolution(void){
 
 
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
+void FSSH::hop_and_scale(arma::vec &vel, arma::vec &inv_mass){
   if (! hopping){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
 
   // FIXME: MFSJM: does this accord with your plan to deal with link atoms?
+  // Perhaps these should be members of BOMD?
   arma::uword NQM = qm_grd.n_cols;
   arma::uword NMM = mm_grd.n_cols;
 
@@ -133,30 +156,57 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
     throw std::range_error("inverse mass of improper size!");
   }
 
-  nac.set_size(3, NQM + NMM);  // below: a dirty, readonly view of nac as a vector
-  const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
+  nac.set_size(3, NQM + NMM);
 
+  arma::mat qmg_new, mmg_new;
+  qmg_new.set_size(3,NQM);
+  
   PropMap props{};
   //FIXME: Make sure you don't need to add min_state to the below
   props.emplace(QMProperty::nacvector, {active_state, target_state}, &nac);
+  // FIXME: do we need to calculate the gradient if the hop will already succeed?
+  props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
+  if (NMM > 0){
+    mmg_new.set_size(3, NMM);
+    props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
+  }
+  
   qm->get_properties(props);
+
+  // Make 3N vector versions of the NAC, gradient, and mass
+  const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
+
+  arma::vec gradv(3 * (NQM + NMM));
+  gradv.subvec(0, 3*NQM) = arma::vectorise(qmg_new);
+  if (NMM > 0){
+    gradv.subvec(3*NQM + 1, 3 * (NQM + NMM)) = arma::vectorise(mmg_new);
+  }
+
+  arma::vec m (3 * (NQM + NMM), arma::fill::zeros);
+  for (arma::uword i = 0; i < inv_mass.n_elem; i++){
+    double mi = 1.0 / inv_mass(i);
+    m.subvec(3 * i, 3*(i+1)) = mi;
+  }
+
 
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
   
-  // 3N mass vector
-  arma::vec m (3 * (NQM + NMM), arma::fill::ones);
-  for (arma::uword i = 0; i < inv_mass.n_elem; i++){
-    double mi = 1.0 / inv_mass(i);
-    m.subvec(3 * i, 3*(i+1)) *= mi;
-  }
-
   double vmd = arma::as_scalar((vel % m)  * nacv.t());
   double dmd = arma::as_scalar((nacv % m) * nacv.t());
 
   double discriminant = (vmd/dmd)*(vmd/dmd) - 2*deltaE/dmd;
   if (discriminant <= 0){   // frustrated hop
-    if (true){ // FIXME: should be velocity reversal criterion
+    /*
+      Velocity reversal along nac as per Jasper, A. W.; Truhlar,
+      D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
+
+      In the original Jain paper a second criterion was imposed. But,
+      in January 2020 A. Jain indicated to Joe that this was not
+      necesary. We follow the original Jasper-Truhlar perscription in
+      line with Jain's updated advice.
+    */
+    if (arma::as_scalar((-gradv * nacv)*(vel * nacv)) < 0){
       arma::vec nacu = arma::normalise(nacv);
       vel = vel - 2.0 * nacu * nacu.t() * vel;
     }
@@ -164,7 +214,7 @@ void FSSH::hop_and_scale(arma::vec vel, arma::vec inv_mass){
   else{  // hop succeeds
     // test the sign of vmd to pick the root yeilding the smallest value of alpha
     double alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
-    // alpha has dimension of Time/Mass
+    // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
     vel = vel + alpha * nacv;
     active_state = target_state;
   }
