@@ -221,7 +221,12 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &mass){
   driver is exceeded and we've had a hop. Update the current surface
   and to the total gradient, add (new-old).
 */
-void FSSH::update_MD_global_gradient(void){
+void FSSH::update_md_global_gradient(void){
+  // FIXME: MFSJM: does this accord with your plan to deal with link atoms?
+  // Perhaps these should be members of BOMD?
+  arma::uword NQM = qm_grd.n_cols;
+  arma::uword NMM = mm_grd.n_cols;
+  
   PropMap props = {};
   arma::mat qmg_new, mmg_new;
   qmg_new.set_size(3,NQM);
@@ -235,12 +240,16 @@ void FSSH::update_MD_global_gradient(void){
   qm->get_properties(props);
 
   // add this to whatever representation of the total gradient that we have
-  //qmg_new - qm_grd;
-  //mmg_new - mm_grd;
-
+  // qmg_new - qm_grd;
+  // if (NMM > 0){
+  //   mmg_new - mm_grd;
+  // }
+  
   //FIXME: make sure this does a copy
   qm_grd = qmg_new;
-  mm_grd = mmg_new;
+  if (NMM > 0){
+    mm_grd = mmg_new;
+  }
 }
 
 
