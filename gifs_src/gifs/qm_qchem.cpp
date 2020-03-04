@@ -129,8 +129,6 @@ void QM_QChem::get_properties(PropMap &props){
       
     case QMProperty::energies:{
       arma::vec * energies = props.get(QMProperty::energies); 
-      // FIXME: clean-up the way we avoid an extra call for energy
-      // (currently: sorting + e(e)_call_idx flags)
       if (props.has_idx(QMProperty::energies)){
 	if (energies->n_elem != excited_states + 1){
 	  throw std::range_error("Insufficient space for all energies!");
@@ -317,11 +315,6 @@ void QM_QChem::parse_qm_gradient(arma::mat &g_qm){
 }
 
 
-/*
-  FIXME: This will return a *force* rather than a gradient unless
-  efield is the negative of the field, which it may be. We need to
-  return a gradient.
-*/
 void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
   /* Set a ceiling on the number of doubles we read-in because the
      number of MM atoms can fluctuate during a simulation. */
@@ -333,7 +326,7 @@ void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
-    // FILE_EFIELD really contains the field so we ned a negative to get the gradient.
+    // FILE_EFIELD really contains the *field* so we need a negative to get the gradient.
     g_mm.col(i) *= -1.0 * q;
   }
   /*
@@ -348,10 +341,9 @@ void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
     Ex(qmN) Ey(qmN) Ez(qmN)
 
     where Ea(u) is the component of the electric field in the a
-    direction at u and mmi and qmi are the coordinates of the ith mm and
-    qm atoms respectively and there is a perhaps-present factor of (-1)
-    s.t. the product of the value and the charge is a gradient rather
-    than a force.
+    direction at u and mmi and qmi are the coordinates of the ith mm
+    and qm atoms respectively. N.N. The product of the field and the
+    charge is a force rather than the gradient.
   */
 }
 
@@ -506,6 +498,15 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   }
 }
 
+
+/*
+  Sentinel system to track whether the requested property has been
+  computed since the last call to update(). See/update the protected
+  nested enum class S (as in sentinel) for the list of properties
+
+  FIXME: think about how to use QMProperty instead; might require a
+  different keyword for energy.
+*/
 bool QM_QChem::called(S s){
   static std::unordered_map<S, int> calls;
   if(call_idx() == calls[s]){
@@ -513,8 +514,8 @@ bool QM_QChem::called(S s){
   }
   else{
     calls[s] = call_idx();
+    return false;
   }
-  return false;
 }
 
 /*
