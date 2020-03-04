@@ -11,7 +11,7 @@ ArmaWrap PropMap::get(QMProperty key) {
   if(itr == prop.end()){
     return nullptr;
   }
-  else return itr->second;
+  else{ return itr->second;}
 }
 
 const arma::uvec* PropMap::get_idx(QMProperty key) const { 
