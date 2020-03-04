@@ -9,10 +9,16 @@ class FSSH: public BOMD{
 public:
   explicit FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc);
   virtual ~FSSH() {};
+
+  double update_gradient(void);
+  // FIXME: velocity_rescale
+  void velocityrescale(void);
+    
   
 protected:
   void electonic_evolution(void);
-  void hop_and_scale(arma::vec &vel, arma::vec &inv_mass);
+  void update_md_global_gradient(void);
+  void hop_and_scale(arma::vec &vel, arma::vec &mass);
   double gen_rand(void);
   arma::uword sample_discrete(const arma::vec &p);
 

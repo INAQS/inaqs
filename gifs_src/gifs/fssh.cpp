@@ -25,6 +25,8 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
     throw std::range_error("Active state not in the range of computed states!");
   }
 
+  // FIXME: need to pass min_state to QM_Interface
+
   // FIXME: some objects have excited + ground states, others have
   // excited + ground - minimum; this will screw up indexing.
   U.set_size(nstates);
@@ -33,12 +35,10 @@ FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, s
   V.set_size(nstates);
 
   // FIXME: should be able to configure (multiple) state(s)
+  // R.B.: c is of type Electronic, not an arma object
   arma::cx_vec c_ (nstates, arma::fill::zeros);
   c_(active_state) = 1.0;
   c.set(c_);
-  // c.set_size(nstates, 1);
-  // c.zeros();
-  // c(active_state,0) = 1.0;
   
   std::random_device rd;
   mt64_generator.seed(rd()); //FIXME: should be able to pass random seed
@@ -81,9 +81,6 @@ void FSSH::electonic_evolution(void){
   }
   
   PropMap props{};
-  props.emplace(QMProperty::qmgradient, {active_state}, &qm_grd);
-  props.emplace(QMProperty::mmgradient, {active_state}, &mm_grd);
-  props.emplace(QMProperty::energies,   {excited_states}, &energy); // R.B.: with any idx, energies will get *all* states
   props.emplace(QMProperty::wfoverlap,  &U);
   qm->get_properties(props);
 
@@ -130,19 +127,9 @@ void FSSH::electonic_evolution(void){
   }
 }
 
-/*
-  FIXME: e_conserved will need to be provided on the GROMACS side to
-  determine if we need a gradient update. It may also be that, instead
-  of a bool, we need to request an energy difference (and a tolerance)
-  so that we can verify that the update succeeds.
-
-  Such checking should occur in a distinct function that will be
-  called before hop_and_scale.
- */
-
 
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-void FSSH::hop_and_scale(arma::vec &vel, arma::vec &inv_mass){
+void FSSH::hop_and_scale(arma::vec &vel, arma::vec &mass){
   if (! hopping){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
@@ -152,40 +139,24 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &inv_mass){
   arma::uword NQM = qm_grd.n_cols;
   arma::uword NMM = mm_grd.n_cols;
 
-  if (inv_mass.n_elem != NQM + NMM){
-    throw std::range_error("inverse mass of improper size!");
+  if (mass.n_elem != NQM + NMM){
+    throw std::range_error("mass of improper size!");
   }
 
   nac.set_size(3, NQM + NMM);
-
-  arma::mat qmg_new, mmg_new;
-  qmg_new.set_size(3,NQM);
   
   PropMap props{};
   //FIXME: Make sure you don't need to add min_state to the below
   props.emplace(QMProperty::nacvector, {active_state, target_state}, &nac);
-  // FIXME: do we need to calculate the gradient if the hop will already succeed?
-  props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
-  if (NMM > 0){
-    mmg_new.set_size(3, NMM);
-    props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
-  }
   
   qm->get_properties(props);
 
-  // Make 3N vector versions of the NAC, gradient, and mass
+  // Make 3N vector versions of the NAC and mass
   const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
 
-  arma::vec gradv(3 * (NQM + NMM));
-  gradv.subvec(0, 3*NQM) = arma::vectorise(qmg_new);
-  if (NMM > 0){
-    gradv.subvec(3*NQM + 1, 3 * (NQM + NMM)) = arma::vectorise(mmg_new);
-  }
-
   arma::vec m (3 * (NQM + NMM), arma::fill::zeros);
-  for (arma::uword i = 0; i < inv_mass.n_elem; i++){
-    double mi = 1.0 / inv_mass(i);
-    m.subvec(3 * i, 3*(i+1)) = mi;
+  for (arma::uword i = 0; i < mass.n_elem; i++){
+    m.subvec(3 * i, 3*(i+1)) = mass(i);
   }
 
 
@@ -196,7 +167,33 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &inv_mass){
   double dmd = arma::as_scalar((nacv % m) * nacv.t());
 
   double discriminant = (vmd/dmd)*(vmd/dmd) - 2*deltaE/dmd;
-  if (discriminant <= 0){   // frustrated hop
+  if (discriminant > 0){  // hop succeeds
+    // test the sign of vmd to pick the root yeilding the smallest value of alpha
+    double alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
+    // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
+    vel = vel + alpha * nacv;
+    active_state = target_state;
+  }
+  else{  // frustrated hop
+    // compute gradient of target_state to see if we reverse
+    arma::mat qmg_new, mmg_new;
+    qmg_new.set_size(3,NQM);
+  
+    props = {};
+    props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
+    if (NMM > 0){
+      mmg_new.set_size(3, NMM);
+      props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
+    }
+    qm->get_properties(props);
+
+    // 3N vector version of gradient
+    arma::vec gradv(3 * (NQM + NMM));
+    gradv.subvec(0, 3*NQM) = arma::vectorise(qmg_new);
+    if (NMM > 0){
+      gradv.subvec(3*NQM + 1, 3 * (NQM + NMM)) = arma::vectorise(mmg_new);
+    }
+    
     /*
       Velocity reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
@@ -210,14 +207,74 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &inv_mass){
       arma::vec nacu = arma::normalise(nacv);
       vel = vel - 2.0 * nacu * nacu.t() * vel;
     }
+    else{
+      // Ignore the unsuccessful hop; active_state remains unchanged 
+    }
   }
-  else{  // hop succeeds
-    // test the sign of vmd to pick the root yeilding the smallest value of alpha
-    double alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
-    // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
-    vel = vel + alpha * nacv;
-    active_state = target_state;
-  }
-  
   hopping = false;
+}
+
+
+
+/*
+  Call this function when energy fluctuation tolerance in the MD
+  driver is exceeded and we've had a hop. Update the current surface
+  and to the total gradient, add (new-old).
+*/
+void FSSH::update_MD_global_gradient(void){
+  PropMap props = {};
+  arma::mat qmg_new, mmg_new;
+  qmg_new.set_size(3,NQM);
+  
+
+  props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
+  if (NMM > 0){
+    mmg_new.set_size(3, NMM);
+    props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
+  }
+  qm->get_properties(props);
+
+  // add this to whatever representation of the total gradient that we have
+  //qmg_new - qm_grd;
+  //mmg_new - mm_grd;
+
+  //FIXME: make sure this does a copy
+  qm_grd = qmg_new;
+  mm_grd = mmg_new;
+}
+
+
+double FSSH::update_gradient(void){
+  //FIXME: should figure out how to call qm->update(void) automatically
+  //qm->update();
+
+  PropMap props{};
+  props.emplace(QMProperty::qmgradient, {active_state}, &qm_grd);
+  props.emplace(QMProperty::mmgradient, {active_state}, &mm_grd);
+  props.emplace(QMProperty::energies,   {excited_states}, &energy); // R.B.: with any idx, energies will get *all* states
+
+  qm->get_properties(props);
+  electonic_evolution();
+
+  return energy(min_state + active_state);
+}
+
+
+void FSSH::velocityrescale(void){  
+  if (hopping){/*
+    if(delta_e_from_md > md_tolerance){
+      // trivial crossing; need to update global gradient
+      update_md_global_gradient();
+      active_state = target_state;
+      hopping = false;
+    }
+    else{
+      hop_and_scale(arma::vec &vel, arma::vec &mass);
+      hopping = false;
+    }
+  */
+  }
+  else{
+    // nothing to do
+  }
 }
