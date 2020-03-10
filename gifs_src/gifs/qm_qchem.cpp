@@ -19,7 +19,7 @@ QM_QChem::QM_QChem(arma::uvec& in_qmids,
 		   arma::vec& in_mm_chg, 
 		   int charge, 
 		   int mult,
-		   int excited_states):
+		   size_t excited_states):
   QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states),
   qc_scratch_directory(get_qcscratch()),
   qc_executable(get_qcprog()),

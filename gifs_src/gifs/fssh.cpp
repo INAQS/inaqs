@@ -9,17 +9,12 @@ double FSSH::gen_rand(void){
   return uniform_distribution(mt64_generator);
 }
 
-// FSSH::FSSH(arma::uvec& atomicnumbers,
-// 	   arma::mat& qm_crd, 
-// 	   arma::mat& mm_crd, 
-// 	   arma::vec& mm_chg, 
-// 	   arma::mat& qm_grd,
-// 	   arma::mat& mm_grd):
-//   BOMD(atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd){
-
 // FIXME: need to parse our config
-FSSH::FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc):
-  BOMD(nqm, qmid), dtc {dtc},
+FSSH::FSSH(arma::uvec& atomicnumbers, arma::mat& qm_crd,
+           arma::mat& mm_crd, arma::vec& mm_chg,
+	   arma::mat& qm_grd, arma::mat& mm_grd,
+	   size_t min_state, size_t excited_states, size_t active_state, double dtc, double delta_e_tol):
+  BOMD(atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd), dtc {dtc}, delta_e_tol {delta_e_tol},
   min_state {min_state}, excited_states {excited_states}, active_state {active_state},
   c {excited_states + 1 - min_state}
 {
@@ -276,9 +271,9 @@ double FSSH::update_gradient(void){
 }
 
 
-void FSSH::velocityrescale(void){  
-  if (hopping){/*
-    if(delta_e_from_md > md_tolerance){
+void FSSH::rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
+  if (hopping){
+    if(std::abs(e_drift) > delta_e_tol){
       // trivial crossing; need to update global gradient
       update_md_global_gradient();
       active_state = target_state;
@@ -288,7 +283,6 @@ void FSSH::velocityrescale(void){
       hop_and_scale(arma::vec &vel, arma::vec &mass);
       hopping = false;
     }
-  */
   }
   else{
     // nothing to do

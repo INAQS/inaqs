@@ -9,19 +9,16 @@
 class BOMD
 {
 public:
-    explicit BOMD(arma::uvec& atomicnumbers,
-                  arma::mat& qm_crd, 
-                  arma::mat& mm_crd, 
-                  arma::vec& mm_chg, 
-                  arma::mat& qm_grd,
-                  arma::mat& mm_grd);
-    //
-    virtual double update_gradient();
-    //
-    virtual ~BOMD() {delete qm;}
-    //
-    template<typename T> // templates cannot be virtual
-    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+  explicit BOMD(arma::uvec& atomicnumbers,
+		arma::mat& qm_crd,
+		arma::mat& mm_crd,
+		arma::vec& mm_chg,
+		arma::mat& qm_grd,
+		arma::mat& mm_grd);
+  virtual ~BOMD() {delete qm;}
+  
+  virtual double update_gradient(void);
+  virtual void rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::vec &total_gradient, double e_drift);
 
 protected:
   // // fixed size

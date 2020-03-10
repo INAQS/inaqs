@@ -13,13 +13,11 @@ public:
 		arma::mat& mm_crd, 
 		arma::vec& mm_chg, 
 		arma::mat& qm_grd,
-		arma::mat& mm_grd);
+		arma::mat& mm_grd, size_t min_state, size_t excited_states, size_t active_state, double dtc,  double delta_e_tol);
   virtual ~FSSH() {};
 
-  double update_gradient(void);
-  // FIXME: velocity_rescale
-  void velocityrescale(void);
-    
+  virtual double update_gradient(void);
+  virtual void rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
   
 protected:
   void electonic_evolution(void);
@@ -32,6 +30,7 @@ protected:
   arma::mat T, V;
 
   const double dtc;
+  const double delta_e_tol;
   double dtq;
 
   const size_t min_state;

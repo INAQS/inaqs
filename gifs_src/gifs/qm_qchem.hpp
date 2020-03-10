@@ -17,7 +17,7 @@ public:
 	   arma::vec& in_mm_chg, 
 	   int charge, 
 	   int mult,
-	   int excited_states);
+	   size_t excited_states);
   void get_properties(PropMap &props);
 
 private:  
@@ -51,6 +51,7 @@ private:
   const std::string qc_log_file = "GQSH.out";
   const std::string exchange_method;
   const std::string basis_set;
+  const size_t excited_states;
   bool first_call = true;
 
   enum class S{
