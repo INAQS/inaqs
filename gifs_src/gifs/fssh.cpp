@@ -165,13 +165,13 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &mass){
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
   
-  double vmd = arma::as_scalar((vel % m)  * nacv.t());
-  double dmd = arma::as_scalar((nacv % m) * nacv.t());
+  double vd = arma::as_scalar(vel * nacv.t());
+  double dmd = arma::as_scalar((nacv / m) * nacv.t());
 
-  double discriminant = (vmd/dmd)*(vmd/dmd) - 2*deltaE/dmd;
+  double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){  // hop succeeds
-    // test the sign of vmd to pick the root yeilding the smallest value of alpha
-    double alpha = (vmd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vmd/dmd);
+    // test the sign of vd to pick the root yeilding the smallest value of alpha
+    double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
     // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
     vel = vel + alpha * nacv;
     active_state = target_state;
