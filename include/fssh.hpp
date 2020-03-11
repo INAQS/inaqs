@@ -17,12 +17,12 @@ public:
   virtual ~FSSH() {};
 
   virtual double update_gradient(void);
-  virtual void rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual void rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
   
 protected:
   void electonic_evolution(void);
-  void update_md_global_gradient(void);
-  void hop_and_scale(arma::vec &vel, arma::vec &mass);
+  void update_md_global_gradient(arma::mat &total_gradient);
+  void hop_and_scale(arma::mat &velocities, arma::vec &mass);
   double gen_rand(void);
   arma::uword sample_discrete(const arma::vec &p);
 

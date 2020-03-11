@@ -18,7 +18,7 @@ public:
   virtual ~BOMD() {delete qm;}
   
   virtual double update_gradient(void);
-  virtual void rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::vec &total_gradient, double e_drift);
+  virtual void rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::vec &total_gradient, double e_drift);
 
 protected:
   // // fixed size

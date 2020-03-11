@@ -131,7 +131,7 @@ void FSSH::electonic_evolution(void){
 
 
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-void FSSH::hop_and_scale(arma::vec &vel, arma::vec &mass){
+void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   if (! hopping){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
@@ -153,10 +153,12 @@ void FSSH::hop_and_scale(arma::vec &vel, arma::vec &mass){
   
   qm->get_properties(props);
 
-  // Make 3N vector versions of the NAC and mass
-  const arma::vec nacv(nac.memptr(), 3 * (NQM + NMM), false, true);
-
-  arma::vec m (3 * (NQM + NMM), arma::fill::zeros);
+  // Make 3N vector versions of the NAC, velocity, and mass
+  const arma::vec nacv(nac.memptr(), 3 * (NQM() + NMM()), false, true);
+  arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
+  
+  
+  arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
   for (arma::uword i = 0; i < mass.n_elem; i++){
     m.subvec(3 * i, 3*(i+1)) = mass(i);
   }
@@ -271,7 +273,7 @@ double FSSH::update_gradient(void){
 }
 
 
-void FSSH::rescale_velocities(arma::vec &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
+void FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
   if (hopping){
     if(std::abs(e_drift) > delta_e_tol){
       // trivial crossing; need to update global gradient
