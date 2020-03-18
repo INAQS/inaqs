@@ -93,7 +93,6 @@ public:
     bool get_data(int& out); 
     bool get_data(std::string& out); 
     // move operation
-
     /*
     void move_data(double& out); 
     void move_data(int& out); 
