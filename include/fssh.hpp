@@ -17,7 +17,7 @@ public:
   virtual ~FSSH() {};
 
   virtual double update_gradient(void);
-  virtual void rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
   
 protected:
   void electonic_evolution(void);

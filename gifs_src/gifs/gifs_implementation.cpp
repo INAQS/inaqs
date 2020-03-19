@@ -66,6 +66,47 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     // return energy
     return conv->energy_from_au(energy);
 };
+
+template<typename T1, typename T2>
+void from_global(const T1* global, T2& local,
+                 const arma::uword nqm, const arma::uvec& qm_index,
+                 const arma::uword nmm, const arma::uvec& mm_index)
+{
+    for (arma::uword i=0; i<nqm; ++i) {
+        const arma::uword idx = qm_index[i];
+        local(0, i) = global[idx*3];
+        local(1, i) = global[idx*3+1];
+        local(2, i) = global[idx*3+2];
+    }
+
+    for (arma::uword i=0; i<nmm; ++i) {
+        const arma::uword idx = mm_index[i];
+        local(0, i+nqm) = global[idx*3];
+        local(1, i+nqm) = global[idx*3+1];
+        local(2, i+nqm) = global[idx*3+2];
+    }
+};
+
+template<typename T1, typename T2>
+void to_global(T1* global, const T2& local,
+               const arma::uword nqm, const arma::uvec& qm_index,
+               const arma::uword nmm, const arma::uvec& mm_index)
+{
+    for (arma::uword i=0; i<nqm; ++i) {
+        const arma::uword idx = qm_index[i];
+        global[idx*3]   = local(0, i);
+        global[idx*3+1] = local(1, i);
+        global[idx*3+2] = local(2, i);
+    }
+
+    for (arma::uword i=0; i<nmm; ++i) {
+        const arma::uword idx = mm_index[i];
+        global[idx*3]   = local(0, i+nqm);
+        global[idx*3+1] = local(1, i+nqm);
+        global[idx*3+2] = local(2, i+nqm);
+    }
+};
+
 //
 template<typename T> 
 void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
@@ -75,35 +116,10 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     total_gradient.resize(3, ntot);
     masses.resize(ntot);
     veloc.resize(3, ntot);
-
-    for (arma::uword i=0; i<nqm; ++i) {
-        const arma::uword idx = qm_index[i];
-        total_gradient(0, i) = in_grad[idx*3];
-        total_gradient(1, i) = in_grad[idx*3+1];
-        total_gradient(2, i) = in_grad[idx*3+2];
-    }
-
-    for (arma::uword i=0; i<nmm; ++i) {
-        const arma::uword idx = mm_index[i];
-        total_gradient(0, i+nqm) = in_grad[idx*3];
-        total_gradient(1, i+nqm) = in_grad[idx*3+1];
-        total_gradient(2, i+nqm) = in_grad[idx*3+2];
-    }
-
-    for (arma::uword i=0; i<nqm; ++i) {
-        const arma::uword idx = qm_index[i];
-        veloc(0, i) = in_veloc[idx*3];
-        veloc(1, i) = in_veloc[idx*3+1];
-        veloc(2, i) = in_veloc[idx*3+2];
-    }
-
-    for (arma::uword i=0; i<nmm; ++i) {
-        const arma::uword idx = mm_index[i];
-        veloc(0, i+nqm) = in_veloc[idx*3];
-        veloc(1, i+nqm) = in_veloc[idx*3+1];
-        veloc(2, i+nqm) = in_veloc[idx*3+2];
-    }
-
+    //
+    from_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
+    from_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
+    //
     for (arma::uword i=0; i<nqm; ++i) {
         const arma::uword idx = qm_index[i];
         masses[i] = in_masses[idx];
@@ -117,7 +133,12 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     conv->transform_veloc_to_au(veloc.begin(), veloc.end(), veloc.begin());
     conv->transform_forces_to_au(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
     double e_drift = 0;
-    bomd->rescale_velocities(veloc, masses, total_gradient, e_drift);
+    if (bomd->rescale_velocities(veloc, masses, total_gradient, e_drift)) {
+        conv->transform_au_to_forces(veloc.begin(), veloc.end(), veloc.begin());
+        conv->transform_au_to_veloc(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
+        to_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
+        to_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
+    }
 };
 //
 GifsImpl::GifsImpl(size_t in_nqm, const int * ian)

@@ -4,6 +4,11 @@
 #include <complex>
 #include <cmath>
 
+
+// initial state vector, initial state
+// multiple state vectors,
+// random_seed
+
 double FSSH::gen_rand(void){
   static std::uniform_real_distribution<> uniform_distribution(0.0, 1.0);
   return uniform_distribution(mt64_generator);
@@ -273,7 +278,7 @@ double FSSH::update_gradient(void){
 }
 
 
-void FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
+bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
   if (hopping){
     if(std::abs(e_drift) > delta_e_tol){
       // trivial crossing; need to update global gradient
@@ -289,4 +294,5 @@ void FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   else{
     // nothing to do
   }
+  return hopping;
 }

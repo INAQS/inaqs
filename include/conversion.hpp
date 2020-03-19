@@ -35,6 +35,13 @@ public:
     template<typename itr1, typename itr2>
     inline 
     void 
+    transform_au_to_veloc(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val/this->veloc_to_au;});
+    }
+
+    template<typename itr1, typename itr2>
+    inline 
+    void 
     transform_au_to_forces(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->au_to_forces;});
     }

@@ -34,11 +34,12 @@ BOMD::update_gradient()
 };
 
 
-void BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
+bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
   (void) total_gradient;
   (void) masses;
   (void) velocities;
   (void) e_drift;
+  return false;
 };
 
 

@@ -18,7 +18,7 @@ public:
   virtual ~BOMD() {delete qm;}
   
   virtual double update_gradient(void);
-  virtual void rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
 
 protected:
   // // fixed size
@@ -53,10 +53,11 @@ public:
       mm_grd.fill(0.0);
       return 0.0;
   }
-  void rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) { 
+  bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) { 
       velocities.print("Velocities:");
       masses.print("Masses:");
       total_gradient.print("Total Gradient");
+      return true;
   };
     
 
