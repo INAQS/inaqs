@@ -8,7 +8,7 @@ QMInterface::QMInterface(arma::uvec& in_qmids,
                          int charge, 
                          int mult,
 			 int excited_states) :
-  NQM {atomids.size()},
+  NQM {in_qmids.size()},
   qm_charge(charge), qm_multiplicity(mult),
   excited_states(excited_states),
   atomids{in_qmids}, crd_qm{in_qm_crd}, 

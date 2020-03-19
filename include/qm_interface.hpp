@@ -24,7 +24,7 @@ public:
   virtual void get_properties(PropMap &props) =0;
   virtual ~QMInterface(){};
 
-protected:
+//protected:
   //Properties
   size_t NQM;             // const, actually NQM+NLink
   int qm_charge, qm_multiplicity;

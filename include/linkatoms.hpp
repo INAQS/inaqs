@@ -7,21 +7,15 @@ class LinkAtoms
 {
 public:
 
-    static LinkAtoms with_const_factors(const arma::umat global_idx, arma::vec factors)
-    {
-        return LinkAtoms(global_idx, factors, arma::vec{});
-    };
+    // you own it
+    static LinkAtoms* with_const_factors(const arma::umat global_idx, arma::vec factors);
     //
-    static LinkAtoms with_const_length(const arma::umat global_idx, arma::vec dist)
-    {
-        arma::vec fac(dist.size());
-        return LinkAtoms(global_idx, fac, dist);
-    };
+    static LinkAtoms* with_const_length(const arma::umat global_idx, arma::vec dist);
     //
     arma::mat& get_frc() { return frc; }
     arma::mat& get_crd() { return crd; }
     //
-    inline void set_local_idx(const arma::uword* indices) {
+    inline void set_local_idx(const size_t* indices) {
         auto itr = local_idx.begin();
         for (size_t idx=0; idx<nlink; ++idx) {
             *itr++ = indices[idx*2];
@@ -65,6 +59,79 @@ protected:
     arma::umat global_idx{};
     // local index
     arma::umat local_idx{};
+};
+// assume global coords
+template<typename T>
+void 
+LinkAtoms::update_crd(T* syscrd) {
+    if (!dist.empty()) {
+        update_factors(syscrd);
+    }
+    auto itr = crd.begin();
+    for (size_t idx=0; idx<nlink; ++idx) {
+        auto col = global_idx.col(idx);
+        arma::uword qmid = col[0]*3;
+        arma::uword mmid = col[1]*3;
+        double fac = factors[idx];
+
+        for(size_t ixyz=0; ixyz<3; ++ixyz) {
+            *itr++ = get_la_crd(fac, syscrd[qmid + ixyz], syscrd[mmid + ixyz]);
+        }
+    }
+};
+// assume local coords, qm and mm section
+template<typename T>
+void 
+LinkAtoms::update_crd(T* qmcrd, T* mmcrd) {
+    if (!dist.empty()) {
+        update_factors(qmcrd, mmcrd);
+    }
+
+    auto itr = crd.begin();
+    for (size_t idx=0; idx<nlink; ++idx) {
+        auto col = local_idx.col(idx);
+        arma::uword qmid = col[0]*3;
+        arma::uword mmid = col[1]*3;
+        double fac = factors[idx];
+
+        for(size_t ixyz=0; ixyz<3; ++ixyz) {
+            *itr++ = get_la_crd(fac, qmcrd[qmid + ixyz], mmcrd[mmid + ixyz]);
+        }
+    }
+};
+    
+template<typename T>
+void 
+LinkAtoms::update_factors(T* syscrd) {
+    auto fac_itr = factors.begin();
+    auto dist_itr = dist.begin();
+    for (size_t idx=0; idx<nlink; ++idx) {
+        auto col = local_idx.col(idx);
+        arma::uword qmid = col[0]*3;
+        arma::uword mmid = col[1]*3;
+        double R = 0;
+        for(size_t ixyz=0; ixyz<3; ++ixyz) {
+            R += pow(syscrd[qmid + ixyz] - syscrd[mmid + ixyz], 2);
+        }
+            *fac_itr++ = *dist_itr++/std::sqrt(R);
+    }
+};
+// assume local coords, qm and mm section
+template<typename T>
+void 
+LinkAtoms::update_factors(T* qmcrd, T* mmcrd) {
+    auto fac_itr = factors.begin();
+    auto dist_itr = dist.begin();
+    for (size_t idx=0; idx<nlink; ++idx) {
+        auto col = local_idx.col(idx);
+        arma::uword qmid = col[0]*3;
+        arma::uword mmid = col[1]*3;
+        double R = 0;
+        for(size_t ixyz=0; ixyz<3; ++ixyz) {
+            R += pow(qmcrd[qmid + ixyz] - mmcrd[mmid + ixyz], 2);
+        }
+        *fac_itr++ = *dist_itr++/std::sqrt(R);
+    }
 };
 
 #endif // GIFS_LINKATOMS_H
