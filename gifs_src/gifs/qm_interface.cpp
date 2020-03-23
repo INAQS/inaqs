@@ -1,20 +1,23 @@
-#include <vector>
 #include "properties.hpp"
 #include "qm_interface.hpp"
 
-QMInterface::QMInterface(const std::vector<int> &qmid, int charge, int mult):
-  qm_charge(charge), qm_multiplicity(mult){
-  NQM = qmid.size();
-  NMM = 0;
-  atomids = qmid;
-  
-  crd_qm.resize(3 * NQM);
-}
+QMInterface::QMInterface(arma::uvec& in_qmids, 
+                         arma::mat& in_qm_crd, 
+                         arma::mat& in_mm_crd, 
+                         arma::vec& in_mm_chg, 
+                         int charge, 
+                         int mult,
+			 int excited_states) :
+  NQM {in_qmids.size()},
+  qm_charge(charge), qm_multiplicity(mult),
+  excited_states(excited_states),
+  atomids{in_qmids}, crd_qm{in_qm_crd}, 
+  NMM {in_mm_chg.size()}, crd_mm{in_mm_crd}, chg_mm{in_mm_chg}
+{}
 
-void QMInterface::update(const std::vector<double> &crdqm, const std::vector<double> &crdmm, const std::vector<double> &chgmm){
-  NMM = chgmm.size();
-  crd_qm = crdqm;
-  crd_mm = crdmm;
-  chg_mm = chgmm;
+
+void QMInterface::update()
+{
+  NMM = chg_mm.size();
   qm_call_idx++;
 }

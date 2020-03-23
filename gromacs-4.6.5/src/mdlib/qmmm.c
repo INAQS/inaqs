@@ -170,6 +170,7 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM, 
 			       mm->nrMMatoms, mm->xMM, mm->MMcharges,
 			       f, fshift);
+    gifs_update_global_idx(qm->indexQM, mm->indexMM);
     return QMener;
 #endif
 

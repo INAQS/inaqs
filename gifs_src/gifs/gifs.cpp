@@ -1,18 +1,48 @@
 #include <vector>
-#include "gifs.hpp"
 #include "gifs_implementation.hpp"
-#include "properties.hpp"
+//#include "gifs.hpp"
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
 //Don't inline these; they need to be exported and available to Gromacs etc...
-
 void create_qm_interface(size_t nqm, const int* qm_atomids)
 {
   Gifs gifs_handle(nqm, qm_atomids);
 }
 
 
-float gifs_get_forces(const float* qm_crd, size_t nmm, const float* mm_crd, const float* mm_chg, float* f, float* fshift)
+float gifs_get_forces(const float* qm_crd, 
+                      const size_t* link_ids,
+                      size_t nmm, 
+                      const float* mm_crd, 
+                      const float* mm_chg, 
+                      float* f_qm, float* f_mm)
 {
   Gifs gifs_handle;
-  return gifs_handle.get_gradient(qm_crd, nmm, mm_crd, mm_chg, f, fshift);
+  /*
+    FIXME: MFSJM: I don't think the corresponding call exists in GIFS
+    yet---seems like it needs to be plummed through
+    Conversion/LinkAtoms.
+  */ 
+  return gifs_handle.update_gradient(qm_crd, 
+                                     link_ids, nmm, 
+                                     mm_crd, mm_chg, 
+                                     f_qm, f_mm);
 };
+
+void
+gifs_update_global_index(int* indexQM, int* indexMM) {
+  Gifs gifs_handle;
+  gifs_handle.update_global_index(indexQM, indexMM);
+}
+
+void
+gifs_rescale_velocities(float* total_gradient, float* masses, float* velocities) {
+  Gifs gifs_handle;
+  gifs_handle.rescale_velocities(total_gradient, masses, velocities);
+}
+
+#ifdef __cplusplus
+}
+#endif 
