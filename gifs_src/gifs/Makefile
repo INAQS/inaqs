@@ -26,12 +26,6 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
 COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
-
-all: example
-
-example: conversion.o example.o
-	$(CPP) -o ex.x example.o conversion.o
-
 $(LIBRARY): $(OBJS) | $(LIBDIR)
 	$(CPP) -shared -o $@ $(OBJS)
 
