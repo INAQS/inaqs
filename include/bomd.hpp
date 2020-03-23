@@ -53,7 +53,8 @@ public:
       mm_grd.fill(0.0);
       return 0.0;
   }
-  bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) { 
+  bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
+    (void) e_drift;
       velocities.print("Velocities:");
       masses.print("Masses:");
       total_gradient.print("Total Gradient");
