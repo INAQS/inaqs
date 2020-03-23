@@ -21,17 +21,14 @@ public:
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
 
 protected:
-  // // fixed size
-  // arma::cube qm_grd;
-  // // flexible size
-  // arma::cube mm_grd;
-  // arma::vec energy;
+  inline arma::uword NQM(void) const { return qm_grd.n_cols; }
+  inline arma::uword NMM(void) const { return mm_grd.n_cols; }
+  
     QMInterface* qm{nullptr};
     // fixed size
     arma::mat& qm_grd;
     // flexible size
     arma::mat& mm_grd;
-    //
     arma::vec energy{};
 };
 

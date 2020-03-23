@@ -41,7 +41,3 @@ bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   (void) e_drift;
   return false;
 };
-
-
-template void BOMD::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template void BOMD::rescale_velocities(float* total_gradient, float* masses, float* velocities);

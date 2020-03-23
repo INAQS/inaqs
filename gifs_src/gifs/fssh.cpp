@@ -5,10 +5,6 @@
 #include <cmath>
 
 
-// initial state vector, initial state
-// multiple state vectors,
-// random_seed
-
 double FSSH::gen_rand(void){
   static std::uniform_real_distribution<> uniform_distribution(0.0, 1.0);
   return uniform_distribution(mt64_generator);
@@ -141,16 +137,11 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
 
-  // FIXME: MFSJM: does this accord with your plan to deal with link atoms?
-  // Perhaps these should be members of BOMD?
-  arma::uword NQM = qm_grd.n_cols;
-  arma::uword NMM = mm_grd.n_cols;
-
-  if (mass.n_elem != NQM + NMM){
+  if (mass.n_elem != NQM() + NMM()){
     throw std::range_error("mass of improper size!");
   }
 
-  nac.set_size(3, NQM + NMM);
+  nac.set_size(3, NQM() + NMM());
   
   PropMap props{};
   //FIXME: Make sure you don't need to add min_state to the below
@@ -186,21 +177,21 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   else{  // frustrated hop
     // compute gradient of target_state to see if we reverse
     arma::mat qmg_new, mmg_new;
-    qmg_new.set_size(3,NQM);
+    qmg_new.set_size(3,NQM());
   
     props = {};
     props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
-    if (NMM > 0){
-      mmg_new.set_size(3, NMM);
+    if (NMM() > 0){
+      mmg_new.set_size(3, NMM());
       props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
     }
     qm->get_properties(props);
 
     // 3N vector version of gradient
-    arma::vec gradv(3 * (NQM + NMM));
-    gradv.subvec(0, 3*NQM) = arma::vectorise(qmg_new);
-    if (NMM > 0){
-      gradv.subvec(3*NQM + 1, 3 * (NQM + NMM)) = arma::vectorise(mmg_new);
+    arma::vec gradv(3 * (NQM() + NMM()));
+    gradv.subvec(0, 3*NQM()) = arma::vectorise(qmg_new);
+    if (NMM() > 0){
+      gradv.subvec(3*NQM() + 1, 3 * (NQM() + NMM())) = arma::vectorise(mmg_new);
     }
     
     /*
@@ -229,36 +220,30 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   Call this function when energy fluctuation tolerance in the MD
   driver is exceeded and we've had a hop. Update the current surface
   and to the total gradient, add (new-old).
+
+  FIXME: also need to do back-propogation on velocities, no??
 */
-void FSSH::update_md_global_gradient(void){
-  // FIXME: MFSJM: does this accord with your plan to deal with link atoms?
-  // Perhaps these should be members of BOMD?
-  arma::uword NQM = qm_grd.n_cols;
-  arma::uword NMM = mm_grd.n_cols;
-  
+void FSSH::update_md_global_gradient(arma::mat &total_gradient){
   PropMap props = {};
   arma::mat qmg_new, mmg_new;
-  qmg_new.set_size(3,NQM);
+  qmg_new.set_size(3,NQM());
   
 
   props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
-  if (NMM > 0){
-    mmg_new.set_size(3, NMM);
+  if (NMM() > 0){
+    mmg_new.set_size(3, NMM());
     props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
   }
   qm->get_properties(props);
-
-  // add this to whatever representation of the total gradient that we have
-  // qmg_new - qm_grd;
-  // if (NMM > 0){
-  //   mmg_new - mm_grd;
-  // }
   
-  //FIXME: make sure this does a copy
   qm_grd = qmg_new;
-  if (NMM > 0){
+  if (NMM() > 0){
     mm_grd = mmg_new;
   }
+
+  //FIXME: need to actually update!
+  (void) total_gradient;
+  
 }
 
 
@@ -282,12 +267,12 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   if (hopping){
     if(std::abs(e_drift) > delta_e_tol){
       // trivial crossing; need to update global gradient
-      update_md_global_gradient();
+      update_md_global_gradient(total_gradient);
       active_state = target_state;
       hopping = false;
     }
     else{
-      hop_and_scale(arma::vec &vel, arma::vec &mass);
+      hop_and_scale(velocities, masses);
       hopping = false;
     }
   }
