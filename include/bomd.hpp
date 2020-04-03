@@ -4,12 +4,14 @@
 
 #include <armadillo>
 #include "qm_interface.hpp"
+#include "configreader.hpp"
 
 
 class BOMD
 {
 public:
-  explicit BOMD(arma::uvec& atomicnumbers,
+  explicit BOMD(FileHandle& fh,
+        arma::uvec& atomicnumbers,
 		arma::mat& qm_crd,
 		arma::mat& mm_crd,
 		arma::vec& mm_chg,
@@ -19,8 +21,11 @@ public:
   
   virtual double update_gradient(void);
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
-
+    //
 protected:
+  virtual ConfigBlockReader setup_reader(void);
+  virtual void get_reader_data(ConfigBlockReader& reader);
+  void add_necessary_keys(ConfigBlockReader& reader);
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
   
@@ -36,12 +41,12 @@ class PrintBomd:
     public BOMD 
 {
 public:
-  explicit PrintBomd(arma::uvec& atomicnumbers,
+  explicit PrintBomd(FileHandle& fh, arma::uvec& atomicnumbers,
 		arma::mat& qm_crd,
 		arma::mat& mm_crd,
 		arma::vec& mm_chg,
 		arma::mat& qm_grd,
-		arma::mat& mm_grd) : BOMD(atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd) {}
+		arma::mat& mm_grd) : BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd) {}
   
   double update_gradient(void) {
       qm->crd_qm.print("qm_crd: ");
@@ -50,6 +55,7 @@ public:
       mm_grd.fill(0.0);
       return 0.0;
   }
+    //
   bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
     (void) e_drift;
       velocities.print("Velocities:");
@@ -58,6 +64,11 @@ public:
       return true;
   };
     
+private:
+  virtual ConfigBlockReader setup_reader() {
+    return ConfigBlockReader{"printbomd"};    
+  };
+  //virtual void get_reader_data(ConfigBlockReader& reader) {}
 
 };
 

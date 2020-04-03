@@ -8,6 +8,7 @@
 #include "bomd.hpp"
 #include "conversion.hpp"
 #include "linkatoms.hpp"
+#include "configreader.hpp"
 
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
@@ -19,7 +20,7 @@ class GifsImpl
 {
 public: 
     // creation
-    static GifsImpl* get_instance(size_t nqm, const int * qmid);
+    static GifsImpl* get_instance(const char* file, size_t nqm, const int * qmid);
     static GifsImpl* get_instance();
     // methods
     template<typename T>
@@ -40,11 +41,13 @@ public:
     }
 
 private:
-    GifsImpl(size_t nqm, const int * qmids);
+    GifsImpl(const char* file, size_t nqm, const int * qmids);
     // private destructor
-    static void destory_instance();
+    static void destory_instance(void);
     // Singleton Pointer
     static GifsImpl* impl; 
+    //
+    ConfigBlockReader setup_reader(void);
     // Local data!
     arma::uword nqm;
     arma::uword nmm;
@@ -78,9 +81,9 @@ class Gifs
 {
 public:
     // create instance, can only be called once!
-    explicit Gifs(size_t nqm, const int * qmid) {
+    explicit Gifs(const char* file, size_t nqm, const int * qmid) {
         if (!GifsImpl::instance_exists()) {
-            impl = GifsImpl::get_instance(nqm, qmid);   
+            impl = GifsImpl::get_instance(file, nqm, qmid);   
         } else {
             impl = GifsImpl::get_instance();   
         }

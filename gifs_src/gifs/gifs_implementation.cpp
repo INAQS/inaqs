@@ -3,16 +3,17 @@
 #include <algorithm>
 //
 #include "gifs_implementation.hpp"
-
+#include "configreader.hpp"
+//
 // creation
-GifsImpl* GifsImpl::get_instance(size_t nqm, const int * qmid)
+GifsImpl* GifsImpl::get_instance(const char* file, size_t nqm, const int * qmid)
 {
 // actually create instance, and register its destructor atexit!
     if (instance_exists()) {
         // throw std::Exception("GIFS object was already created");
     }
     //
-    impl = new GifsImpl(nqm, qmid);
+    impl = new GifsImpl(file, nqm, qmid);
     //
     atexit(destory_instance);
     return impl;
@@ -141,9 +142,44 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     }
 };
 //
-GifsImpl::GifsImpl(size_t in_nqm, const int * ian)
+BOMD*
+select_bomd(ConfigBlockReader& reader, FileHandle& fh,
+             arma::uvec& atomicnumbers,
+             arma::mat& qm_crd, 
+             arma::mat& mm_crd, 
+             arma::vec& mm_chg, 
+             arma::mat& qm_grd,
+             arma::mat& mm_grd) 
+{
+    std::string runtype;
+    reader.get_data("runtype", runtype);
+    if (runtype == "bomd") {
+        return new BOMD(fh, atomicnumbers, qm_crd, mm_crd, 
+                        mm_chg, qm_grd, mm_grd);
+    }
+    else {
+        throw "unknown runtype";
+    }
+};
+
+ConfigBlockReader
+GifsImpl::setup_reader() {
+    using types = ConfigBlockReader::types;
+    ConfigBlockReader reader{"gifs"};
+    //
+    reader.add_entry("runtype", std::string("bomd"));
+//    reader.add_entry("latoms", std::vector<int>{});
+    return reader;
+}
+
+
+GifsImpl::GifsImpl(const char* file, size_t in_nqm, const int * ian)
     : nqm{in_nqm}, nmm{0}, qm_atomicnumbers(in_nqm), qm_index(in_nqm)
 {
+    ConfigBlockReader reader = setup_reader();
+    FileHandle fh{file};
+    // parse input
+    reader.parse(fh);
     // set to correct size:
     qm_crd.resize(3, nqm);
     qm_frc.resize(3, nqm);
@@ -166,12 +202,13 @@ GifsImpl::GifsImpl(size_t in_nqm, const int * ian)
     // 
     conv = Conversion::from_elementary(mass_unit, length_unit, time_unit);
     //bomd = new BOMD(in_nqm, in_qmid);
-    bomd = new BOMD(qm_atomicnumbers,
-            qm_crd, 
-            mm_crd, 
-            mm_chg, 
-            qm_frc, 
-            mm_frc);
+    bomd = select_bomd(reader, fh,
+                    qm_atomicnumbers,
+                    qm_crd, 
+                    mm_crd, 
+                    mm_chg, 
+                    qm_frc, 
+                    mm_frc);
     // no link atoms
     arma::umat global_idx(0, 0);
     arma::vec factors(1);

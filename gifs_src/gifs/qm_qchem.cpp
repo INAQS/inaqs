@@ -11,9 +11,42 @@
 #include <armadillo>
 #include <unordered_map>
 
+static const std::string NONE{"__NONE__"};
+
+ConfigBlockReader
+QM_QChem::qchem_reader() {
+    using types = ConfigBlockReader::types;
+    ConfigBlockReader reader{"qchem"};
+    reader.add_entry("qc_scratch", NONE);
+    reader.add_entry("qc_exe", NONE);
+    reader.add_entry("qc_input", "GQSH.in");
+    reader.add_entry("qc_log", "GQSH.out");
+    reader.add_entry("basis", types::STRING);
+    reader.add_entry("functional", types::STRING);
+    reader.add_entry("nthreads", 1);
+    return reader;
+}
+
+void
+QM_QChem::setup(FileHandle& fh) {
+    auto reader = qchem_reader();
+    reader.parse(fh);
+    reader.get_data("qc_scratch", qc_scratch_directory);
+    if (qc_scratch_directory == NONE) qc_scratch_directory = get_qcscratch();
+    reader.get_data("qc_exe", qc_executable);
+    if (qc_executable == NONE) qc_executable = get_qcprog();
+    reader.get_data("qc_input", qc_input_file);
+    reader.get_data("qc_log", qc_log_file);
+    //
+    reader.get_data("basis", basis_set);
+    reader.get_data("functional", exchange_method);
+    //
+    reader.get_data("nthreads", nthreads);
+}
 
 //QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
-QM_QChem::QM_QChem(arma::uvec& in_qmids, 
+QM_QChem::QM_QChem(FileHandle& fh, 
+           arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
 		   arma::mat& in_mm_crd, 
 		   arma::vec& in_mm_chg, 
@@ -21,10 +54,6 @@ QM_QChem::QM_QChem(arma::uvec& in_qmids,
 		   int mult,
 		   size_t excited_states):
   QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states),
-  qc_scratch_directory(get_qcscratch()),
-  qc_executable(get_qcprog()),
-  exchange_method("HF"), // FIXME: Method/basis should be configurable;
-  basis_set("6-31+G*"),  // by parsing an input file? Or higher up?
   /*
     FIXME: Q-Chem can decide to change the number of excited states it
     computes!! Usually this will be to a larger number of states
@@ -32,6 +61,7 @@ QM_QChem::QM_QChem(arma::uvec& in_qmids,
   */
   excited_states(excited_states)
 {
+    setup(fh);
   /*
     Set the number of threads, but don't overwrite if the flag is set
     elsewhere
