@@ -164,7 +164,7 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
 
 ConfigBlockReader
 GifsImpl::setup_reader() {
-    using types = ConfigBlockReader::types;
+  //using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"gifs"};
     //
     reader.add_entry("runtype", std::string("bomd"));
