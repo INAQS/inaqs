@@ -245,7 +245,9 @@ void QM_QChem::get_all_energies(arma::vec *e){
 
 void QM_QChem::get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface){
   get_gradient(g_qm, surface);
-  parse_mm_gradient(g_mm);
+  if (NMM > 0){
+    parse_mm_gradient(g_mm);
+  }
 }
 
 
