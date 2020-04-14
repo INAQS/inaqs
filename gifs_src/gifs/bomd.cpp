@@ -47,6 +47,7 @@ BOMD::BOMD(FileHandle& fh,
 void
 BOMD::get_reader_data(ConfigBlockReader& reader) {
     const auto& reader2 = reader;
+    (void) reader2;
 };
 
 void
