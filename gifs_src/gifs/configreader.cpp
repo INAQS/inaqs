@@ -6,6 +6,26 @@
 #include <regex>
 //
 #include "configreader.hpp"
+//
+#define from_void(type, value) new type(*static_cast<type*>(value))
+#define delete_void_as(type, value) delete static_cast<type*>(value)
+
+
+template<typename T>
+inline
+void
+move_output(T& out, void* data) {
+    out = std::move(*static_cast<T*>(data));
+}
+
+
+template<typename T>
+inline
+void
+copy_output(T& out, void* data) {
+    out = *static_cast<T*>(data);
+}
+
 
 inline
 bool
@@ -88,25 +108,51 @@ Data::Data(const Data& rhs) {
     isset = rhs.isset;
     switch (type) {
         case types::INT:
-            integer = rhs.integer;
+            data = from_void(int, rhs.data);
             break;
         case types::DOUBLE:
-            dbl = rhs.dbl;
+            data = from_void(double, rhs.data);
             break;
         case types::STRING:
-            str = rhs.str;
+            data = from_void(std::string, rhs.data);
             break;
         case types::SVEC:
-            svec = rhs.svec;
+            data = from_void(std::vector<std::string>, rhs.data);
             break;
         case types::IVEC:
-            ivec = rhs.ivec;
+            data = from_void(std::vector<int>, rhs.data);
             break;
         case types::DVEC:
-            dvec = rhs.dvec;
+            data = from_void(std::vector<double>, rhs.data);
             break;
         default:
-            type = types::NONE;
+            break;
+    }
+}
+
+Data::~Data() {
+    if (data == nullptr)
+        return;
+    switch (type) {
+        case types::INT:
+            delete_void_as(int, data);
+            break;
+        case types::DOUBLE:
+            delete_void_as(double, data);
+            break;
+        case types::STRING:
+            delete_void_as(std::string, data);
+            break;
+        case types::SVEC:
+            delete_void_as(std::vector<std::string>, data);
+            break;
+        case types::IVEC:
+            delete_void_as(std::vector<int>, data);
+            break;
+        case types::DVEC:
+            delete_void_as(std::vector<double>, data);
+            break;
+        default:
             break;
     }
 }
@@ -118,25 +164,22 @@ Data::set_from_string(const std::string& value)
     bool do_set = true;
     switch (type) {
         case types::INT:
-            integer = std::stoi(value);
+            data = new int(std::stoi(value));
             break;
         case types::DOUBLE:
-            dbl = std::stod(value);
+            data = new double(std::stod(value));
             break;
         case types::STRING:
-            str = value.c_str();
+            data = new std::string(value);
             break;
         case types::IVEC:
-            ivec = string_to_ivec(value);
+            data = new std::vector<int>(string_to_ivec(value));
             break;
         case types::DVEC:
-            dvec = string_to_dvec(value);
+            data = new std::vector<double>(string_to_dvec(value));
             break;
         case types::SVEC:
-            std::cout << "value = " << value << "\n";
-            std::cout << "called split_string \n"; 
-            svec = split_string(value);
-            std::cout << "called split_string \n"; 
+            data = new std::vector<std::string>(split_string(value));
             break;
         default:
             do_set = false;
@@ -173,7 +216,7 @@ Data::get_data(double& out) {
     if (type != types::DOUBLE || !isset) {
         return false;
     } 
-    out = dbl;
+    copy_output(out, data);
     return true;
 };
 
@@ -183,7 +226,7 @@ Data::get_data(int& out) {
     if (type != types::INT || !isset) {
         return false;
     }
-    out = integer;
+    copy_output(out, data);
     return true;
 }
 
@@ -193,7 +236,7 @@ Data::get_data(std::string& out)
     if (type != types::STRING || !isset) {
         return false;
     }
-    out = str;
+    copy_output(out, data);
     return true;
 }
 
@@ -202,7 +245,7 @@ Data::get_data(std::vector<std::string>& out) {
     if (type != types::DVEC || !isset) {
         return false;
     }
-    out = svec;
+    copy_output(out, data);
     return true;
 }
 
@@ -211,7 +254,7 @@ Data::get_data(std::vector<int>& out) {
     if (type != types::IVEC || !isset) {
         return false;
     }
-    out = ivec;
+    copy_output(out, data);
     return true;
 }
 
@@ -220,7 +263,7 @@ Data::get_data(std::vector<double>& out) {
     if (type != types::DVEC || !isset) {
         return false;
     }
-    out = dvec;
+    copy_output(out, data);
     return true;
 }
 
@@ -229,7 +272,7 @@ Data::move_data(double& out) {
     if (type != types::DOUBLE || !isset) {
         return false;
     } 
-    out = std::move(dbl);
+    move_output(out, data);
     return true;
 };
 
@@ -239,7 +282,7 @@ Data::move_data(int& out) {
     if (type != types::INT || !isset) {
         return false;
     }
-    out = std::move(integer);
+    move_output(out, data);
     return true;
 }
 
@@ -249,7 +292,7 @@ Data::move_data(std::string& out)
     if (type != types::STRING || !isset) {
         return false;
     }
-    out = std::move(str);
+    move_output(out, data);
     return true;
 }
 
@@ -258,7 +301,7 @@ Data::move_data(std::vector<std::string>& out) {
     if (type != types::SVEC || !isset) {
         return false;
     }
-    out = std::move(svec);
+    move_output(out, data);
     return true;
 }
 
@@ -267,7 +310,7 @@ Data::move_data(std::vector<int>& out) {
     if (type != types::IVEC || !isset) {
         return false;
     }
-    out = std::move(ivec);
+    move_output(out, data);
     return true;
 }
 
@@ -276,20 +319,22 @@ Data::move_data(std::vector<double>& out) {
     if (type != types::DVEC || !isset) {
         return false;
     }
-    out = std::move(dvec);
+    move_output(out, data);
     return true;
 }
+
+static const std::regex block_expr("\\s*\\[(.*)\\]\\s*");
+static const std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
 
 int
 ConfigBlockReader::parse(FileHandle& file) 
 {
+    if (!file.is_open()) {
+        return -2;
+    }
     // reset file pointer
     file.rewind_fh();
-    // block
-    std::regex block_expr("\\s*\\[(.*)\\]\\s*");
     std::smatch block_match;
-    // line
-    std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
     std::smatch line_match;
 
     char* line = file.find_line(name);
@@ -315,8 +360,8 @@ ConfigBlockReader::parse(FileHandle& file)
         }
     }
     return 0;
-
 };
+
 
 void 
 ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
@@ -325,5 +370,14 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
         data[key].set_from_string(value);
     } else {
         std::cout << "Unkown field " << key << std::endl;
+    }
+};
+
+
+FileHandle get_filehandle(const std::string filename) {
+    try {
+        return FileHandle(filename);
+    } catch (std::exception& e) {
+        return FileHandle{};
     }
 };

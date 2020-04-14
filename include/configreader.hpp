@@ -61,11 +61,17 @@ class File
         }
         // init file with existing open file and position
         explicit File(const int fileno, const int pos) {
-	  (void) pos;
             fh_ =  fdopen(fileno, "r");
             if (fh_ == NULL) {
                 throw CannotOpenFile("Cannot open file with number" + std::to_string(fileno));
             }
+            seek(pos);
+        }
+        File() = default;
+        File(File&& rhs) {
+            name = rhs.name;    
+            fh_ = rhs.fh_;
+            rhs.fh_ = nullptr;
         }
 
         ~File() noexcept { if (fh_) fclose(fh_);}
@@ -81,11 +87,14 @@ class File
         iterator fh_{nullptr};
 };
 
+
 class FileHandle
 {
     public:
-        explicit FileHandle(const std::string filename) : file{filename} { }
-        explicit FileHandle(const int fileno, const int pos) : file{fileno, pos} { }
+        explicit FileHandle(const std::string filename): file{filename}, _is_open{true} { }
+        explicit FileHandle(const int fileno, const int pos) : file{fileno, pos}, _is_open{true} { }
+        FileHandle(){}
+
         // Helper
         char* get_line();
         char* find_line(const std::string& key); 
@@ -97,9 +106,13 @@ class FileHandle
 
         File::iterator fh() const noexcept {return file.fh();}
 
-        File f() noexcept {return file;}
+        File& f() noexcept {return file;}
+
+        bool is_open() const noexcept { return _is_open; }
+
     private:
         File file;
+        bool _is_open{false};
 };
 
 enum class DATA_TYPE {
@@ -112,19 +125,20 @@ enum class DATA_TYPE {
     NONE
 };
 
+
 class Data
 {
 public:
     using types = DATA_TYPE;
     //
-    explicit Data(int input, bool in_isset=true)                      : isset{in_isset}, integer{input}, type{DATA_TYPE::INT} {}
-    explicit Data(double input, bool in_isset=true)                   : isset{in_isset}, dbl{input},     type{DATA_TYPE::DOUBLE} {}
-    explicit Data(std::string input, bool in_isset=true)              : isset{in_isset}, str{input},     type{DATA_TYPE::STRING} {}
-    explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, svec{input},    type{DATA_TYPE::SVEC} {}
-    explicit Data(std::vector<int> input, bool in_isset=true)         : isset{in_isset}, ivec{input},    type{DATA_TYPE::IVEC} {}
-    explicit Data(std::vector<double> input, bool in_isset=true)      : isset{in_isset}, dvec{input},    type{DATA_TYPE::DVEC} {}
+    explicit Data(int input, bool in_isset=true)                      : isset{in_isset}, data{new int(input)}, type{DATA_TYPE::INT} {}
+    explicit Data(double input, bool in_isset=true)                   : isset{in_isset}, data{new double(input)},     type{DATA_TYPE::DOUBLE} {}
+    explicit Data(std::string input, bool in_isset=true)              : isset{in_isset}, data{new std::string{input}},     type{DATA_TYPE::STRING} {}
+    explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, data{new std::vector<std::string>{input}},    type{DATA_TYPE::SVEC} {}
+    explicit Data(std::vector<int> input, bool in_isset=true)         : isset{in_isset}, data{new std::vector<int>{input}},    type{DATA_TYPE::IVEC} {}
+    explicit Data(std::vector<double> input, bool in_isset=true)      : isset{in_isset}, data{new std::vector<double>{input}},    type{DATA_TYPE::DVEC} {}
     Data(): type{DATA_TYPE::NONE} { }
-    ~Data(){}
+    ~Data(); 
     Data(const Data& rhs);
     // copy operation
     bool get_data(double& out); 
@@ -148,18 +162,11 @@ public:
     //
 private:
     bool isset{true};
-    union
-    {
-        int integer;
-        double dbl;
-        std::string str;
-        std::vector<int> ivec;
-        std::vector<double> dvec;
-        std::vector<std::string> svec;
-    };
+    void* data{nullptr};
 
     DATA_TYPE type{};
 };
+
 
 
 class ConfigBlockReader
@@ -213,5 +220,6 @@ private:
     std::unordered_map<std::string, Data> data;
 };
 
+FileHandle get_filehandle(const std::string filename); 
 
 #endif
