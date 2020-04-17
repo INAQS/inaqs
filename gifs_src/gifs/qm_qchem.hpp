@@ -43,12 +43,11 @@ private:
   void parse_energies(arma::vec &e);
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
-  //
+
   ConfigBlockReader qchem_reader();
-  void setup(FileHandle& fh);
   
   const std::string get_qcprog(void);
-  const std::string get_qcscratch(void);
+  const std::string get_qcscratch(std::string conf_dir);
 
   std::string qc_scratch_directory;
   std::string qc_executable;
@@ -56,8 +55,6 @@ private:
   std::string qc_log_file = "GQSH.out";
   std::string exchange_method;
   std::string basis_set;
-  int nthreads; 
-  size_t excited_states;
   bool first_call = true;
 
   enum class S{
