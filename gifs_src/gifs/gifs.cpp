@@ -6,9 +6,9 @@
 extern "C" {
 #endif 
 //Don't inline these; they need to be exported and available to Gromacs etc...
-void create_qm_interface(size_t nqm, const int* qm_atomids)
+void create_qm_interface(const char* file, size_t nqm, const int* qm_atomids)
 {
-  Gifs gifs_handle(nqm, qm_atomids);
+  Gifs gifs_handle(file, nqm, qm_atomids);
 }
 
 

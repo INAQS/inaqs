@@ -10,16 +10,44 @@ double FSSH::gen_rand(void){
   return uniform_distribution(mt64_generator);
 }
 
-// FIXME: need to parse our config
-FSSH::FSSH(arma::uvec& atomicnumbers, arma::mat& qm_crd,
+
+ConfigBlockReader
+FSSH::setup_reader() 
+{
+    using types = ConfigBlockReader::types;
+    ConfigBlockReader reader{"fssh"};
+    reader.add_entry("dtc", types::DOUBLE);
+    reader.add_entry("delta_e_tol", types::DOUBLE);
+    reader.add_entry("min_state", 0);
+    reader.add_entry("active_state", 0);
+    return reader;
+}
+
+void
+FSSH::get_reader_data(ConfigBlockReader& reader) {
+    double in_dtc, in_delta_e_tol;
+    reader.get_data("dtc", in_dtc);
+    dtc = in_dtc;
+    reader.get_data("delta_e_tol", in_delta_e_tol);
+    delta_e_tol = in_delta_e_tol;
+    int in_min_state, nstates, in_active;
+    reader.get_data("min_state", in_min_state);
+    min_state = in_min_state;
+    reader.get_data("nstates", nstates);
+    excited_states = nstates;
+    reader.get_data("active_state", in_active);
+    active_state = in_active;
+};
+
+FSSH::FSSH(FileHandle& fh,
+           arma::uvec& atomicnumbers, arma::mat& qm_crd,
            arma::mat& mm_crd, arma::vec& mm_chg,
-	   arma::mat& qm_grd, arma::mat& mm_grd,
-	   size_t min_state, size_t excited_states, size_t active_state, double dtc, double delta_e_tol):
-  BOMD(atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd), dtc {dtc}, delta_e_tol {delta_e_tol},
-  min_state {min_state}, excited_states {excited_states}, active_state {active_state},
-  c {excited_states + 1 - min_state}
+	       arma::mat& qm_grd, arma::mat& mm_grd):
+    BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd), 
+    c{excited_states + 1 - min_state}
 {
   int nstates = excited_states + 1 - min_state;
+  c = nstates;
   if (nstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }

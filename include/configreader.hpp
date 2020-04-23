@@ -5,6 +5,25 @@
 #include <vector>
 #include <string>
 
+#include <exception>
+
+std::vector<std::string> split_string(const std::string& str, const std::string& delims=",");
+
+class CannotOpenFile: 
+    public std::exception
+{
+public:
+    CannotOpenFile(std::string msg) : _msg{msg} {
+
+    }
+
+    virtual const char* what() const throw() {
+        return _msg.c_str();
+    }
+private:
+    std::string _msg{};
+};
+
 
 inline std::string trim(const std::string& str)
 {
@@ -36,13 +55,23 @@ class File
         // open new file
         explicit File(const std::string filename) : name{filename} {
             fh_ = fopen(name.c_str(), "r");
-            if (fh_ == NULL) exit(EXIT_FAILURE);
+            if (fh_ == NULL) {
+                throw CannotOpenFile("Cannot open file " + name);
+            }
         }
         // init file with existing open file and position
         explicit File(const int fileno, const int pos) {
-	  (void) pos;
             fh_ =  fdopen(fileno, "r");
-            if (fh_ == NULL) exit(EXIT_FAILURE);
+            if (fh_ == NULL) {
+                throw CannotOpenFile("Cannot open file with number" + std::to_string(fileno));
+            }
+            seek(pos);
+        }
+        File() = default;
+        File(File&& rhs) {
+            name = rhs.name;    
+            fh_ = rhs.fh_;
+            rhs.fh_ = nullptr;
         }
 
         ~File() noexcept { if (fh_) fclose(fh_);}
@@ -58,11 +87,14 @@ class File
         iterator fh_{nullptr};
 };
 
+
 class FileHandle
 {
     public:
-        explicit FileHandle(const std::string filename) : file{filename} { }
-        explicit FileHandle(const int fileno, const int pos) : file{fileno, pos} { }
+        explicit FileHandle(const std::string filename): file{filename}, _is_open{true} { }
+        explicit FileHandle(const int fileno, const int pos) : file{fileno, pos}, _is_open{true} { }
+        FileHandle(){}
+
         // Helper
         char* get_line();
         char* find_line(const std::string& key); 
@@ -74,68 +106,111 @@ class FileHandle
 
         File::iterator fh() const noexcept {return file.fh();}
 
-        File f() noexcept {return file;}
+        File& f() noexcept {return file;}
+
+        bool is_open() const noexcept { return _is_open; }
+
     private:
         File file;
+        bool _is_open{false};
 };
+
+enum class DATA_TYPE {
+    INT,
+    DOUBLE,
+    STRING, 
+    IVEC,
+    DVEC,
+    SVEC,
+    NONE
+};
+
 
 class Data
 {
 public:
-    explicit Data(int input) : integer{input}, type{data_type::INT} {}
-    explicit Data(double input) : dbl{input}, type{data_type::DOUBLE} {}
-    explicit Data(std::string input) : str{input}, type{data_type::STRING} {}
-    Data(): type{data_type::NONE} {}
-    ~Data(){}
+    using types = DATA_TYPE;
+    //
+    explicit Data(int input, bool in_isset=true)                      : isset{in_isset}, data{new int(input)}, type{DATA_TYPE::INT} {}
+    explicit Data(double input, bool in_isset=true)                   : isset{in_isset}, data{new double(input)},     type{DATA_TYPE::DOUBLE} {}
+    explicit Data(std::string input, bool in_isset=true)              : isset{in_isset}, data{new std::string{input}},     type{DATA_TYPE::STRING} {}
+    explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, data{new std::vector<std::string>{input}},    type{DATA_TYPE::SVEC} {}
+    explicit Data(std::vector<int> input, bool in_isset=true)         : isset{in_isset}, data{new std::vector<int>{input}},    type{DATA_TYPE::IVEC} {}
+    explicit Data(std::vector<double> input, bool in_isset=true)      : isset{in_isset}, data{new std::vector<double>{input}},    type{DATA_TYPE::DVEC} {}
+    Data(): type{DATA_TYPE::NONE} { }
+    ~Data(); 
     Data(const Data& rhs);
     // copy operation
     bool get_data(double& out); 
     bool get_data(int& out); 
     bool get_data(std::string& out); 
+    bool get_data(std::vector<int>&);
+    bool get_data(std::vector<double>&);
+    bool get_data(std::vector<std::string>&);
     // move operation
-    /*
-    void move_data(double& out); 
-    void move_data(int& out); 
-    void move_data(std::vector<int>& out); 
-    void move_data(std::vector<double>& out); 
-    void move_data(std::string& out); 
-    */
+    bool move_data(double& out); 
+    bool move_data(int& out); 
+    bool move_data(std::string& out); 
+    bool move_data(std::vector<int>&);
+    bool move_data(std::vector<double>&);
+    bool move_data(std::vector<std::string>&);
+    //
     void set_from_string(const std::string& validation);
-private:
+    //
+    //
     std::string get_type();
-    union
-    {
-        double dbl;
-        int integer;
-        std::string str{};
-    };
+    //
+private:
+    bool isset{true};
+    void* data{nullptr};
 
-    enum class data_type {
-        INT,
-        DOUBLE,
-        STRING, 
-        NONE
-    };
-    data_type type{};
-    using types = Data::data_type;
+    DATA_TYPE type{};
 };
+
 
 
 class ConfigBlockReader
 {
 public:
+    using types = Data::types;
     explicit ConfigBlockReader(std::string block): name{block}, data{} {}
     // add entry by type
-    void add_entry(const std::string name, const int def) { data.emplace(name, Data{def}); }
-    void add_entry(const std::string name, const double def) { data.emplace(name, Data{def}); }
-    void add_entry(const std::string name, const std::string def) { data.emplace(name, Data{def}); }
+    template<typename T>
+    void add_entry(const std::string name, const T def) { data.emplace(name, Data{def}); }
+
+    void add_entry(const std::string name, const Data::types type) { 
+    switch (type) {
+        case types::INT:
+            data.emplace(name, Data{0, false}); 
+            break;
+        case types::DOUBLE:
+            data.emplace(name, Data{0.0, false}); 
+            break;
+        case types::STRING:
+            data.emplace(name, Data{std::string(""), false}); 
+            break;
+        case types::SVEC:
+            data.emplace(name, Data{std::vector<std::string>{}, false}); 
+            break;
+        case types::IVEC:
+            data.emplace(name, Data{std::vector<int>{}, false}); 
+            break;
+        case types::DVEC:
+            data.emplace(name, Data{std::vector<double>{}, false}); 
+            break;
+        default:
+            data.emplace(name, Data{}); 
+            break;
+    }
+    }
     // parse file
     int parse(FileHandle& file);
     // get results
-    inline bool get_data(const std::string& key, int& val) { return data[key].get_data(val); }
-    inline bool get_data(const std::string& key, double& val) { return data[key].get_data(val); }
-    inline bool get_data(const std::string& key, std::string& val) { return data[key].get_data(val); }
-
+    template<typename T>
+    inline bool get_data(const std::string& key, T& val) { return data[key].get_data(val); }
+    template<typename T>
+    inline bool move_data(const std::string& key, T& val) { return data[key].move_data(val); }
+    //
     Data operator[](const std::string& key) {return data[key];}
 
 private:
@@ -145,5 +220,6 @@ private:
     std::unordered_map<std::string, Data> data;
 };
 
+FileHandle get_filehandle(const std::string filename); 
 
 #endif

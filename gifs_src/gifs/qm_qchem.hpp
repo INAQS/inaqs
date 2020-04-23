@@ -3,6 +3,7 @@
 
 #include "properties.hpp"
 #include "qm_interface.hpp"
+#include "configreader.hpp"
 #include <vector>
 #include <map>
 #include <armadillo>
@@ -11,7 +12,8 @@ using REMKeys = std::map<std::string, std::string>;
 
 class QM_QChem: public QMInterface{
 public:
-  QM_QChem(arma::uvec& in_qmids, 
+  QM_QChem(FileHandle& fh, 
+       arma::uvec& in_qmids, 
 	   arma::mat& in_qm_crd, 
 	   arma::mat& in_mm_crd, 
 	   arma::vec& in_mm_chg, 
@@ -41,17 +43,18 @@ private:
   void parse_energies(arma::vec &e);
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
+
+  ConfigBlockReader qchem_reader();
   
   const std::string get_qcprog(void);
-  const std::string get_qcscratch(void);
+  const std::string get_qcscratch(std::string conf_dir);
 
-  const std::string qc_scratch_directory;
-  const std::string qc_executable;
-  const std::string qc_input_file = "GQSH.in";
-  const std::string qc_log_file = "GQSH.out";
-  const std::string exchange_method;
-  const std::string basis_set;
-  const size_t excited_states;
+  std::string qc_scratch_directory;
+  std::string qc_executable;
+  std::string qc_input_file = "GQSH.in";
+  std::string qc_log_file = "GQSH.out";
+  std::string exchange_method;
+  std::string basis_set;
   bool first_call = true;
 
   enum class S{

@@ -6,12 +6,72 @@
 #include <regex>
 //
 #include "configreader.hpp"
+//
+#define from_void(type, value) new type(*static_cast<type*>(value))
+#define delete_void_as(type, value) delete static_cast<type*>(value)
+
+
+template<typename T>
+inline
+void
+move_output(T& out, void* data) {
+    out = std::move(*static_cast<T*>(data));
+}
+
+
+template<typename T>
+inline
+void
+copy_output(T& out, void* data) {
+    out = *static_cast<T*>(data);
+}
+
 
 inline
 bool
 is_str_substring(const char* substring, const char* string) 
 {
     return strstr(string, substring) != NULL; 
+};
+
+
+std::vector<std::string>
+split_string(const std::string& str, const std::string& delims)
+{
+    std::vector<std::string> outvec{};
+    std::size_t current, previous = 0;
+    current = str.find_first_of(delims);
+    while (current != std::string::npos) {
+        outvec.push_back(str.substr(previous, current-previous));
+        previous = current + 1;
+        current = str.find_first_of(delims, previous);
+    };
+    outvec.push_back(str.substr(previous, current-previous));
+    return outvec;
+};
+
+
+std::vector<double>
+string_to_dvec(const std::string& str)
+{
+    const auto value = split_string(str);
+    std::vector<double> out{};
+    for (auto& ele: value) {
+        out.push_back(std::stod(ele));            
+    }
+    return out;
+};
+
+
+std::vector<int>
+string_to_ivec(const std::string& str)
+{
+    const auto value = split_string(str);
+    std::vector<int> out{};
+    for (auto& ele: value) {
+        out.push_back(std::stoi(ele));            
+    }
+    return out;
 };
 
 
@@ -45,50 +105,91 @@ FileHandle::find_line(const std::string& key) {
 
 Data::Data(const Data& rhs) {
     type = rhs.type;
+    isset = rhs.isset;
     switch (type) {
         case types::INT:
-            integer = rhs.integer;
+            data = from_void(int, rhs.data);
             break;
         case types::DOUBLE:
-            dbl = rhs.dbl;
+            data = from_void(double, rhs.data);
             break;
         case types::STRING:
-            str = rhs.str;
+            data = from_void(std::string, rhs.data);
+            break;
+        case types::SVEC:
+            data = from_void(std::vector<std::string>, rhs.data);
+            break;
+        case types::IVEC:
+            data = from_void(std::vector<int>, rhs.data);
+            break;
+        case types::DVEC:
+            data = from_void(std::vector<double>, rhs.data);
             break;
         default:
-            type = types::NONE;
             break;
     }
-
 }
+
+Data::~Data() {
+    if (data == nullptr)
+        return;
+    switch (type) {
+        case types::INT:
+            delete_void_as(int, data);
+            break;
+        case types::DOUBLE:
+            delete_void_as(double, data);
+            break;
+        case types::STRING:
+            delete_void_as(std::string, data);
+            break;
+        case types::SVEC:
+            delete_void_as(std::vector<std::string>, data);
+            break;
+        case types::IVEC:
+            delete_void_as(std::vector<int>, data);
+            break;
+        case types::DVEC:
+            delete_void_as(std::vector<double>, data);
+            break;
+        default:
+            break;
+    }
+}
+
+
 void
 Data::set_from_string(const std::string& value) 
 {
+    bool do_set = true;
     switch (type) {
         case types::INT:
-            integer = std::stoi(value);
+            data = new int(std::stoi(value));
             break;
         case types::DOUBLE:
-            dbl = std::stod(value);
+            data = new double(std::stod(value));
             break;
         case types::STRING:
-            str = value.c_str();
+            data = new std::string(value);
+            break;
+        case types::IVEC:
+            data = new std::vector<int>(string_to_ivec(value));
+            break;
+        case types::DVEC:
+            data = new std::vector<double>(string_to_dvec(value));
+            break;
+        case types::SVEC:
+            data = new std::vector<std::string>(split_string(value));
             break;
         default:
+            do_set = false;
             break;
+    }
+    if (do_set) {
+        isset = true;
     }
 };
 
-
-bool
-Data::get_data(double& out) {
-    if (type != types::DOUBLE) {
-        return false;
-    } 
-    out = dbl;
-    return true;
-    
-};
 
 std::string
 Data::get_type() {
@@ -98,41 +199,142 @@ Data::get_type() {
         case (types::DOUBLE): 
             return "double";
         case (types::STRING): 
-            return "break";
+            return "string";
+        case (types::IVEC): 
+            return "ivec";
+        case (types::DVEC): 
+            return "dvec";
+        case (types::SVEC): 
+            return "svec";
         default:
             return "unknown";
     }
 };
 
 bool
+Data::get_data(double& out) {
+    if (type != types::DOUBLE || !isset) {
+        return false;
+    } 
+    copy_output(out, data);
+    return true;
+};
+
+
+bool
 Data::get_data(int& out) {
-    if (type != types::INT) {
+    if (type != types::INT || !isset) {
         return false;
     }
-    out = integer;
+    copy_output(out, data);
     return true;
 }
 
 bool
 Data::get_data(std::string& out)
 {
-    if (type != types::STRING) {
+    if (type != types::STRING || !isset) {
         return false;
     }
-    out = std::string(str);
+    copy_output(out, data);
     return true;
 }
+
+bool
+Data::get_data(std::vector<std::string>& out) {
+    if (type != types::DVEC || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+}
+
+bool
+Data::get_data(std::vector<int>& out) {
+    if (type != types::IVEC || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+}
+
+bool
+Data::get_data(std::vector<double>& out) {
+    if (type != types::DVEC || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+}
+
+bool
+Data::move_data(double& out) {
+    if (type != types::DOUBLE || !isset) {
+        return false;
+    } 
+    move_output(out, data);
+    return true;
+};
+
+
+bool
+Data::move_data(int& out) {
+    if (type != types::INT || !isset) {
+        return false;
+    }
+    move_output(out, data);
+    return true;
+}
+
+bool
+Data::move_data(std::string& out)
+{
+    if (type != types::STRING || !isset) {
+        return false;
+    }
+    move_output(out, data);
+    return true;
+}
+
+bool
+Data::move_data(std::vector<std::string>& out) {
+    if (type != types::SVEC || !isset) {
+        return false;
+    }
+    move_output(out, data);
+    return true;
+}
+
+bool
+Data::move_data(std::vector<int>& out) {
+    if (type != types::IVEC || !isset) {
+        return false;
+    }
+    move_output(out, data);
+    return true;
+}
+
+bool
+Data::move_data(std::vector<double>& out) {
+    if (type != types::DVEC || !isset) {
+        return false;
+    }
+    move_output(out, data);
+    return true;
+}
+
+static const std::regex block_expr("\\s*\\[(.*)\\]\\s*");
+static const std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
 
 int
 ConfigBlockReader::parse(FileHandle& file) 
 {
+    if (!file.is_open()) {
+        return -2;
+    }
     // reset file pointer
     file.rewind_fh();
-    // block
-    std::regex block_expr("\\s*\\[(.*)\\]\\s*");
     std::smatch block_match;
-    // line
-    std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
     std::smatch line_match;
 
     char* line = file.find_line(name);
@@ -158,8 +360,8 @@ ConfigBlockReader::parse(FileHandle& file)
         }
     }
     return 0;
-
 };
+
 
 void 
 ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
@@ -167,5 +369,15 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
     if (key_in_map(key, data)) {
         data[key].set_from_string(value);
     } else {
+        std::cout << "Unkown field " << key << std::endl;
+    }
+};
+
+
+FileHandle get_filehandle(const std::string filename) {
+    try {
+        return FileHandle(filename);
+    } catch (std::exception& e) {
+        return FileHandle{};
     }
 };
