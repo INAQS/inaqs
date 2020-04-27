@@ -12,47 +12,45 @@ public:
     // public constructor
     static Conversion* from_elementary(double mass, double length, double time);
     //
-    inline double energy_to_md(double en) { return en*energy_au2md; }
-
     template<typename itr1, typename itr2>
     inline
     void 
-    transform_coords_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_coords_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->crd_md2au;});
     };
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_veloc_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_veloc_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->veloc_md2au;});
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_veloc_to_md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_veloc_au2md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->veloc_au2md;});
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_gradient_to_md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_gradient_au2md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->grd_au2md;});
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_gradient_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_gradient_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->grd_md2au;});
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_masses_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+    transform_masses_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
         std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->mass_md2au;});
     }
     // energies

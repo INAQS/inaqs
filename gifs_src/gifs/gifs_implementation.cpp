@@ -1,8 +1,10 @@
 #include <stdlib.h>
+#include <iostream>
 #include <vector>
 #include <algorithm>
 //
 #include "gifs_implementation.hpp"
+#include "bomd_rescale.hpp"
 #include "configreader.hpp"
 //
 // creation
@@ -49,23 +51,23 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     // copy coordinates 
     size_t nqm_withoutlink = nqm-las->nlink;
     // assumes linkatoms are below coordinate section
-    conv->transform_coords_to_au(in_qm_crd, in_qm_crd+3*nqm_withoutlink, qm_crd.begin());
-    conv->transform_coords_to_au(in_mm_crd, in_mm_crd+3*nmm, mm_crd.begin()); 
+    conv->transform_coords_md2au(in_qm_crd, in_qm_crd+3*nqm_withoutlink, qm_crd.begin());
+    conv->transform_coords_md2au(in_mm_crd, in_mm_crd+3*nmm, mm_crd.begin()); 
     // linkatoms coords
     const auto& la_crd = las->get_crd();
-    conv->transform_coords_to_au(la_crd.begin(), la_crd.end(), qm_crd.begin()+nqm_withoutlink*3);
+    conv->transform_coords_md2au(la_crd.begin(), la_crd.end(), qm_crd.begin()+nqm_withoutlink*3);
     // Compute Forces etc.
     double energy = bomd->update_gradient();
     // update linkatom
     auto& la_frc = las->get_frc();
-    conv->transform_au_to_forces(qm_frc.begin()+3*nqm_withoutlink, qm_frc.end(), la_frc.begin());
+    conv->transform_gradient_au2md(qm_frc.begin()+3*nqm_withoutlink, qm_frc.end(), la_frc.begin());
     // transform back forces
-    conv->transform_au_to_forces(qm_frc.begin(), qm_frc.end()-3*las->nlink, in_qm_frc);
-    conv->transform_au_to_forces(mm_frc.begin(), mm_frc.end(), in_mm_frc);
+    conv->transform_gradient_au2md(qm_frc.begin(), qm_frc.end()-3*las->nlink, in_qm_frc);
+    conv->transform_gradient_au2md(mm_frc.begin(), mm_frc.end(), in_mm_frc);
     // copy linkatom forces
     std::copy(la_frc.begin(), la_frc.end(), in_qm_frc+3*nqm_withoutlink);
     // return energy
-    return conv->energy_from_au(energy);
+    return conv->energy_au2md * energy;
 };
 
 template<typename T1, typename T2>
@@ -123,20 +125,22 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     //
     for (arma::uword i=0; i<nqm; ++i) {
         const arma::uword idx = qm_index[i];
-        masses[i] = in_masses[idx];
+        masses[i] = conv->mass_md2au * 1.0/in_masses[idx];
     }
 
-    for (arma::uword i=0; i<nmm; ++i) {
+    for (arma::uword i=nqm; i<ntot; ++i) {
         const arma::uword idx = mm_index[i];
-        masses[i] = in_masses[idx];
+        masses[i] = conv->mass_md2au * 1.0/in_masses[idx];
     }
     // do unit transformation
-    conv->transform_veloc_to_au(veloc.begin(), veloc.end(), veloc.begin());
-    conv->transform_forces_to_au(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
+    conv->transform_veloc_md2au(veloc.begin(), veloc.end(), veloc.begin());
+    conv->transform_gradient_md2au(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
     double e_drift = 0;
     if (bomd->rescale_velocities(veloc, masses, total_gradient, e_drift)) {
-        conv->transform_au_to_forces(veloc.begin(), veloc.end(), veloc.begin());
-        conv->transform_au_to_veloc(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
+        //
+        conv->transform_veloc_au2md(veloc.begin(), veloc.end(), veloc.begin());
+        conv->transform_gradient_au2md(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
+        //
         to_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
         to_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
     }
@@ -155,6 +159,10 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     reader.get_data("runtype", runtype);
     if (runtype == "bomd") {
         return new BOMD(fh, atomicnumbers, qm_crd, mm_crd, 
+                        mm_chg, qm_grd, mm_grd);
+    }
+    else if (runtype == "rescale bomd") {
+        return new RescaleBomd(fh, atomicnumbers, qm_crd, mm_crd, 
                         mm_chg, qm_grd, mm_grd);
     }
     else {
@@ -232,12 +240,17 @@ void Gifs::update_global_index(int* indexQM, int* indexMM) {
 void 
 GifsImpl::update_global_index(int* indexQM, int* indexMM)
 {
+    std::cout << "Update GLOBAL INDICES\n";
     for (arma::uword i=0; i<nqm; ++i) {
         qm_index[i] = indexQM[i];
+        std::cout << indexQM[i] << " ";
     };
+    std::cout << "\n";
     for (arma::uword i=0; i<nmm; ++i) {
         mm_index[i] = indexMM[i];
+        std::cout << indexMM[i] << " ";
     };
+    std::cout << "\n";
 }
 //
 GifsImpl* GifsImpl::impl = nullptr;
