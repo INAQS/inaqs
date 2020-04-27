@@ -3,8 +3,7 @@
 
 #include "conversion.hpp"
 
-
-Conversion* Conversion::from_elementary(const double mass, const double length, const double time) {
+Conversion::Conversion(const double mass, const double length, const double time) {
     const double internal_length = 5.29177210903e-11;  // m, Bohr
     const double internal_mass =  9.1093837015e-31;    // kg, au
     const double internal_time =  2.418884326509e-17;  // seconds, au
@@ -17,5 +16,19 @@ Conversion* Conversion::from_elementary(const double mass, const double length, 
     const double gradient = energy/length;
     const double velocity = length/time;
     //
-    return new Conversion(internal_energy/energy, internal_length/length, internal_gradient/gradient, internal_velocity/velocity, internal_mass/mass);
+    _energy_au2md = internal_energy/energy;
+    _energy_md2au = energy/internal_energy;
+    // coordinates
+    _crd_au2md = internal_length/length;
+    _crd_md2au = length/internal_length;
+    // velocities
+    _veloc_au2md = internal_velocity/velocity;
+    _veloc_md2au = velocity/internal_velocity;
+    // gradient
+    _grd_au2md = internal_gradient/gradient;
+    _grd_md2au = gradient/internal_gradient;
+    // mass
+    _mass_au2md = internal_mass/mass;
+    _mass_md2au = mass/internal_mass; 
+    //
 };
