@@ -9,31 +9,9 @@
 class Conversion
 {
 public:
-    explicit Conversion(
-            double in_energy_md2au, 
-            double in_crd_md2au, 
-            double in_grd_md2au, 
-            double in_veloc_md2au, 
-            double in_mass_md2au) :
-    energy_au2md{1.0/in_energy_md2au},
-    energy_md2au{in_energy_md2au},
-    // coordinates
-    crd_au2md{1.0/in_crd_md2au},
-    crd_md2au{in_crd_md2au},
-    // velocities
-    veloc_au2md{1.0/in_veloc_md2au},
-    veloc_md2au{in_veloc_md2au},
-    // gradient
-    grd_au2md{1.0/in_grd_md2au},
-    grd_md2au{in_grd_md2au},
-    // mass
-    mass_au2md{1.0/in_mass_md2au},
-    mass_md2au{in_mass_md2au}
-    {}
-
-    // you own it!
+    // public constructor
     static Conversion* from_elementary(double mass, double length, double time);
-
+    //
     inline double energy_to_md(double en) { return en*energy_au2md; }
 
     template<typename itr1, typename itr2>
@@ -92,6 +70,28 @@ public:
     // mass
     const double mass_au2md;
     const double mass_md2au;
+private:
+    explicit Conversion(
+            double in_energy_md2au, 
+            double in_crd_md2au, 
+            double in_grd_md2au, 
+            double in_veloc_md2au, 
+            double in_mass_md2au) :
+    energy_au2md{1.0/in_energy_md2au},
+    energy_md2au{in_energy_md2au},
+    // coordinates
+    crd_au2md{1.0/in_crd_md2au},
+    crd_md2au{in_crd_md2au},
+    // velocities
+    veloc_au2md{1.0/in_veloc_md2au},
+    veloc_md2au{in_veloc_md2au},
+    // gradient
+    grd_au2md{1.0/in_grd_md2au},
+    grd_md2au{in_grd_md2au},
+    // mass
+    mass_au2md{1.0/in_mass_md2au},
+    mass_md2au{in_mass_md2au}
+    {}
 };
 
 #endif
