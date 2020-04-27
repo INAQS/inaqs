@@ -11,40 +11,22 @@
 #include <armadillo>
 #include <unordered_map>
 
-static const std::string NONE{"__NONE__"};
-
 ConfigBlockReader
 QM_QChem::qchem_reader() {
     using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"qchem"};
-    reader.add_entry("qc_scratch", NONE);
-    reader.add_entry("qc_exe", NONE);
-    reader.add_entry("qc_input", "GQSH.in");
-    reader.add_entry("qc_log", "GQSH.out");
+    reader.add_entry("qc_scratch", "DEFAULT");
     reader.add_entry("basis", types::STRING);
-    reader.add_entry("functional", types::STRING);
+    reader.add_entry("exchange", types::STRING);
     reader.add_entry("nthreads", 1);
     return reader;
 }
 
-void
-QM_QChem::setup(FileHandle& fh) {
-    auto reader = qchem_reader();
-    reader.parse(fh);
-    reader.get_data("qc_scratch", qc_scratch_directory);
-    if (qc_scratch_directory == NONE) qc_scratch_directory = get_qcscratch();
-    reader.get_data("qc_exe", qc_executable);
-    if (qc_executable == NONE) qc_executable = get_qcprog();
-    reader.get_data("qc_input", qc_input_file);
-    reader.get_data("qc_log", qc_log_file);
-    //
-    reader.get_data("basis", basis_set);
-    reader.get_data("functional", exchange_method);
-    //
-    reader.get_data("nthreads", nthreads);
-}
 
-//QM_QChem::QM_QChem(const std::vector<int> &qmid, int charge, int mult, int excited_states):
+/*
+  Recall that Q-Chem can decide to change the number of excited states
+  it computes! Usually this will be to a larger number of states. --Y.S.
+*/
 QM_QChem::QM_QChem(FileHandle& fh, 
            arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
@@ -53,51 +35,42 @@ QM_QChem::QM_QChem(FileHandle& fh,
 		   int charge, 
 		   int mult,
 		   size_t excited_states):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states),
-  /*
-    FIXME: Q-Chem can decide to change the number of excited states it
-    computes!! Usually this will be to a larger number of states
-    --Y.S.
-  */
-  excited_states(excited_states)
+  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states)
 {
-    setup(fh);
   /*
-    Set the number of threads, but don't overwrite if the flag is set
-    elsewhere
+    The environmental variables $QCSCRATCH, $QCTHREADS shall take
+    precedence over anything set in the config.
   */
-  // FIXME: Threading should be done in a configurable fashion
-  setenv("QCTHREADS", "4", 0);
+  
+  ConfigBlockReader reader = qchem_reader();
+  reader.parse(fh);
+
+  reader.get_data("basis", basis_set);
+  reader.get_data("exchange", exchange_method);
+
+  std::string conf_scratch;
+  reader.get_data("qc_scratch", conf_scratch);
+  qc_scratch_directory = get_qcscratch(conf_scratch);
+
   /*
     Setting $QCTHREADS seems sufficient on the Subotnik cluster, but
     perhaps this is unique to our setup. Need to check with Evgeny to
     be sure. Changes to $OMP_NUM_THREADS seem to have no effect.
   */
+  int conf_threads;
+  reader.get_data("nthreads", conf_threads);
+  if (conf_threads > 1){
+    setenv("QCTHREADS", std::to_string(conf_threads).c_str(), 0);
+  }
+
+  qc_executable = get_qcprog();
 }
 
 
-void QM_QChem::get_properties(PropMap &props){
-  // std::cout << ":: [" << call_idx() << "]" << std::endl;
-  
-  // arma::mat U (excited_states, excited_states);
-  // get_wf_overlap(&U);
-  // U.print();
-  // std::cout << std::endl;
-
-  // arma::mat D (3, (NMM + NQM));
-  // get_nac_vector(&D, 1, 2);
-  // D.t().print();
-  // std::cout << std::endl;
-
-  // arma::vec ee(excited_states + 1);
-  // get_all_energies(&ee);
-  // ee.print();
-  // std::cout << std::endl;
-  
-
+void QM_QChem::get_properties(PropMap &props){  
   for (QMProperty p: props.keys()){
     switch(p){
-
+      
     case QMProperty::wfoverlap:
       get_wf_overlap(props.get(QMProperty::wfoverlap));
       break;
@@ -400,9 +373,23 @@ const std::string QM_QChem::get_qcprog(void){
 }
 
 
-const std::string QM_QChem::get_qcscratch(void){
+/*
+  In order of preference:
+  1)               If $QCSCRATCH is set and an absolute path use it
+  2) Failing that, if conf_dir   is set and an absolute path use it
+  3) Failing that, use our default path
+
+  The above are set in reverse.
+*/
+
+const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   char * pwd = std::getenv("PWD");
   std::string scratch_path = std::string(pwd) + "/GQSH.sav";
+
+  // if the config directory is valid, take it as the default
+  if (conf_dir[0] == '/'){
+    scratch_path = conf_dir;
+  }
   
   char * qc_str = std::getenv("QCSCRATCH");
   if (nullptr == qc_str){
@@ -421,8 +408,11 @@ const std::string QM_QChem::get_qcscratch(void){
     mkdir(scratch_path.c_str(), 0700);
   }
 
-  /* Set $QCSCRATCH; this fixes a corner case where Q-Chem will crash
-     if QCSCRATCH="" */
+  /*
+    Set $QCSCRATCH to whatever we're using. Incidentally, this fixes a
+     corner case where Q-Chem will crash if QCSCRATCH=""; set, but to
+     the empty string.
+  */
   setenv("QCSCRATCH", scratch_path.c_str(), true);
 
   return scratch_path;

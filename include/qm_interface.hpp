@@ -9,6 +9,7 @@
 */
 
 class QMInterface{
+  friend class PrintBomd;
 public:
   QMInterface(arma::uvec& in_qmids, 
 	      arma::mat& in_qm_crd, 
@@ -24,11 +25,13 @@ public:
   virtual void get_properties(PropMap &props) =0;
   virtual ~QMInterface(){};
 
-//protected:
+protected:
   //Properties
-  size_t NQM;             // const, actually NQM+NLink
-  int qm_charge, qm_multiplicity;
+  const size_t NQM;             // const, actually NQM+NLink
+  const int qm_charge;
+  const int qm_multiplicity;
   const size_t excited_states;
+  
   //  fixed size
   arma::uvec& atomids;    // NQM
   arma::mat& crd_qm;      // NQM*3
