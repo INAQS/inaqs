@@ -275,8 +275,7 @@ void FSSH::update_md_global_gradient(arma::mat &total_gradient){
 
 
 double FSSH::update_gradient(void){
-  //FIXME: should figure out how to call qm->update(void) automatically
-  //qm->update();
+  qm->update();
 
   PropMap props{};
   props.emplace(QMProperty::qmgradient, {active_state}, &qm_grd);
