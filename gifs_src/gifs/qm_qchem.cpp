@@ -458,11 +458,12 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   // Default options 
   REMKeys rem_keys
     {
-     {"method",        exchange_method},
-     {"basis",         basis_set},
-     {"sym_ignore",    "true"},
-     {"qm_mm",         "true"},
-     {"input_bohr",    "true"} // .../libgen/PointCharges.C works for MM charges
+     {"method",         exchange_method},
+     {"basis",          basis_set},
+     {"sym_ignore",     "true"},
+     {"qm_mm",          "true"},
+     {"max_scf_cycles", "500"}
+     {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
   
   if (first_call ){
