@@ -73,8 +73,7 @@ FSSH::FSSH(FileHandle& fh,
   
   std::random_device rd;
   mt64_generator.seed(rd()); //FIXME: should be able to pass random seed
-  //FIXME: attempting to set the armadillo random seed errors: ‘arma_rng’ has not been declared
-  //arma_rng::set_seed_random(); //arma_rng::set_seed(rd());
+  arma::arma_rng::set_seed(rd());
 }; 
 
 
