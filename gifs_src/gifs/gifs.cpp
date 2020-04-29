@@ -8,7 +8,10 @@ extern "C" {
 //Don't inline these; they need to be exported and available to Gromacs etc...
 void create_qm_interface(const char* file, size_t nqm, const int* qm_atomids)
 {
-  Gifs gifs_handle(file, nqm, qm_atomids);
+  const double mass_unit = 1.660538921e-27; 
+  const double length_unit = 1e-9; 
+  const double time_unit = 1e-12;
+  Gifs gifs_handle(file, nqm, qm_atomids, mass_unit, length_unit, time_unit);
 }
 
 

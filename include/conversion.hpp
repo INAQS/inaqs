@@ -9,58 +9,88 @@
 class Conversion
 {
 public:
-    explicit Conversion(double in_en_from, double in_coords_to, double au_to_forces, double in_veloc_to) :
-      en_from_au{in_en_from}, coords_to_au{in_coords_to}, veloc_to_au{in_veloc_to}, au_to_forces{au_to_forces} 
-      {}
+    // 
+    explicit Conversion(double mass, double length, double time);
+    Conversion(const Conversion& rhs) = default;
+    Conversion(Conversion&& rhs) = default;
+    Conversion& operator=(const Conversion& rhs) = default;
+    Conversion& operator=(Conversion&& rhs) = default;
 
-      // you own it!
-    static Conversion* from_elementary(double mass, double length, double time);
-
-    inline double energy_from_au(double en) { return en*en_from_au; }
-
+    //
     template<typename itr1, typename itr2>
     inline
     void 
-    transform_coords_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
-        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->coords_to_au;});
+    transform_crd_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->crd_md2au(value); });
     };
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_veloc_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
-        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->veloc_to_au;});
+    transform_veloc_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->veloc_md2au(value); });
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_au_to_veloc(itr1 in_begin, itr1 in_end, itr2 result_begin) {
-        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val/this->veloc_to_au;});
+    transform_veloc_au2md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->veloc_au2md(value); });
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_au_to_forces(itr1 in_begin, itr1 in_end, itr2 result_begin) {
-        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val*this->au_to_forces;});
+    transform_gradient_au2md(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->grd_au2md(value); });
     }
-
+    //
     template<typename itr1, typename itr2>
     inline 
     void 
-    transform_forces_to_au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
-        std::transform(in_begin, in_end, result_begin, [this](double val) -> double {return val/this->au_to_forces;});
+    transform_gradient_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->grd_md2au(value); });
     }
+    //
+    template<typename itr1, typename itr2>
+    inline 
+    void 
+    transform_masses_md2au(itr1 in_begin, itr1 in_end, itr2 result_begin) {
+        std::transform(in_begin, in_end, result_begin, [this](double value){ return this->mass_md2au(value); });
+    }
+    //
+    inline double energy_au2md(double value) const noexcept {return _energy_au2md*value;}
+    inline double energy_md2au(double value) const noexcept {return _energy_md2au*value;}
+    //
+    inline double crd_au2md(double value) const noexcept {return _crd_au2md*value;}
+    inline double crd_md2au(double value) const noexcept {return _crd_md2au*value;}
+    //
+    inline double veloc_au2md(double value) const noexcept {return _veloc_au2md*value;}
+    inline double veloc_md2au(double value) const noexcept {return _veloc_md2au*value;}
+    //
+    inline double grd_au2md(double value) const noexcept {return _grd_au2md*value;}
+    inline double grd_md2au(double value) const noexcept {return _grd_md2au*value;}
+    //
+    inline double mass_au2md(double value) const noexcept {return _mass_au2md*value;}
+    inline double mass_md2au(double value) const noexcept {return _mass_md2au*value;}
+
 private:
     // energies
-    double en_from_au;
+    double _energy_au2md;
+    double _energy_md2au;
     // coordinates
-    double coords_to_au;
+    double _crd_au2md;
+    double _crd_md2au;
     // velocities
-    double veloc_to_au;
-    // forces
-    double au_to_forces;
+    double _veloc_au2md;
+    double _veloc_md2au;
+    // gradient
+    double _grd_au2md;
+    double _grd_md2au;
+    // mass
+    double _mass_au2md;
+    double _mass_md2au;
+    //
 };
 
 #endif
