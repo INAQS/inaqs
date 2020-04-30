@@ -1,0 +1,40 @@
+$molecule
+0 1
+Li 0 0 0
+H  0 0 1.652685688
+$end
+
+$rem
+jobtype			AIMD
+EXCHANGE        	HF
+BASIS           	6-31G
+SET_STATE_DERIV 	1
+CIS_N_ROOTS		2
+CIS_SINGLETS		TRUE
+CIS_TRIPLETS		FALSE
+AIMD_STEPS      	10
+TIME_STEP       	10
+AIMD_INIT_VELOC 	THERMAL
+AIMD_TEMP       	298
+AIMD_THERMOSTAT 	4	!Langevin
+PROJ_TRANSROT   	TRUE
+AIMD_INTEGRATION	VVERLET
+FSSH_LOWESTSURFACE	1
+FSSH_INITIALSURFACE	2 !initial surface
+FSSH_NSURFACES		2 !total surfaces
+AFSSH			1 !A-FSSH not FSSH
+CIS_DER_COUPLE		FALSE
+CIS_DER_NUMSTATE	2
+$end
+
+$derivative_coupling
+FSSH surfaces
+1 2
+$end
+
+$comment
+$aimd_init_states
+1 2
+$end
+
+AIMD_INIT_STATES	1
