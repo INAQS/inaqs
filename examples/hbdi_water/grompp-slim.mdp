@@ -52,7 +52,7 @@ ref_t                   = 300          ; reference temperature, one for each gro
 pcoupl                  = no
 
 ; Periodic boundary conditions
-pbc                     = yxz      ; 3-D PBC
+pbc                     = xyz      ; 3-D PBC
 comm_mode 		= linear   ; angular>linear>none; remove center of mass translation and rotation
 nstcomm                 = 10       ; number of steps for center of mass motion removal
 domain-decomposition    = no
