@@ -23,11 +23,6 @@ float gifs_get_forces(const float* qm_crd,
                       float* f_qm, float* f_mm)
 {
   Gifs gifs_handle;
-  /*
-    FIXME: MFSJM: I don't think the corresponding call exists in GIFS
-    yet---seems like it needs to be plummed through
-    Conversion/LinkAtoms.
-  */ 
   return gifs_handle.update_gradient(qm_crd, 
                                      link_ids, nmm, 
                                      mm_crd, mm_chg, 

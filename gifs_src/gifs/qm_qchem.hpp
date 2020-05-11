@@ -64,8 +64,9 @@ private:
     wfoverlap,
   };
 
-  //FIXME: when switching to the new interface, verify that call_idx()
-  //will always return a value > 0
+  // As long as QM_Interface.update() is called before
+  // get_properites(), call_idx() will always return a value > 0. This
+  // is required behavior.
   bool called(S s);
 };
 
