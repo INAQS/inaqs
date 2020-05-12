@@ -8,33 +8,27 @@ $rem
 jobtype			AIMD
 EXCHANGE        	HF
 BASIS           	6-31G
-SET_STATE_DERIV 	1
 CIS_N_ROOTS		2
 CIS_SINGLETS		TRUE
 CIS_TRIPLETS		FALSE
-AIMD_STEPS      	10
+SET_STATE_DERIV		2
+CALC_NAC		TRUE
+AIMD_STEPS      	100
 TIME_STEP       	10
-AIMD_INIT_VELOC 	THERMAL
-AIMD_TEMP       	298
-AIMD_THERMOSTAT 	4	!Langevin
-PROJ_TRANSROT   	TRUE
+PROJ_TRANSROT   	TRUE ! remove net rotation and tranlation
 AIMD_INTEGRATION	VVERLET
 FSSH_LOWESTSURFACE	1
 FSSH_INITIALSURFACE	2 !initial surface
 FSSH_NSURFACES		2 !total surfaces
-AFSSH			1 !A-FSSH not FSSH
-CIS_DER_COUPLE		FALSE
-CIS_DER_NUMSTATE	2
-$end
-
-$derivative_coupling
-FSSH surfaces
-1 2
+AFSSH			0 !FSSH not A-FSSH
 $end
 
 $comment
-$aimd_init_states
-1 2
+0 0 -7e-5
+0 0  5e-4
 $end
 
-AIMD_INIT_STATES	1
+$velocity
+0 0 -5e-4
+0 0  5e-3
+$end
