@@ -1,12 +1,12 @@
 #include <algorithm>
 #include <armadillo>
-
+#include "constants.hpp"
 #include "conversion.hpp"
 
 Conversion::Conversion(const double mass, const double length, const double time) {
-    const double internal_length = 5.29177210903e-11;  // m, Bohr
-    const double internal_mass =  9.1093837015e-31;    // kg, au
-    const double internal_time =  2.418884326509e-17;  // seconds, au
+    const double internal_length = AU2SI_LEN;
+    const double internal_mass =   AU2SI_MASS;
+    const double internal_time =   AU2SI_TIME;
     const double internal_velocity =  internal_length/internal_time;  // m/s
     const double internal_energy = internal_mass * internal_length * internal_length /
                                     (internal_time * internal_time);
