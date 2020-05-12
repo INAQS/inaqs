@@ -26,6 +26,11 @@ QM_QChem::qchem_reader() {
 /*
   Recall that Q-Chem can decide to change the number of excited states
   it computes! Usually this will be to a larger number of states. --Y.S.
+
+  Happens in setman; to see where, search for "NRoots was altered as:"
+
+  On subsequent invocation (as during AIMD), setman_init.F will reset
+  the number requested to the origional number.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
            arma::uvec& in_qmids, 
@@ -47,7 +52,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
   reader.get_data("basis", basis_set);
   reader.get_data("exchange", exchange_method);
-
+  
   std::string conf_scratch;
   reader.get_data("qc_scratch", conf_scratch);
   qc_scratch_directory = get_qcscratch(conf_scratch);
@@ -166,7 +171,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   if (! called(S::wfoverlap)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
-    	      {"namd_lowestsurface","1"},  //FIXME: parametrize lowest surface
+    	      {"namd_lowestsurface",std::to_string(lowest_surface)},
     	      {"dump_wf_overlap", "1"}});
 
     std::ofstream input = get_input_handle();
@@ -342,6 +347,8 @@ void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
     g_mm.col(i) *= -1.0 * q;
   }
   /*
+    FIXME: prevent efield.dat from being written with REM_QMMM_EXT_GIFS set
+
     This method replaced parsing efield.dat, which has the following
     format:
 
@@ -420,8 +427,8 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
 
 
 void QM_QChem::exec_qchem(void){
-  std::string cmd = "cd " + qc_scratch_directory + "; " + // change WD->$QCSCRATCH
-    qc_executable + " " + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
+  std::string cmd = // "cd " + qc_scratch_directory + "; " + // change WD->$QCSCRATCH
+    qc_executable + " " + qc_scratch_directory + "/" + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
   int status = std::system(cmd.c_str());
   if (status){
     throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + qc_log_file);

@@ -20,6 +20,7 @@ public:
 	   int charge, 
 	   int mult,
 	   size_t excited_states);
+  
   void get_properties(PropMap &props);
 
 private:  
@@ -55,6 +56,7 @@ private:
   std::string qc_log_file = "GQSH.out";
   std::string exchange_method;
   std::string basis_set;
+  size_t lowest_surface = 1; //FIXME: Figure out how to make this modifiable
   bool first_call = true;
 
   enum class S{

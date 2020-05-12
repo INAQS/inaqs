@@ -1,5 +1,6 @@
 #include "fssh.hpp"
 #include "electronic.hpp"
+#include "constants.hpp"
 #include <armadillo>
 #include <complex>
 #include <cmath>
@@ -18,36 +19,53 @@ FSSH::setup_reader()
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", types::DOUBLE);
-    reader.add_entry("min_state", 0);
-    reader.add_entry("active_state", 0);
+    reader.add_entry("min_state", 1);
+    reader.add_entry("active_state", 1);
+    reader.add_entry("excited_states", 4);
+    
+    std::random_device rd; // for default random seed
+    reader.add_entry("random_seed", (int) rd());
     return reader;
 }
 
 void
 FSSH::get_reader_data(ConfigBlockReader& reader) {
-    double in_dtc, in_delta_e_tol;
+    double in_dtc;
     reader.get_data("dtc", in_dtc);
-    dtc = in_dtc;
-    reader.get_data("delta_e_tol", in_delta_e_tol);
-    delta_e_tol = in_delta_e_tol;
-    int in_min_state, nstates, in_active;
-    reader.get_data("min_state", in_min_state);
-    min_state = in_min_state;
-    reader.get_data("nstates", nstates);
-    excited_states = nstates;
-    reader.get_data("active_state", in_active);
-    active_state = in_active;
+    // FIXME: Should input time be in ns to match GMX or in fs because
+    // our interface is notionally general?
+    dtc = in_dtc * (1e-15 / AU2SI_TIME); // fs -> a.u.
+    
+    reader.get_data("delta_e_tol", delta_e_tol);
+
+    // Need these until ConfigReader has support for unsigned longs etc.
+    int min_state_in, excited_states_in, active_state_in;
+    reader.get_data("min_state", min_state_in);
+    reader.get_data("excited_states", excited_states_in);
+    reader.get_data("active_state", active_state_in);
+
+    min_state = min_state_in;
+    excited_states = excited_states_in;
+    active_state = active_state_in;
+
+    int seed = -1; // the real default seed is set in setup_reader()
+    reader.get_data("random_seed", seed);
+    // the only place we might lose range in signed <-> unsigned conversion is in the read function
+    mt64_generator.seed((unsigned int) seed); 
+    arma::arma_rng::set_seed((unsigned int) seed);
+    // FIXME: Should output the random seed to the user
 };
 
 FSSH::FSSH(FileHandle& fh,
            arma::uvec& atomicnumbers, arma::mat& qm_crd,
            arma::mat& mm_crd, arma::vec& mm_chg,
-	       arma::mat& qm_grd, arma::mat& mm_grd):
-    BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd), 
-    c{excited_states + 1 - min_state}
+	   arma::mat& qm_grd, arma::mat& mm_grd):
+  BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd)
 {
+  ConfigBlockReader reader = setup_reader();
+  get_reader_data(reader);
+  
   int nstates = excited_states + 1 - min_state;
-  c = nstates;
   if (nstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }
@@ -55,25 +73,34 @@ FSSH::FSSH(FileHandle& fh,
   if ((active_state < min_state) || (excited_states < active_state)){
     throw std::range_error("Active state not in the range of computed states!");
   }
+  
+  // FIXME: How to pass min_state to QM_Interface?
 
-  // FIXME: need to pass min_state to QM_Interface
+  active_state -= min_state;
+  
+  /*
+    R.B. energy has excited_states + 1 (ground) states, while all
+    others have excited_states + 1 - min_state (nstates); this could
+    screw up indexing.
 
-  // FIXME: some objects have excited + ground states, others have
-  // excited + ground - minimum; this will screw up indexing.
-  U.set_size(nstates);
+    active_state \on [0, nstates]
+      can index U, T, V, c
+      cannot index energy
+
+    energy[min_state + active_state]
+  */
+
   energy.set_size(excited_states + 1);
+  
+  U.set_size(nstates);
   T.set_size(nstates);
   V.set_size(nstates);
 
-  // FIXME: should be able to configure (multiple) state(s)
-  // R.B.: c is of type Electronic, not an arma object
-  arma::cx_vec c_ (nstates, arma::fill::zeros);
-  c_(active_state) = 1.0;
-  c.set(c_);
-  
-  std::random_device rd;
-  mt64_generator.seed(rd()); //FIXME: should be able to pass random seed
-  arma::arma_rng::set_seed(rd());
+  /*
+    FIXME: should be able to configure (multiple) initial electronic
+    state(s). Can use DVEC?
+  */
+  c.reset(nstates, 1, active_state);
 }; 
 
 
@@ -143,7 +170,7 @@ void FSSH::electonic_evolution(void){
       g.elem( arma::find(g < 0) ).zeros();
 
       // FIXME: is this norming the correct thing to do? Should we rather be monitoring the norm of g?
-      // ensure that g is normed by adding any residual desnity to the active state.
+      // ensure that g is normed by adding any residual density to the active state. See what Medders does...
       g(a) += 1.0 - arma::sum(g);
 
       // randomly select an element from the discrete distribution represented by g
@@ -171,8 +198,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   nac.set_size(3, NQM() + NMM());
   
   PropMap props{};
-  //FIXME: Make sure you don't need to add min_state to the below
-  props.emplace(QMProperty::nacvector, {active_state, target_state}, &nac);
+  props.emplace(QMProperty::nacvector, {min_state + active_state, min_state + target_state}, &nac);
   
   qm->get_properties(props);
 
@@ -207,10 +233,10 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     qmg_new.set_size(3,NQM());
   
     props = {};
-    props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
+    props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
     if (NMM() > 0){
       mmg_new.set_size(3, NMM());
-      props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
+      props.emplace(QMProperty::mmgradient, {min_state + target_state}, &mmg_new);
     }
     qm->get_properties(props);
 
@@ -256,10 +282,11 @@ void FSSH::update_md_global_gradient(arma::mat &total_gradient){
   qmg_new.set_size(3,NQM());
   
 
-  props.emplace(QMProperty::qmgradient, {target_state}, &qmg_new);
+  //FIXME: save target gradient
+  props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
   if (NMM() > 0){
     mmg_new.set_size(3, NMM());
-    props.emplace(QMProperty::mmgradient, {target_state}, &mmg_new);
+    props.emplace(QMProperty::mmgradient, {min_state + target_state}, &mmg_new);
   }
   qm->get_properties(props);
   
@@ -278,9 +305,10 @@ double FSSH::update_gradient(void){
   qm->update();
 
   PropMap props{};
-  props.emplace(QMProperty::qmgradient, {active_state}, &qm_grd);
-  props.emplace(QMProperty::mmgradient, {active_state}, &mm_grd);
-  props.emplace(QMProperty::energies,   {excited_states}, &energy); // R.B.: with any idx, energies will get *all* states
+  props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
+  props.emplace(QMProperty::mmgradient, {min_state + active_state}, &mm_grd);
+  // R.B.: with any idx, energies will get all (excited_states + 1) states
+  props.emplace(QMProperty::energies,   {excited_states}, &energy);
 
   qm->get_properties(props);
   electonic_evolution();

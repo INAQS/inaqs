@@ -5,14 +5,23 @@
 
 class Electronic{
 public:
+  Electronic(void) {}
   Electronic(const arma::cx_mat &cs) : amplitudes (cs) {reserve();}
   Electronic(const arma::cx_vec &c)  : amplitudes (c)  {reserve();}
-  Electronic(arma::uword NStates): Electronic(NStates, 1) {reserve();}
-  Electronic(arma::uword NStates, arma::uword NSets) {amplitudes.set_size(NStates, NSets); reserve();}
+  Electronic(arma::uword NStates, arma::uword NSets=1, arma::uword active=0) {
+    reset(NStates, NSets, active);
+  }
 
+  void reset(arma::uword NStates, arma::uword NSets, arma::uword active){
+    amplitudes.set_size(NStates, NSets);
+    amplitudes.zeros();
+    amplitudes.row(active).ones();
+    reserve();
+  }
+  
   void set(const arma::cx_mat &cs) {amplitudes = cs;}
   void set(const arma::cx_vec &c) {amplitudes.col(0) = c;}
-
+  
   const std::complex<double> operator()(arma::uword i, arma::uword j) const {return amplitudes(i,j);}
   const std::complex<double> operator()(arma::uword i) const {return amplitudes(i,0);}
   const arma::cx_vec operator()(void) const {return amplitudes.col(0);}
