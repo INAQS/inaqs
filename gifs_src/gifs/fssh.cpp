@@ -231,7 +231,10 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     // compute gradient of target_state to see if we reverse
     arma::mat qmg_new, mmg_new;
     qmg_new.set_size(3,NQM());
-  
+
+    // FIXME: there is, perhaps, a small performance advantage to be
+    // gained by saving this gradient. It would be most important for
+    // situations where we had many frustrated hops.
     props = {};
     props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
     if (NMM() > 0){
@@ -281,23 +284,19 @@ void FSSH::update_md_global_gradient(arma::mat &total_gradient){
   arma::mat qmg_new, mmg_new;
   qmg_new.set_size(3,NQM());
   
-
-  //FIXME: save target gradient
   props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
   if (NMM() > 0){
     mmg_new.set_size(3, NMM());
     props.emplace(QMProperty::mmgradient, {min_state + target_state}, &mmg_new);
   }
   qm->get_properties(props);
-  
+
+  total_gradient(arma::span(arma::span::all), arma::span(0, NQM() - 1)) -= qmg_new;
   qm_grd = qmg_new;
   if (NMM() > 0){
+    total_gradient(arma::span(arma::span::all), arma::span(NQM(), NQM() + NMM() - 1)) -= mmg_new;
     mm_grd = mmg_new;
-  }
-
-  //FIXME: need to actually update!
-  (void) total_gradient;
-  
+  }  
 }
 
 
