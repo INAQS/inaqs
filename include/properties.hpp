@@ -12,6 +12,7 @@ enum class QMProperty{
    nacvector,        // mat
    nacvector_imag,   // mat
    wfoverlap,        // mat
+   diabatic_rot_mat, //mat
    qmgradient,       // mat
    mmgradient,       // mat
    qmgradient_multi, // cube

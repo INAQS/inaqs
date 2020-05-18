@@ -26,6 +26,7 @@ public:
 private:  
   void get_nac_vector(arma::mat *nac, size_t A, size_t B);
   void get_wf_overlap(arma::mat *U);
+  void get_diabatic_rot_mat(arma::mat *U);
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
   void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
@@ -80,6 +81,7 @@ private:
 #define FILE_EFIELD           329   // 
 #define FILE_DERCOUP          967   // Derrivative coupling 
 #define FILE_WF_OVERLAP       398   // wavefunction overlap
+#define FILE_ROT_MATRIX       950   // for diabatization rotations
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11

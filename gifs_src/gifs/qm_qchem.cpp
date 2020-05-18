@@ -80,6 +80,10 @@ void QM_QChem::get_properties(PropMap &props){
       get_wf_overlap(props.get(QMProperty::wfoverlap));
       break;
 
+    case QMProperty::diabatic_rot_mat:
+      get_diabatic_rot_mat(props.get(QMProperty::diabatic_rot_mat));
+      break;
+
     case QMProperty::nacvector_imag:
       throw std::invalid_argument("Imaginary NAC not implemented!");
       break;
@@ -188,6 +192,32 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse wavefunction overlap");
   }  
+}
+
+
+/*
+  FIXME: Need to recitfy min_state or choose which states to mix
+  FIXME: Want to choose between ER and Boys and ...
+  FIXME: Want to pick separate spin states (rem_boys_cis_spin_separate)
+  FIXME: May want to increase REM_CIS_CONVERGENCE to 7 (from default 6)
+  FIXME: Do we need to include $localised_diabatization section?
+*/
+void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
+  REMKeys k = excited_rem();
+  k.insert({{"jobtype","sp"},
+	    {"boys_cis_numstate", std::to_string(excited_states)}
+	    });
+
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, k);
+  write_molecule_section(input);
+  input.close();
+  exec_qchem();
+  
+  size_t count = readQFMan(FILE_ROT_MATRIX, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
+  if (count != excited_states * excited_states){
+    throw std::runtime_error("Unable to parse diabatic rotation matrix");
+  }
 }
 
 
