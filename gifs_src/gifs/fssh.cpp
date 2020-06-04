@@ -169,8 +169,11 @@ void FSSH::electonic_evolution(void){
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
 
-      // FIXME: is this norming the correct thing to do? Should we rather be monitoring the norm of g?
-      // ensure that g is normed by adding any residual density to the active state. See what Medders does...
+      /*
+	Ensure that g is normed by adding any residual density to the
+	active state. This maintains the correct transition
+	probability to all states.
+      */
       g(a) += 1.0 - arma::sum(g);
 
       // randomly select an element from the discrete distribution represented by g
