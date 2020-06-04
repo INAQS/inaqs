@@ -81,7 +81,7 @@ private:
 #define FILE_EFIELD           329   // 
 #define FILE_DERCOUP          967   // Derrivative coupling 
 #define FILE_WF_OVERLAP       398   // wavefunction overlap
-#define FILE_ROT_MATRIX       950   // for diabatization rotations
+#define FILE_DIAB_ROT_MAT     971   // for diabatization rotations
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11

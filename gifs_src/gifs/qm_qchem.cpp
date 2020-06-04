@@ -214,7 +214,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
   input.close();
   exec_qchem();
   
-  size_t count = readQFMan(FILE_ROT_MATRIX, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
+  size_t count = readQFMan(FILE_DIAB_ROT_MAT, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
   if (count != excited_states * excited_states){
     throw std::runtime_error("Unable to parse diabatic rotation matrix");
   }
