@@ -1,0 +1,74 @@
+$comment
+A-FSSH sample imput file
+$end
+
+$molecule
+0 1
+H       0.546983     2.558802     1.122413
+C       0.485537     1.477728     1.196564
+C       1.748113     0.864058     0.614704
+C       4.111960    -0.294137    -0.408420
+C       1.882080    -0.526204     0.513948
+C       2.814764     1.663532     0.192642
+C       3.967957     1.113341    -0.307248
+C       3.023012    -1.100686     0.021538
+H       1.065260    -1.149596     0.820491
+H       2.729601     2.731034     0.263124
+H       4.773400     1.745118    -0.626976
+H       3.110062    -2.163956    -0.049641
+C       5.289278    -0.863241    -0.917716
+H       6.122382    -0.284903    -1.249706
+O       5.393335    -2.226862    -1.001380
+H       0.418614     1.232435     2.252110
+C      -0.774404     1.000958     0.492271
+H      -1.664947     0.149475     2.208626
+C      -1.761405     0.349104     1.157908
+C      -2.043257     0.863549    -1.556502
+C      -2.942942    -0.080321     0.495428
+C      -0.928357     1.256538    -0.896923
+C      -3.088484     0.180339    -0.879025
+C      -3.980575    -0.763031     1.177876
+H      -0.138485     1.759731    -1.418835
+H      -4.370382    -0.044581    -2.589528
+H      -2.152317     1.060977    -2.605473
+C      -5.099365    -1.160846     0.518573
+H      -3.866678    -0.960051     2.226384
+H      -5.880110    -1.676606     1.041423
+C      -5.244822    -0.898740    -0.862163
+H      -6.133519    -1.219196    -1.368408
+C      -4.265964    -0.246254    -1.540934
+$end
+
+
+$rem
+JOBTYPE           AIMD
+EXCHANGE          HF
+BASIS             3-21G
+FOCK_EXTRAP_ORDER 6 # Use a 6th-order extrapolation
+FOCK_EXTRAP_POINTS 12 # of the previous 12 Fock matrices
+SCF_CONVERGENCE 8
+CIS_CONVERGENCE 8
+TIME_STEP 300 # Nuclear time step duration in a.u./time_step_conversion
+AIMD_SHORT_TIME_STEP 1 # Electronic time step a.u./time_step_conversion
+AIMD_TIME_STEP_CONVERSION 10 # Divide time steps by this value
+AIMD_STEPS 3 # Take 3 time steps
+AIMD_PRINT 1 # Print velocity at each step
+AIMD_INIT_VELOC THERMAL # Sample from Maxwell-Boltzmann
+AIMD_THERMOSTAT 4 # Langevin thermostat
+AIMD_TEMP 300 # (in Kelvin)
+AIMD_THERMOSTAT_LANGEVIN_FRICTION 15 # This is gamma*100000 
+AIMD_INTEGRATION VVERLET # How to propagate nuclear motion
+CIS_N_ROOTS      2
+CIS_SINGLETS     FALSE
+CIS_TRIPLETS     TRUE
+SET_STATE_DERIV  1
+CIS_DER_COUPLE   TRUE
+FSSH_LOWESTSURFACE  1 # Lowest adiabat considered in FSSH
+FSSH_INITIALSURFACE 1 # Initial surface for FSSH
+FSSH_NSURFACES 2      # Number of surfaces for FSSH
+AFSSH 1 # Use augmented FSSH
+SET_ITER 40 # Max number of CPCIS cycles
+SYMMETRY   OFF
+SYM_IGNORE TRUE
+$end
+
