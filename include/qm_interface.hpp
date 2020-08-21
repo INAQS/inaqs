@@ -18,7 +18,7 @@ public:
 	      int charge, 
 	      int mult,
 	      int excited_states);
-  void update();
+  virtual void update(); // if overriding, be sure to call the parent too.
   inline size_t nqm() const noexcept { return NQM; };
   inline int call_idx() const noexcept { return qm_call_idx; };
   
