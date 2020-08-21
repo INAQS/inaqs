@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+export GMX_MAXBACKUP=-1
 
 readonly NAME=gly_minimize
 
