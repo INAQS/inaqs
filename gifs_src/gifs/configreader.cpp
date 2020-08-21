@@ -10,7 +10,6 @@
 #define from_void(type, value) new type(*static_cast<type*>(value))
 #define delete_void_as(type, value) delete static_cast<type*>(value)
 
-
 template<typename T>
 inline
 void
@@ -81,7 +80,7 @@ FileHandle::get_line()
 {
     char* line = nullptr;
     size_t len;
-    ssize_t read = getline(&line, &len, file.fh()); 
+    ssize_t read = getline(&line, &len, file.fh());
     if (read == -1) {
         return nullptr; 
     }
@@ -97,7 +96,7 @@ FileHandle::find_line(const std::string& key) {
 
     while (true) {
         line = get_line();
-        if (line == nullptr)  break; 
+        if (line == nullptr)  break;
         if (is_str_substring(ref, line)) break; 
     }
     return line;
@@ -325,6 +324,7 @@ Data::move_data(std::vector<double>& out) {
 
 static const std::regex block_expr("\\s*\\[(.*)\\]\\s*");
 static const std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
+static const std::regex comment_expr("^#");
 
 int
 ConfigBlockReader::parse(FileHandle& file) 
@@ -337,7 +337,7 @@ ConfigBlockReader::parse(FileHandle& file)
     std::smatch block_match;
     std::smatch line_match;
 
-    char* line = file.find_line(name);
+    char* line = file.find_line("[" + name + "]");
     if (!line) {
         return -1;
     }
@@ -349,7 +349,10 @@ ConfigBlockReader::parse(FileHandle& file)
             line = nullptr;
         } else {
             if(string.find_first_not_of("\t\n\v\f\r") != std::string::npos) {
-                if (std::regex_match(string, line_match, line_expr)) {
+	        if (std::regex_search(string, comment_expr)){
+                    // pass for comment
+	        }
+                else if (std::regex_match(string, line_match, line_expr)) {
                     parse_line(trim(line_match[1]), line_match[2]);
                 } else {
                     std::cout << "Input Error: " << line << "\n";
@@ -369,7 +372,7 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
     if (key_in_map(key, data)) {
         data[key].set_from_string(value);
     } else {
-        std::cout << "Unkown field " << key << std::endl;
+        std::cout << "Unknown field " << key << std::endl;
     }
 };
 

@@ -207,11 +207,11 @@ public:
     int parse(FileHandle& file);
     // get results
     template<typename T>
-    inline bool get_data(const std::string& key, T& val) { return data[key].get_data(val); }
+    inline bool get_data(const std::string& key, T& val) { return data.at(key).get_data(val); }
     template<typename T>
-    inline bool move_data(const std::string& key, T& val) { return data[key].move_data(val); }
+    inline bool move_data(const std::string& key, T& val) { return data.at(key).move_data(val); }
     //
-    Data operator[](const std::string& key) {return data[key];}
+  Data operator[](const std::string& key) {return data.at(key);}
 
 private:
     void parse_line(const std::string& key, const std::string& value); 
