@@ -13,13 +13,17 @@
 
 ConfigBlockReader
 QM_QChem::qchem_reader() {
-    using types = ConfigBlockReader::types;
-    ConfigBlockReader reader{"qchem"};
-    reader.add_entry("qc_scratch", "DEFAULT");
-    reader.add_entry("basis", types::STRING);
-    reader.add_entry("exchange", types::STRING);
-    reader.add_entry("nthreads", 1);
-    return reader;
+  using types = ConfigBlockReader::types;
+  ConfigBlockReader reader{"qchem"};
+  reader.add_entry("qc_scratch", "DEFAULT");
+  reader.add_entry("basis", types::STRING);
+  reader.add_entry("exchange", types::STRING);
+  reader.add_entry("nthreads", 1);
+  // FIXME: ConfigReader should support bool
+  reader.add_entry("singlets", 1);
+  reader.add_entry("triplets", 0);
+
+  return reader;
 }
 
 
@@ -52,6 +56,12 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
   reader.get_data("basis", basis_set);
   reader.get_data("exchange", exchange_method);
+
+  int in;
+  reader.get_data("singlets", in);
+  singlets = in;
+  reader.get_data("triplets", in);
+  triplets = in;
   
   std::string conf_scratch;
   reader.get_data("qc_scratch", conf_scratch);
@@ -483,9 +493,9 @@ REMKeys QM_QChem::excited_rem(void){
 
   REMKeys excited
     {
-     {"cis_n_roots", std::to_string(excited_states)},
-     {"cis_singlets", "true"},  //Fixme: singlet/triplet selection should
-     {"cis_triplets", "false"}  //be configurable
+      {"cis_n_roots", std::to_string(excited_states)},
+      {"cis_singlets", std::to_string(singlets)},  
+      {"cis_triplets", std::to_string(triplets)} 
     };
 
   return excited;

@@ -60,6 +60,9 @@ private:
   size_t lowest_surface = 1; //FIXME: Figure out how to make this modifiable
   bool first_call = true;
 
+  bool singlets = true;  // Defaults for CIS calculation
+  bool triplets = false;
+
   enum class S{
     energy,
     ex_energy,
