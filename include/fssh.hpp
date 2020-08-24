@@ -2,17 +2,15 @@
 #define __GIFS_FSSH_HPP
 
 #include <armadillo>
-//
 #include "bomd.hpp"
 #include "configreader.hpp"
 #include "electronic.hpp"
 
 class FSSH: public BOMD{
 public:
-  //explicit FSSH(int nqm, const int * qmid, size_t min_state, size_t excited_states, size_t active_state, double dtc);
   explicit FSSH(
         FileHandle& fh,
-        arma::uvec& atomicnumbers,  // need to parse our config
+        arma::uvec& atomicnumbers,
 		arma::mat& qm_crd, 
 		arma::mat& mm_crd, 
 		arma::vec& mm_chg, 
