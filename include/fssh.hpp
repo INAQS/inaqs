@@ -25,7 +25,7 @@ protected:
   virtual void get_reader_data(ConfigBlockReader& reader); 
   virtual ConfigBlockReader setup_reader();
   void electonic_evolution(void);
-  void update_md_global_gradient(arma::mat &total_gradient);
+  void backpropagate_gradient_velocities(arma::mat &total_gradient, arma::mat &velocities, arma::vec &masses);
   void hop_and_scale(arma::mat &velocities, arma::vec &mass);
   arma::uword sample_discrete(const arma::vec &p);
 

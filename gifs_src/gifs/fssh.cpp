@@ -84,6 +84,10 @@ FSSH::FSSH(FileHandle& fh,
   // FIXME!: How to pass min_state to QM_Interface?
 
   active_state -= min_state;
+
+  if (min_state != 1){
+    throw std::runtime_error("minimum states other than 1 not supported!");
+  }
   
   /*
     R.B. energy has excited_states + 1 (ground) states, while all
@@ -269,7 +273,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     /*
       There is, perhaps, a modest performance advantage to be gained
       by saving this gradient for use below in
-      update_md_global_gradient(). This would be most important for
+      backpropagate_gradient_velocities(). This would be most important for
       situations where we had many frustrated hops. The infrastructure
       to track which gradients are up-to-date is a complication for
       later.
@@ -315,11 +319,18 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 /*
   Call this function when energy fluctuation tolerance in the MD
   driver is exceeded and we've had a hop. Update the current surface
-  and to the total gradient, add (new-old).
+  and to the total gradient, add (new-old). Similarly, take a step in
+  velocity space backwards along the old gradient and then forwards
+  along the new one.
 
-  FIXME: also need to do back-propagation on velocities, no??
+  N.B.: When working with Gromacs, it is not necessary to do any
+  back-propagation in positions, only velocities. Gromacs's
+  velocity-Verlet integrator splits velocity integration over 2 steps
+  (so that all of the tooling for leap-frog still works) and then does
+  position integration in a single step afterwards. See
+  gifs/docs/GromacsVVImplementation.jpg for notes.
 */
-void FSSH::update_md_global_gradient(arma::mat &total_gradient){
+void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::mat &velocities, arma::vec &masses){
   PropMap props = {};
   arma::mat qmg_new, mmg_new;
   qmg_new.set_size(3,NQM());
@@ -331,10 +342,22 @@ void FSSH::update_md_global_gradient(arma::mat &total_gradient){
   }
   qm->get_properties(props);
 
-  total_gradient(arma::span(arma::span::all), arma::span(0, NQM() - 1)) -= qmg_new;
+  // 3xN  mass matrix 
+  arma::mat m (3, (NQM() + NMM()), arma::fill::zeros);
+  for (arma::uword i = 0; i < masses.n_elem; i++){
+    m.col(i) = masses(i);
+  }
+
+  auto rows=arma::span(arma::span::all); auto cols = arma::span(0, NQM() - 1);
+  total_gradient(rows, cols) += qmg_new - qm_grd;
+  // a = -g/m 
+  velocities(rows, cols) += -1.0*(qmg_new - qm_grd)/m(rows, cols)*dtc/2;
   qm_grd = qmg_new;
+
   if (NMM() > 0){
-    total_gradient(arma::span(arma::span::all), arma::span(NQM(), NQM() + NMM() - 1)) -= mmg_new;
+    cols = arma::span(NQM(), NQM() + NMM() - 1);
+    total_gradient(rows, cols) += mmg_new - mm_grd;    
+    velocities(rows, cols) += -1.0*(mmg_new - mm_grd)/m(rows, cols)*dtc/2;
     mm_grd = mmg_new;
   }  
 }
@@ -357,6 +380,7 @@ double FSSH::update_gradient(void){
 }
 
 
+// This hook comes after the first MD half-step (and before constraint forces are calculated in gromacs)
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
   if (!hopping){
     // nothing to do
@@ -364,8 +388,8 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   }
   else{
     if(std::abs(e_drift) > delta_e_tol){
-      // trivial crossing; need to update global gradient
-      update_md_global_gradient(total_gradient);
+      // trivial crossing; need to update global gradient & velocities
+      backpropagate_gradient_velocities(total_gradient, velocities, masses);
       active_state = target_state;
       hopping = false;
     }
