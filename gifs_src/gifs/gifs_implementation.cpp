@@ -4,6 +4,7 @@
 #include <algorithm>
 //
 #include "gifs_implementation.hpp"
+#include "fssh.cpp"
 #include "bomd_rescale.hpp"
 #include "configreader.hpp"
 //
@@ -159,6 +160,10 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     reader.get_data("runtype", runtype);
     if (runtype == "bomd") {
         return new BOMD(fh, atomicnumbers, qm_crd, mm_crd, 
+                        mm_chg, qm_grd, mm_grd);
+    }
+    else if (runtype == "fssh") {
+        return new FSSH(fh, atomicnumbers, qm_crd, mm_crd, 
                         mm_chg, qm_grd, mm_grd);
     }
     else if (runtype == "rescale bomd") {
