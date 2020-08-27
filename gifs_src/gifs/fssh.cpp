@@ -267,11 +267,12 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     qmg_new.set_size(3,NQM());
 
     /*
-      There is, perhaps, a modest performance advantage to be
-      gained by saving this gradient. It would be most important for
-      situations where we had many frustrated hops. The
-      infrastructure to track which gradients are up-to-date is a
-      complication for later.
+      There is, perhaps, a modest performance advantage to be gained
+      by saving this gradient for use below in
+      update_md_global_gradient(). This would be most important for
+      situations where we had many frustrated hops. The infrastructure
+      to track which gradients are up-to-date is a complication for
+      later.
     */
     
     props = {};
@@ -282,7 +283,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     }
     qm->get_properties(props);
 
-    // 3N vector version of gradient
+    // 3N vector version of new gradient
     arma::vec gradv(3 * (NQM() + NMM()));
     gradv.subvec(0, 3*NQM()) = arma::vectorise(qmg_new);
     if (NMM() > 0){
@@ -293,10 +294,10 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
       Velocity reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
 
-      In the original Jain paper a second criterion was imposed. But,
-      in January 2020 A. Jain indicated to Joe that this was not
-      necessary. We follow the original Jasper-Truhlar prescription in
-      line with Jain's updated advice.
+      In Jain (2016) a second criterion was imposed. But, in January
+      2020 A. Jain indicated to JES that this was not necessary. We
+      follow the original Jasper-Truhlar prescription in line with
+      Jain's updated advice.
     */
     if (arma::as_scalar((-gradv * nacv)*(vel * nacv)) < 0){
       arma::vec nacu = arma::normalise(nacv);
@@ -339,6 +340,7 @@ void FSSH::update_md_global_gradient(arma::mat &total_gradient){
 }
 
 
+// This is our primary hook into the Gromacs (or other) MD loop 
 double FSSH::update_gradient(void){
   qm->update();
 
@@ -356,7 +358,11 @@ double FSSH::update_gradient(void){
 
 
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
-  if (hopping){
+  if (!hopping){
+    // nothing to do
+    return false;
+  }
+  else{
     if(std::abs(e_drift) > delta_e_tol){
       // trivial crossing; need to update global gradient
       update_md_global_gradient(total_gradient);
@@ -368,8 +374,5 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
       hopping = false;
     }
   }
-  else{
-    // nothing to do
-  }
-  return hopping;
+  return true;
 }
