@@ -4,7 +4,7 @@
 #include <algorithm>
 //
 #include "gifs_implementation.hpp"
-#include "fssh.cpp"
+#include "fssh.hpp"
 #include "bomd_rescale.hpp"
 #include "configreader.hpp"
 //
