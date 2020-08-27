@@ -6,12 +6,6 @@
 #include <cmath>
 
 
-double FSSH::gen_rand(void){
-  static std::uniform_real_distribution<> uniform_distribution(0.0, 1.0);
-  return uniform_distribution(mt64_generator);
-}
-
-
 ConfigBlockReader
 FSSH::setup_reader() 
 {
@@ -28,17 +22,21 @@ FSSH::setup_reader()
     return reader;
 }
 
+
 void
 FSSH::get_reader_data(ConfigBlockReader& reader) {
+  {
     double in_dtc;
     reader.get_data("dtc", in_dtc);
-    // FIXME: Should input time be in ns to match GMX or in fs because
-    // our interface is notionally general?
+    // FIXME?: Should input time be in fs as it is (because our
+    // interface is general) or in ns to match GMX?
     dtc = in_dtc * (1e-15 / AU2SI_TIME); // fs -> a.u.
-    
-    reader.get_data("delta_e_tol", delta_e_tol);
+  }
+  
+  reader.get_data("delta_e_tol", delta_e_tol);
 
-    // Need these until ConfigReader has support for unsigned longs etc.
+  // Need _in variables until ConfigReader has support for unsigned longs etc.
+  {
     int min_state_in, excited_states_in, active_state_in;
     reader.get_data("min_state", min_state_in);
     reader.get_data("excited_states", excited_states_in);
@@ -47,14 +45,22 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     min_state = min_state_in;
     excited_states = excited_states_in;
     active_state = active_state_in;
+  }
 
-    int seed = -1; // the real default seed is set in setup_reader()
+  {
+    int seed = -1; // a default seed is set in setup_reader(); this value will not be propagated.
+    
+    // the only place we might lose range in signed <-> unsigned
+    // conversion is in the read function. Otherwise, our internal
+    // conversion [ unsigned -> signed -> unsigned ] is lossless;
     reader.get_data("random_seed", seed);
-    // the only place we might lose range in signed <-> unsigned conversion is in the read function
     mt64_generator.seed((unsigned int) seed); 
     arma::arma_rng::set_seed((unsigned int) seed);
-    // FIXME: Should output the random seed to the user
-};
+
+    std::cerr << "FSSH random seed=" << seed << std::endl;
+  }
+}
+
 
 FSSH::FSSH(FileHandle& fh,
            arma::uvec& atomicnumbers, arma::mat& qm_crd,
@@ -126,7 +132,7 @@ arma::uword FSSH::sample_discrete(const arma::vec &p){
   if (arma::any(p < 0)){throw std::logic_error("P cannot have negative elements!");}
   if (std::abs(arma::sum(p) - 1) > 1e-8){ throw std::logic_error("P is not normed!");}
 
-  const double zeta = gen_rand();
+  const double zeta = arma::randu();
   return as_scalar(arma::find(arma::cumsum(p) > zeta, 1));
 }
 

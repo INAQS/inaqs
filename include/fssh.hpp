@@ -27,7 +27,6 @@ protected:
   void electonic_evolution(void);
   void update_md_global_gradient(arma::mat &total_gradient);
   void hop_and_scale(arma::mat &velocities, arma::vec &mass);
-  double gen_rand(void);
   arma::uword sample_discrete(const arma::vec &p);
 
   arma::mat U;
