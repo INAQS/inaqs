@@ -17,7 +17,8 @@ FSSH::setup_reader()
     reader.add_entry("active_state", 1);
     reader.add_entry("excited_states", 4);
     
-    std::random_device rd; // for default random seed
+    std::random_device rd; // generate default random seed
+    // rd returns an unsigned int; see note in FSSH::get_reader_data()
     reader.add_entry("random_seed", (int) rd());
     return reader;
 }
