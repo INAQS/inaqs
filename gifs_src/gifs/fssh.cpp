@@ -81,20 +81,24 @@ FSSH::FSSH(FileHandle& fh,
     throw std::range_error("Active state not in the range of computed states!");
   }
   
-  // FIXME: How to pass min_state to QM_Interface?
+  // FIXME!: How to pass min_state to QM_Interface?
 
   active_state -= min_state;
   
   /*
     R.B. energy has excited_states + 1 (ground) states, while all
-    others have excited_states + 1 - min_state (nstates); this could
-    screw up indexing.
+    other objects have excited_states + 1 - min_state (nstates); this
+    can screw up indexing.
 
-    active_state \on [0, nstates]
-      can index U, T, V, c
-      cannot index energy
+      active_state \on [0, nstates]
+    
+    can index U, T, V, c but cannot index energy which has nstates +
+    min_state elements.  Indexing properly by taking:
 
-    energy[min_state + active_state]
+      c(i) -> energy(i+min_state).
+    
+    Recall also that all requests for state properties to Q-Chem (or
+    any other QM_Interface) require i+min_state as well.
   */
 
   energy.set_size(excited_states + 1);
@@ -162,16 +166,24 @@ void FSSH::electonic_evolution(void){
 
   const std::complex<double> I(0,1);
   
-  // propagate electronic coefficients (for each set of amplitudes)
+  // Propagate electronic coefficients and compute hopping probabilities for dtc
   for (size_t nt = 0; nt < n_steps; nt++){
-    // propagate all states simutaneously
+    /*
+      Propagate all states simultaneously. Recall that
+      Electronic::advance(H, dt) uses rk4 to propagate the internally
+      held coefficients, c, according the Hamiltonian H for time dt
+    */
     c.advance(V - I*T, dtq);
 
-    // check for a hop unless we've already had one
+    // Check for a hop unless we've already had one
     if (! hopping){
       const arma::uword a = active_state;
 
-      // transition probabilities; eq. 12 has the conjugate on the wrong element; see Tully (1990).
+      /*
+	Compute transition probabilities. Jain (2016) eq. 12 has the
+        conjugate on the wrong element; cf. Tully (1990) -- discussion
+        with Zeyu Zhou
+      */
       arma::vec g = -2 * arma::real(arma::conj(c()) * c(a) * T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
@@ -201,6 +213,15 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
 
+  /*
+    Recall that in our implementation, the kinetic energy reservoir to
+    balance a hop includes the MM atoms, a region of arbitrary
+    size. However, the kinetic energy is only available in proportion
+    to the NAC vector, which is properly computed over the MM region
+    (Thank you, Ou Qi!)  and, we believe, decays with distance. See
+    the calculation of vd below.
+  */
+  
   if (mass.n_elem != NQM() + NMM()){
     throw std::range_error("mass of improper size!");
   }
@@ -213,6 +234,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   qm->get_properties(props);
 
   // Make 3N vector versions of the NAC, velocity, and mass
+  // FIXME: How do each of these interact with link atoms?
   const arma::vec nacv(nac.memptr(), 3 * (NQM() + NMM()), false, true);
   arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
   
@@ -225,13 +247,15 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
+
+  // FIXME: Where are the hopping energy-conservation equations documented?
   
   double vd = arma::as_scalar(vel * nacv.t());
   double dmd = arma::as_scalar((nacv / m) * nacv.t());
 
   double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){  // hop succeeds
-    // test the sign of vd to pick the root yeilding the smallest value of alpha
+    // test the sign of vd to pick the root yielding the smallest value of alpha
     double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
     // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
     vel = vel + alpha * nacv;
@@ -242,9 +266,14 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     arma::mat qmg_new, mmg_new;
     qmg_new.set_size(3,NQM());
 
-    // FIXME: there is, perhaps, a small performance advantage to be
-    // gained by saving this gradient. It would be most important for
-    // situations where we had many frustrated hops.
+    /*
+      There is, perhaps, a modest performance advantage to be
+      gained by saving this gradient. It would be most important for
+      situations where we had many frustrated hops. The
+      infrastructure to track which gradients are up-to-date is a
+      complication for later.
+    */
+    
     props = {};
     props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
     if (NMM() > 0){
@@ -266,7 +295,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 
       In the original Jain paper a second criterion was imposed. But,
       in January 2020 A. Jain indicated to Joe that this was not
-      necesary. We follow the original Jasper-Truhlar perscription in
+      necessary. We follow the original Jasper-Truhlar prescription in
       line with Jain's updated advice.
     */
     if (arma::as_scalar((-gradv * nacv)*(vel * nacv)) < 0){
@@ -287,7 +316,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   driver is exceeded and we've had a hop. Update the current surface
   and to the total gradient, add (new-old).
 
-  FIXME: also need to do back-propogation on velocities, no??
+  FIXME: also need to do back-propagation on velocities, no??
 */
 void FSSH::update_md_global_gradient(arma::mat &total_gradient){
   PropMap props = {};
