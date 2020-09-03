@@ -20,7 +20,7 @@ public:
   virtual ~BOMD() {delete qm;}
   
   virtual double update_gradient(void);
-  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy);
     //
 protected:
   virtual ConfigBlockReader setup_reader(void);

@@ -36,9 +36,9 @@ gifs_update_global_index(int* indexQM, int* indexMM) {
 }
 
 void
-gifs_rescale_velocities(float* total_gradient, float* masses, float* velocities) {
+gifs_rescale_velocities(float total_energy, float* total_gradient, float* masses, float* velocities) {
   Gifs gifs_handle;
-  gifs_handle.rescale_velocities(total_gradient, masses, velocities);
+  gifs_handle.rescale_velocities(total_energy, total_gradient, masses, velocities);
 }
 
 #ifdef __cplusplus

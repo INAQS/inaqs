@@ -30,7 +30,7 @@ public:
 		      T* in_qm_frc, T* in_mm_frc);
     //
     template<typename T> 
-    void rescale_velocities(T* total_gradient, T* masses, T* velocities);
+    void rescale_velocities(T total_energy, T* total_gradient, T* masses, T* velocities);
     //
     void update_global_index(int* indexQM, int* indexMM);
     //
@@ -107,8 +107,8 @@ public:
     //
     template<typename T> 
     inline
-    void rescale_velocities(T* total_gradient, T* masses, T* velocities) {
-        impl->rescale_velocities(total_gradient, masses, velocities);
+    void rescale_velocities(T total_energy, T* total_gradient, T* masses, T* velocities) {
+      impl->rescale_velocities(total_energy, total_gradient, masses, velocities);
     }
     //
     void update_global_index(int* indexQM, int* indexMM);

@@ -2,17 +2,13 @@
 #include "gmxgifs.h"
 #include "gifs.hpp"
 
-void gifs_scale_velocities(float *v, float *f, float* invmass) {
-    printf("WE DO RESCALING!\n");
-    gifs_rescale_velocities(f, invmass, v);
+void gifs_scale_velocities(float energy, float *v, float *f, float* invmass) {
+  printf("WE DO RESCALING: %g!\n", energy);
+    gifs_rescale_velocities(energy, f, invmass, v);
 };
 
 float gifs_print_coords(int nqm, const int* qm_atomids, const float* qm_crd) {
    int i;
-  /*
-  create_qm_interface(nqm, qm_atomids);
-  return gifs_get_forces(qm_crd, nmm, mm_crd,  mm_chg, f, fshift);
-  */
   printf("QM Coords: nqm = %d\n", nqm);
   for(i=0; i<nqm; ++i) {
     printf("%d %12.8f %12.8f %12.8f\n", qm_atomids[i], qm_crd[i*3]*10.0, qm_crd[i*3+1]*10.0, qm_crd[i*3+2]*10.0);

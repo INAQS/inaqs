@@ -113,7 +113,7 @@ void to_global(T1* global, const T2& local,
 
 //
 template<typename T> 
-void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
+void GifsImpl::rescale_velocities(T total_energy, T* in_grad, T* in_masses, T* in_veloc)
 {
     const arma::uword ntot = nqm + nmm;
     //
@@ -124,6 +124,7 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     from_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
     from_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
     //
+    // FIXME: rewrite FSSH to take inv masses so we don't do this conversion
     for (arma::uword i=0; i<nqm; ++i) {
         const arma::uword idx = qm_index[i];
         masses[i] = conv.mass_md2au(1.0/in_masses[idx]);
@@ -136,8 +137,8 @@ void GifsImpl::rescale_velocities(T* in_grad, T* in_masses, T* in_veloc)
     // do unit transformation
     conv.transform_veloc_md2au(veloc.begin(), veloc.end(), veloc.begin());
     conv.transform_gradient_md2au(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
-    double e_drift = 0;
-    if (bomd->rescale_velocities(veloc, masses, total_gradient, e_drift)) {
+    total_energy = conv.energy_md2au(total_energy);
+    if (bomd->rescale_velocities(veloc, masses, total_gradient, total_energy)) {
         //
         conv.transform_veloc_au2md(veloc.begin(), veloc.end(), veloc.begin());
         conv.transform_gradient_au2md(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
@@ -253,7 +254,7 @@ GifsImpl::update_global_index(int* indexQM, int* indexMM)
 //
 GifsImpl* GifsImpl::impl = nullptr;
 //
-template void GifsImpl::rescale_velocities(double* total_gradient, double* masses, double* velocities);
-template void GifsImpl::rescale_velocities(float* total_gradient, float* masses, float* velocities);
+template void GifsImpl::rescale_velocities(double total_energy, double* total_gradient, double* masses, double* velocities);
+template void GifsImpl::rescale_velocities(float total_energy, float* total_gradient, float* masses, float* velocities);
 template float GifsImpl::update_gradient(const float* in_qm_crd, const size_t* local_index, size_t in_nmm, const float* in_mm_crd, const float* in_mm_chg, float* in_qm_frc, float* in_mm_frc);
 template double GifsImpl::update_gradient(const double* in_qm_crd, const size_t* local_index, size_t in_nmm, const double* in_mm_crd, const double* in_mm_chg, double* in_qm_frc, double* in_mm_frc);

@@ -1243,7 +1243,8 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
              * update_coords() and update_constraints()
             */
 
-            gifs_scale_velocities(&state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
+	    float gifs_energy = mdebin->ebin->e[mdebin->ebin->nener-1].e;
+            gifs_scale_velocities(gifs_energy, &state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
 #endif
             if (bIterativeCase && do_per_step(step-1, ir->nstpcouple) && !bInitStep)
             {

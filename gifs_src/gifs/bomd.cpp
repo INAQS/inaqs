@@ -84,10 +84,10 @@ BOMD::update_gradient()
 };
 
 
-bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
+bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
   (void) total_gradient;
   (void) masses;
   (void) velocities;
-  (void) e_drift;
+  std::cout << "Total Energy: " << total_energy << std::endl;
   return false;
 };
