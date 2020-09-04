@@ -88,6 +88,8 @@ bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   (void) total_gradient;
   (void) masses;
   (void) velocities;
-  std::cout << "Total Energy: " << total_energy << std::endl;
+  edrift = (total_energy - elast)/elast;
+  elast = total_energy;
+  std::cout << "Total Energy: " << elast << ", " << edrift << std::endl;
   return false;
 };

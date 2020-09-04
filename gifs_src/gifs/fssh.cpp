@@ -381,19 +381,26 @@ double FSSH::update_gradient(void){
 
 
 // This hook comes after the first MD half-step (and before constraint forces are calculated in gromacs)
-bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift){
+bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy){
+  BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy); // call parent to update edrift
   if (!hopping){
     // nothing to do
     return false;
   }
   else{
-    if(std::abs(e_drift) > delta_e_tol){
-      // trivial crossing; need to update global gradient & velocities
+    /*
+      FIXME: For QM/MM some species hidden from the QM, this energy is
+      for the TOTAL system, which is probably not what we want.
+    */
+    if(std::abs(edrift) > delta_e_tol){
+      std::cerr <<  "Trivial crossing from " << active_state << " to " << target_state << std::endl;
+      // Need to update global gradient & velocities
       backpropagate_gradient_velocities(total_gradient, velocities, masses);
       active_state = target_state;
       hopping = false;
     }
     else{
+      std::cerr <<  "Attempting hop from " << active_state << " to " << target_state << std::endl;
       hop_and_scale(velocities, masses);
       hopping = false;
     }

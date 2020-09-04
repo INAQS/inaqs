@@ -3,8 +3,7 @@
 #include "gifs.hpp"
 
 void gifs_scale_velocities(float energy, float *v, float *f, float* invmass) {
-  printf("WE DO RESCALING: %g!\n", energy);
-    gifs_rescale_velocities(energy, f, invmass, v);
+  gifs_rescale_velocities(energy, f, invmass, v);
 };
 
 float gifs_print_coords(int nqm, const int* qm_atomids, const float* qm_crd) {

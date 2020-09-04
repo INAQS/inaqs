@@ -35,6 +35,8 @@ protected:
     // flexible size
     arma::mat& mm_grd;
     arma::vec energy{};
+
+  double elast = 0, edrift = 0;
 };
 
 class PrintBomd:
