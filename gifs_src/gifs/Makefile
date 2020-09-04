@@ -27,7 +27,7 @@ COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 $(LIBRARY): $(OBJS) | $(LIBDIR)
-	$(CPP) -shared -o $@ $(OBJS)
+	$(CPP) $(CPPFLAGS) -shared -o $@ $(OBJS)
 
 %.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
