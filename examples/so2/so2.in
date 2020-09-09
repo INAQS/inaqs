@@ -1,0 +1,47 @@
+$comment
+A-FSSH sample imput file
+$end
+
+$molecule
+0 1
+  S    37.7909      18.8973      19.5953 
+  O    35.4174      18.8973      18.2014 
+  O   40.1789       18.8973      18.1971 
+$end
+    
+   
+
+$velocity
+  -1.7345e-04     5.0892e-12   -3.9124e-05
+   1.6402e-04     1.9295e-14    1.4123e-04
+   1.8354e-04    -1.3603e-11   -6.2828e-05
+$end
+
+
+$rem
+JOBTYPE           AIMD
+EXCHANGE          HF
+BASIS             3-21G
+INPUT_BOHR True
+SCF_CONVERGENCE 8
+CIS_CONVERGENCE 8
+TIME_STEP 206706873 # Nuclear time step duration in a.u./time_step_conversion
+AIMD_SHORT_TIME_STEP 1 # Electronic time step a.u./time_step_conversion
+AIMD_TIME_STEP_CONVERSION 10000000 # Divide time steps by this value
+AIMD_STEPS 5 # Take 3 time steps
+AIMD_PRINT 1 # Print velocity at each step
+AIMD_TEMP 300 # (in Kelvin)
+AIMD_INTEGRATION VVERLET # How to propagate nuclear motion
+CIS_N_ROOTS      2
+CIS_SINGLETS     FALSE
+CIS_TRIPLETS     TRUE
+SET_STATE_DERIV  1
+FSSH_LOWESTSURFACE  1 # Lowest adiabat considered in FSSH
+FSSH_INITIALSURFACE 1 # Initial surface for FSSH
+FSSH_NSURFACES 2      # Number of surfaces for FSSH
+AFSSH 1 # Use augmented FSSH
+SET_ITER 40 # Max number of CPCIS cycles
+SYMMETRY   OFF
+SYM_IGNORE TRUE
+$end
+

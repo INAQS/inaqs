@@ -1,0 +1,33 @@
+
+; Include forcefield parameters
+#include "oplsaa.ff/forcefield.itp"
+
+; Include Position restraint file
+#ifdef POSRES
+#include "posre.itp"
+#endif
+
+; Include water topology; this is for tip3p, but one could use whatever
+#include "oplsaa.ff/tip3p.itp"
+
+; Include topology for ions
+#include "oplsaa.ff/ions.itp"
+
+[ moleculetype ]
+; Name            nrexcl
+so2_QM        3
+
+[ atoms ]
+;  nr type         resnr residue atom      cgnr   charge       mass
+    1 opls_633         1 QM      S         0      0.0
+    2 opls_788         1 QM      O         0      0.0
+    3 opls_788         1 QM      O         0      0.0
+
+[ system ]
+; Name
+QM
+
+[ molecules ]
+; Compound        #mols
+so2_QM        1
+
