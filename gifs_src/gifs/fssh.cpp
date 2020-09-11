@@ -12,14 +12,14 @@ FSSH::setup_reader()
     using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
-    reader.add_entry("delta_e_tol", types::DOUBLE);
-    reader.add_entry("min_state", 1);
-    reader.add_entry("active_state", 1);
-    reader.add_entry("excited_states", 4);
+    reader.add_entry("delta_e_tol", 1e-4);
+    reader.add_entry("min_state", (size_t) 1);
+    reader.add_entry("active_state", types::ULINT);
+    reader.add_entry("excited_states", types::ULINT);
     
     std::random_device rd; // generate default random seed
     // rd returns an unsigned int; see note in FSSH::get_reader_data()
-    reader.add_entry("random_seed", (int) rd());
+    reader.add_entry("random_seed", (size_t) rd());
     return reader;
 }
 
@@ -36,17 +36,9 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   
   reader.get_data("delta_e_tol", delta_e_tol);
 
-  // Need _in variables until ConfigReader has support for unsigned longs etc.
-  {
-    int min_state_in, excited_states_in, active_state_in;
-    reader.get_data("min_state", min_state_in);
-    reader.get_data("excited_states", excited_states_in);
-    reader.get_data("active_state", active_state_in);
-
-    min_state = min_state_in;
-    excited_states = excited_states_in;
-    active_state = active_state_in;
-  }
+  reader.get_data("min_state", min_state);
+  reader.get_data("excited_states", excited_states);
+  reader.get_data("active_state", active_state);
 
   {
     int seed = -1; // a default seed is set in setup_reader(); this value will not be propagated.
@@ -54,6 +46,8 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     // the only place we might lose range in signed <-> unsigned
     // conversion is in the read function. Otherwise, our internal
     // conversion [ unsigned -> signed -> unsigned ] is lossless;
+
+    // FIXME: input seed not getting picked up
     reader.get_data("random_seed", seed);
     mt64_generator.seed((unsigned int) seed); 
     arma::arma_rng::set_seed((unsigned int) seed);
@@ -70,10 +64,11 @@ FSSH::FSSH(FileHandle& fh,
   BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd)
 {
   ConfigBlockReader reader = setup_reader();
+  reader.parse(fh);
   get_reader_data(reader);
   
-  int nstates = excited_states + 1 - min_state;
-  if (nstates < 2){
+  shstates = excited_states + 1 - min_state;
+  if (shstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }
 
@@ -91,12 +86,12 @@ FSSH::FSSH(FileHandle& fh,
   
   /*
     R.B. energy has excited_states + 1 (ground) states, while all
-    other objects have excited_states + 1 - min_state (nstates); this
+    other objects have excited_states + 1 - min_state (shstates); this
     can screw up indexing.
 
-      active_state \on [0, nstates]
+      active_state \on [0, shstates]
     
-    can index U, T, V, c but cannot index energy which has nstates +
+    can index U, T, V, c but cannot index energy which has shstates +
     min_state elements.  Indexing properly by taking:
 
       c(i) -> energy(i+min_state).
@@ -107,15 +102,15 @@ FSSH::FSSH(FileHandle& fh,
 
   energy.set_size(excited_states + 1);
   
-  U.set_size(nstates);
-  T.set_size(nstates);
-  V.set_size(nstates);
+  U.set_size(shstates, shstates);
+  T.set_size(shstates, shstates);
+  V.set_size(shstates, shstates);
 
   /*
     FIXME: should be able to configure (multiple) initial electronic
     state(s). Can use DVEC?
   */
-  c.reset(nstates, 1, active_state);
+  c.reset(shstates, 1, active_state);
 }; 
 
 
@@ -138,6 +133,7 @@ arma::uword FSSH::sample_discrete(const arma::vec &p){
     * Pi >= 0 forall i 
     * Sum(Pi) == 1
   */
+  if (p.has_nan()){throw std::logic_error("P is malformed; it contains NaN!");}
   if (arma::any(p < 0)){throw std::logic_error("P cannot have negative elements!");}
   if (std::abs(arma::sum(p) - 1) > 1e-8){ throw std::logic_error("P is not normed!");}
 
@@ -155,19 +151,33 @@ void FSSH::electonic_evolution(void){
   PropMap props{};
   props.emplace(QMProperty::wfoverlap,  &U);
   qm->get_properties(props);
-
+  
   Electronic::phase_match(U);
   T = real(arma::logmat(U)) / dtc;
     
-  arma::mat V = diagmat(energy.subvec(min_state, excited_states));
-  
-  // compute min. time step for electronic propagation (eqs. 20, 21)
-  double dtq_ = std::min(dtc,
-			 std::min(0.02 / T.max(),
-				  0.02 / (V.max() - arma::mean(V.diag()))));
-  dtq = dtc / std::round(dtc / dtq_);
-  const size_t n_steps = (size_t) dtc / dtq;
+  arma::mat V = diagmat(energy.tail(shstates));
 
+  /*
+    Since the off-diagonal elements of V are always 0 in this
+    implementation, we work only with the diagonal of V. Equation 20
+    seems to have been developed for a system with positive energy
+    eigenvalues. A constant shift of energy scale to the negative (Vii
+    = Vii - max(V.diag) can cause Eq. 20 to fail.
+
+    FIXME: construct an alternate to Eq. 20 that is applicable to Vii < 0
+  */
+
+  // compute max time step for electronic propagation (eqs. 20, 21)
+  {
+    double dtq_ = std::min(dtc,
+			   std::min(0.02 / T.max(),
+				    0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
+				    )
+			   );
+  
+    dtq = dtc / std::round(dtc / dtq_);
+  }
+  const size_t n_steps = (size_t) dtc / dtq;
   const std::complex<double> I(0,1);
   
   // Propagate electronic coefficients and compute hopping probabilities for dtc
@@ -177,7 +187,10 @@ void FSSH::electonic_evolution(void){
       Electronic::advance(H, dt) uses rk4 to propagate the internally
       held coefficients, c, according the Hamiltonian H for time dt
     */
-    c.advance(V - I*T, dtq);
+
+    // FIXME: should use rk4
+    //c.advance_rk4(V - I*T, dtq);
+    c.advance_exact(V - I*T, dtq);
 
     // Check for a hop unless we've already had one
     if (! hopping){
@@ -188,10 +201,16 @@ void FSSH::electonic_evolution(void){
         conjugate on the wrong element; cf. Tully (1990) -- discussion
         with Zeyu Zhou
       */
-      arma::vec g = -2 * arma::real(arma::conj(c()) * c(a) * T.col(a)) * dtq / std::norm(c(a));
+      arma::vec g = -2 * arma::real(c(a) * arma::conj(c()) % T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
 
+
+      // FIXME: redundant?
+      if (arma::sum(g) < 0 || g.has_nan()){
+	throw std::logic_error("FSSH: norm failure in g");
+      }
+      
       /*
 	Ensure that g is normed by adding any residual density to the
 	active state. This maintains the correct transition
@@ -244,21 +263,24 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   
   
   arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
-  for (arma::uword i = 0; i < mass.n_elem; i++){
-    m.subvec(3 * i, 3*(i+1)) = mass(i);
+  arma::vec mm (3 * (NQM() + NMM()), arma::fill::zeros);
+  for(arma::uword i = 0 ; i < m.n_elem ; i++){
+    // FIXME: use version w/o bounds checking
+    // m[i] =  mass[i/3]; // without bounds check
+    m(i) =  mass(i/3);
   }
-
 
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
 
   // FIXME: Where are the hopping energy-conservation equations documented?
   
-  double vd = arma::as_scalar(vel * nacv.t());
-  double dmd = arma::as_scalar((nacv / m) * nacv.t());
+  double vd = arma::as_scalar(nacv.t() * vel);
+  double dmd = arma::as_scalar(nacv.t() * (nacv / m));
 
   double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
-  if (discriminant > 0){  // hop succeeds
+  if (discriminant > 0){
+    std::cerr << "Hop, " << active_state << "->" << target_state << " succeeds." << std::endl;
     // test the sign of vd to pick the root yielding the smallest value of alpha
     double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
     // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
@@ -266,6 +288,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     active_state = target_state;
   }
   else{  // frustrated hop
+    std::cerr << "Hop is frustrated---will remain on " << active_state << "; ";
     // compute gradient of target_state to see if we reverse
     arma::mat qmg_new, mmg_new;
     qmg_new.set_size(3,NQM());
@@ -289,9 +312,9 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 
     // 3N vector version of new gradient
     arma::vec gradv(3 * (NQM() + NMM()));
-    gradv.subvec(0, 3*NQM()) = arma::vectorise(qmg_new);
+    gradv.head(3*NQM()) = arma::vectorise(qmg_new);
     if (NMM() > 0){
-      gradv.subvec(3*NQM() + 1, 3 * (NQM() + NMM())) = arma::vectorise(mmg_new);
+      gradv.tail(3*NMM()) = arma::vectorise(mmg_new);
     }
     
     /*
@@ -303,11 +326,13 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
       follow the original Jasper-Truhlar prescription in line with
       Jain's updated advice.
     */
-    if (arma::as_scalar((-gradv * nacv)*(vel * nacv)) < 0){
+    if (arma::as_scalar((-gradv.t() * nacv)*(vel.t() * nacv)) < 0){
+      std::cerr << "velocities reversed." << std::endl;
       arma::vec nacu = arma::normalise(nacv);
       vel = vel - 2.0 * nacu * nacu.t() * vel;
     }
     else{
+      std::cerr << "velocities, unchanged." << std::endl;
       // Ignore the unsuccessful hop; active_state remains unchanged 
     }
   }
@@ -393,14 +418,14 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
       for the TOTAL system, which is probably not what we want.
     */
     if(std::abs(edrift) > delta_e_tol){
-      std::cerr <<  "Trivial crossing from " << active_state << " to " << target_state << std::endl;
+      std::cerr <<  "Trivial crossing: " << active_state << "->" << target_state << std::endl;
       // Need to update global gradient & velocities
       backpropagate_gradient_velocities(total_gradient, velocities, masses);
       active_state = target_state;
       hopping = false;
     }
     else{
-      std::cerr <<  "Attempting hop from " << active_state << " to " << target_state << std::endl;
+      std::cerr <<  "Attempting hop: " << active_state << "->" << target_state << std::endl;
       hop_and_scale(velocities, masses);
       hopping = false;
     }

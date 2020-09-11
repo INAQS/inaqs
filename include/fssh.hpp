@@ -38,6 +38,7 @@ protected:
 
   size_t min_state;
   size_t excited_states;
+  int shstates;
   
   size_t active_state;
   size_t target_state;
