@@ -18,7 +18,6 @@ FSSH::setup_reader()
     reader.add_entry("excited_states", types::ULINT);
     
     std::random_device rd; // generate default random seed
-    // rd returns an unsigned int; see note in FSSH::get_reader_data()
     reader.add_entry("random_seed", (size_t) rd());
     return reader;
 }
@@ -41,16 +40,12 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   reader.get_data("active_state", active_state);
 
   {
-    int seed = -1; // a default seed is set in setup_reader(); this value will not be propagated.
-    
-    // the only place we might lose range in signed <-> unsigned
-    // conversion is in the read function. Otherwise, our internal
-    // conversion [ unsigned -> signed -> unsigned ] is lossless;
+    size_t seed = 0; // a default seed is set in setup_reader(); this value will not be propagated.
 
-    // FIXME: input seed not getting picked up
+    // FIXME: ConfigReader won't throw an error if the wrong type is passed in
     reader.get_data("random_seed", seed);
-    mt64_generator.seed((unsigned int) seed); 
-    arma::arma_rng::set_seed((unsigned int) seed);
+    mt64_generator.seed(seed);
+    arma::arma_rng::set_seed(seed);
 
     std::cerr << "FSSH random seed=" << seed << std::endl;
   }
@@ -204,12 +199,6 @@ void FSSH::electonic_evolution(void){
       arma::vec g = -2 * arma::real(c(a) * arma::conj(c()) % T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
-
-
-      // FIXME: redundant?
-      if (arma::sum(g) < 0 || g.has_nan()){
-	throw std::logic_error("FSSH: norm failure in g");
-      }
       
       /*
 	Ensure that g is normed by adding any residual density to the
