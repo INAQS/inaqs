@@ -263,27 +263,24 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   
   
   arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
-  arma::vec mm (3 * (NQM() + NMM()), arma::fill::zeros);
   for(arma::uword i = 0 ; i < m.n_elem ; i++){
-    // FIXME: use version w/o bounds checking
-    // m[i] =  mass[i/3]; // without bounds check
-    m(i) =  mass(i/3);
+    m[i] =  mass[i/3]; // without bounds check
+    //m(i) =  mass(i/3); // with bounds check
   }
 
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
 
-  // FIXME: Where are the hopping energy-conservation equations documented?
+  // The hopping energy-conservation equations are documented in documented Vale's GQSH notes Sept 11, 2020
   
-  double vd = arma::as_scalar(nacv.t() * vel);
-  double dmd = arma::as_scalar(nacv.t() * (nacv / m));
+  double dmv = arma::as_scalar(nacv.t() * (vel % m));
+  double dmd = arma::as_scalar(nacv.t() * (nacv % m));
 
-  double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
+  double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){
-    std::cerr << "Hop, " << active_state << "->" << target_state << " succeeds." << std::endl;
-    // test the sign of vd to pick the root yielding the smallest value of alpha
-    double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
-    // FIXME: verify the dimension (units) of the NAC as calculated by qchem; do we compute NAC or DC?
+    std::cerr << "Hop, " << active_state << "->" << target_state << " succeeds; energy difference = " << deltaE << "."<< std::endl;
+    // test the sign of dmv to pick the root yielding the smallest value of alpha
+    double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
     vel = vel + alpha * nacv;
     active_state = target_state;
   }
