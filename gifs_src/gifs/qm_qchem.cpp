@@ -82,7 +82,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 }
 
 
-void QM_QChem::get_properties(PropMap &props){  
+void QM_QChem::get_properties(PropMap &props){
   for (QMProperty p: props.keys()){
     switch(p){
       
