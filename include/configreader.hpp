@@ -117,6 +117,7 @@ class FileHandle
 
 enum class DATA_TYPE {
     INT,
+    ULINT,
     DOUBLE,
     STRING, 
     IVEC,
@@ -132,6 +133,7 @@ public:
     using types = DATA_TYPE;
     //
     explicit Data(int input, bool in_isset=true)                      : isset{in_isset}, data{new int(input)}, type{DATA_TYPE::INT} {}
+    explicit Data(size_t input, bool in_isset=true)                   : isset{in_isset}, data{new size_t(input)}, type{DATA_TYPE::ULINT} {}
     explicit Data(double input, bool in_isset=true)                   : isset{in_isset}, data{new double(input)},     type{DATA_TYPE::DOUBLE} {}
     explicit Data(std::string input, bool in_isset=true)              : isset{in_isset}, data{new std::string{input}},     type{DATA_TYPE::STRING} {}
     explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, data{new std::vector<std::string>{input}},    type{DATA_TYPE::SVEC} {}
@@ -142,18 +144,12 @@ public:
     Data(const Data& rhs);
     // copy operation
     bool get_data(double& out); 
-    bool get_data(int& out); 
+    bool get_data(int& out);
+    bool get_data(size_t& out); 
     bool get_data(std::string& out); 
     bool get_data(std::vector<int>&);
     bool get_data(std::vector<double>&);
     bool get_data(std::vector<std::string>&);
-    // move operation
-    bool move_data(double& out); 
-    bool move_data(int& out); 
-    bool move_data(std::string& out); 
-    bool move_data(std::vector<int>&);
-    bool move_data(std::vector<double>&);
-    bool move_data(std::vector<std::string>&);
     //
     void set_from_string(const std::string& validation);
     //
@@ -181,10 +177,13 @@ public:
     void add_entry(const std::string name, const Data::types type) { 
     switch (type) {
         case types::INT:
-            data.emplace(name, Data{0, false}); 
+	  data.emplace(name, Data{(int) 0, false}); 
+            break;
+	case types::ULINT:
+	  data.emplace(name, Data{(size_t) 0, false}); 
             break;
         case types::DOUBLE:
-            data.emplace(name, Data{0.0, false}); 
+	  data.emplace(name, Data{(double) 0.0, false}); 
             break;
         case types::STRING:
             data.emplace(name, Data{std::string(""), false}); 
@@ -207,15 +206,15 @@ public:
     int parse(FileHandle& file);
     // get results
     template<typename T>
-    inline bool get_data(const std::string& key, T& val) { return data.at(key).get_data(val); }
-    template<typename T>
-    inline bool move_data(const std::string& key, T& val) { return data.at(key).move_data(val); }
-    //
-  Data operator[](const std::string& key) {return data.at(key);}
+    inline bool get_data(const std::string& key, T& val) {if (!parsed){throw std::logic_error("Must parse before read!");} return data.at(key).get_data(val); }
+
+    Data operator[](const std::string& key) {return data.at(key);}
 
 private:
     void parse_line(const std::string& key, const std::string& value); 
 
+    bool parsed = false;
+  
     std::string name{};
     std::unordered_map<std::string, Data> data;
 };

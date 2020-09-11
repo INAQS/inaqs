@@ -13,14 +13,6 @@
 template<typename T>
 inline
 void
-move_output(T& out, void* data) {
-    out = std::move(*static_cast<T*>(data));
-}
-
-
-template<typename T>
-inline
-void
 copy_output(T& out, void* data) {
     out = *static_cast<T*>(data);
 }
@@ -109,6 +101,9 @@ Data::Data(const Data& rhs) {
         case types::INT:
             data = from_void(int, rhs.data);
             break;
+        case types::ULINT:
+            data = from_void(size_t, rhs.data);
+            break;
         case types::DOUBLE:
             data = from_void(double, rhs.data);
             break;
@@ -135,6 +130,9 @@ Data::~Data() {
     switch (type) {
         case types::INT:
             delete_void_as(int, data);
+            break;
+	case types::ULINT:
+            delete_void_as(size_t, data);
             break;
         case types::DOUBLE:
             delete_void_as(double, data);
@@ -164,6 +162,9 @@ Data::set_from_string(const std::string& value)
     switch (type) {
         case types::INT:
             data = new int(std::stoi(value));
+            break;
+        case types::ULINT:
+            data = new size_t(std::stoul(value));
             break;
         case types::DOUBLE:
             data = new double(std::stod(value));
@@ -195,6 +196,8 @@ Data::get_type() {
     switch (type) {
         case (types::INT):
             return "int";
+	case (types::ULINT):
+            return "size_t";
         case (types::DOUBLE): 
             return "double";
         case (types::STRING): 
@@ -223,6 +226,15 @@ Data::get_data(double& out) {
 bool
 Data::get_data(int& out) {
     if (type != types::INT || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+}
+
+bool
+Data::get_data(size_t& out) {
+    if (type != types::ULINT || !isset) {
         return false;
     }
     copy_output(out, data);
@@ -266,65 +278,10 @@ Data::get_data(std::vector<double>& out) {
     return true;
 }
 
-bool
-Data::move_data(double& out) {
-    if (type != types::DOUBLE || !isset) {
-        return false;
-    } 
-    move_output(out, data);
-    return true;
-};
-
-
-bool
-Data::move_data(int& out) {
-    if (type != types::INT || !isset) {
-        return false;
-    }
-    move_output(out, data);
-    return true;
-}
-
-bool
-Data::move_data(std::string& out)
-{
-    if (type != types::STRING || !isset) {
-        return false;
-    }
-    move_output(out, data);
-    return true;
-}
-
-bool
-Data::move_data(std::vector<std::string>& out) {
-    if (type != types::SVEC || !isset) {
-        return false;
-    }
-    move_output(out, data);
-    return true;
-}
-
-bool
-Data::move_data(std::vector<int>& out) {
-    if (type != types::IVEC || !isset) {
-        return false;
-    }
-    move_output(out, data);
-    return true;
-}
-
-bool
-Data::move_data(std::vector<double>& out) {
-    if (type != types::DVEC || !isset) {
-        return false;
-    }
-    move_output(out, data);
-    return true;
-}
 
 static const std::regex block_expr("\\s*\\[(.*)\\]\\s*");
 static const std::regex line_expr("\\s*(.*)\\s*=\\s*(.*)\\s*");
-static const std::regex comment_expr("^#");
+static const std::regex comment_expr("^#|^\\s*$");
 
 int
 ConfigBlockReader::parse(FileHandle& file) 
@@ -355,13 +312,14 @@ ConfigBlockReader::parse(FileHandle& file)
                 else if (std::regex_match(string, line_match, line_expr)) {
                     parse_line(trim(line_match[1]), line_match[2]);
                 } else {
-                    std::cout << "Input Error: " << line << "\n";
+		  std::cerr << "Input Error: " << line << std::endl;
                     return -1;
                 }
             }
             line = file.get_line();
         }
     }
+    parsed = true;
     return 0;
 };
 
@@ -372,7 +330,7 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
     if (key_in_map(key, data)) {
         data[key].set_from_string(value);
     } else {
-        std::cout << "Unknown field " << key << std::endl;
+        std::cerr << "Unknown field " << key << std::endl;
     }
 };
 
