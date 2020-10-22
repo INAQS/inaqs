@@ -10,18 +10,19 @@
 class BOMD
 {
 public:
-  explicit BOMD(FileHandle& fh,
-        arma::uvec& atomicnumbers,
-		arma::mat& qm_crd,
-		arma::mat& mm_crd,
-		arma::vec& mm_chg,
-		arma::mat& qm_grd,
-		arma::mat& mm_grd);
+  explicit BOMD(arma::mat& qm_grd, arma::mat& mm_grd);
   virtual ~BOMD() {delete qm;}
   
   virtual double update_gradient(void);
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy);
-    //
+  // setup from user input
+  void setup(FileHandle& fh,
+             const arma::uvec& atomicnumbers,
+	         arma::mat& qm_crd,
+	         arma::mat& mm_crd,
+	         arma::vec& mm_chg
+          );
+  //
 protected:
   virtual ConfigBlockReader setup_reader(void);
   virtual void get_reader_data(ConfigBlockReader& reader);
@@ -29,12 +30,12 @@ protected:
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
   
-    QMInterface* qm{nullptr};
-    // fixed size
-    arma::mat& qm_grd;
-    // flexible size
-    arma::mat& mm_grd;
-    arma::vec energy{};
+  QMInterface* qm{nullptr};
+  // fixed size
+  arma::mat& qm_grd;
+  // flexible size
+  arma::mat& mm_grd;
+  arma::vec energy{};
 
   double elast = 0, edrift = 0;
 };
@@ -43,12 +44,8 @@ class PrintBomd:
     public BOMD 
 {
 public:
-  explicit PrintBomd(FileHandle& fh, arma::uvec& atomicnumbers,
-		arma::mat& qm_crd,
-		arma::mat& mm_crd,
-		arma::vec& mm_chg,
-		arma::mat& qm_grd,
-		arma::mat& mm_grd) : BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd) {}
+  explicit PrintBomd(arma::mat& qm_grd,
+		             arma::mat& mm_grd) : BOMD(qm_grd, mm_grd) {}
   
   double update_gradient(void) {
       qm->crd_qm.print("qm_crd: ");

@@ -13,13 +13,13 @@ using REMKeys = std::map<std::string, std::string>;
 class QM_QChem: public QMInterface{
 public:
   QM_QChem(FileHandle& fh, 
-       arma::uvec& in_qmids, 
+       const arma::uvec& in_qmids, 
 	   arma::mat& in_qm_crd, 
 	   arma::mat& in_mm_crd, 
 	   arma::vec& in_mm_chg, 
-	   int charge, 
-	   int mult,
-	   size_t excited_states);
+	   const int charge, 
+	   const int mult,
+	   const size_t excited_states);
   
   void get_properties(PropMap &props);
 

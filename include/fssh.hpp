@@ -8,14 +8,8 @@
 
 class FSSH: public BOMD{
 public:
-  explicit FSSH(
-        FileHandle& fh,
-        arma::uvec& atomicnumbers,
-		arma::mat& qm_crd, 
-		arma::mat& mm_crd, 
-		arma::vec& mm_chg, 
-		arma::mat& qm_grd,
-		arma::mat& mm_grd);
+  explicit FSSH(arma::mat& qm_grd,
+		        arma::mat& mm_grd);
   virtual ~FSSH() {};
 
   virtual double update_gradient(void);

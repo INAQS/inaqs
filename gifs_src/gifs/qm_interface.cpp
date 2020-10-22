@@ -1,13 +1,13 @@
 #include "properties.hpp"
 #include "qm_interface.hpp"
 
-QMInterface::QMInterface(arma::uvec& in_qmids, 
+QMInterface::QMInterface(const arma::uvec& in_qmids, 
                          arma::mat& in_qm_crd, 
                          arma::mat& in_mm_crd, 
                          arma::vec& in_mm_chg, 
-                         int charge, 
-                         int mult,
-			 int excited_states) :
+                         const int charge, 
+                         const int mult,
+			             const int excited_states) :
   NQM {in_qmids.size()},
   qm_charge(charge), qm_multiplicity(mult),
   excited_states(excited_states),

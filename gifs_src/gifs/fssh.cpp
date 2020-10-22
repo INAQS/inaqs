@@ -7,7 +7,7 @@
 
 
 ConfigBlockReader
-FSSH::setup_reader() 
+FSSH::setup_reader()
 {
     using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"fssh"};
@@ -16,7 +16,7 @@ FSSH::setup_reader()
     reader.add_entry("min_state", (size_t) 1);
     reader.add_entry("active_state", types::ULINT);
     reader.add_entry("excited_states", types::ULINT);
-    
+
     std::random_device rd; // generate default random seed
     reader.add_entry("random_seed", (size_t) rd());
     return reader;
@@ -32,7 +32,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     // interface is general) or in ns to match GMX?
     dtc = in_dtc * (1e-15 / AU2SI_TIME); // fs -> a.u.
   }
-  
+
   reader.get_data("delta_e_tol", delta_e_tol);
 
   reader.get_data("min_state", min_state);
@@ -49,19 +49,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     std::cerr << "FSSH random seed=" << seed << std::endl;
   }
-}
 
-
-FSSH::FSSH(FileHandle& fh,
-           arma::uvec& atomicnumbers, arma::mat& qm_crd,
-           arma::mat& mm_crd, arma::vec& mm_chg,
-	   arma::mat& qm_grd, arma::mat& mm_grd):
-  BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd)
-{
-  ConfigBlockReader reader = setup_reader();
-  reader.parse(fh);
-  get_reader_data(reader);
-  
   shstates = excited_states + 1 - min_state;
   if (shstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
@@ -70,7 +58,7 @@ FSSH::FSSH(FileHandle& fh,
   if ((active_state < min_state) || (excited_states < active_state)){
     throw std::range_error("Active state not in the range of computed states!");
   }
-  
+
   // FIXME!: How to pass min_state to QM_Interface?
 
   active_state -= min_state;
@@ -78,25 +66,25 @@ FSSH::FSSH(FileHandle& fh,
   if (min_state != 1){
     throw std::runtime_error("minimum states other than 1 not supported!");
   }
-  
+
   /*
     R.B. energy has excited_states + 1 (ground) states, while all
     other objects have excited_states + 1 - min_state (shstates); this
     can screw up indexing.
 
       active_state \on [0, shstates]
-    
+
     can index U, T, V, c but cannot index energy which has shstates +
     min_state elements.  Indexing properly by taking:
 
       c(i) -> energy(i+min_state).
-    
+
     Recall also that all requests for state properties to Q-Chem (or
     any other QM_Interface) require i+min_state as well.
   */
 
   energy.set_size(excited_states + 1);
-  
+
   U.set_size(shstates, shstates);
   T.set_size(shstates, shstates);
   V.set_size(shstates, shstates);
@@ -106,7 +94,12 @@ FSSH::FSSH(FileHandle& fh,
     state(s). Can use DVEC?
   */
   c.reset(shstates, 1, active_state);
-}; 
+};
+
+
+FSSH::FSSH(arma::mat& qm_grd, arma::mat& mm_grd):
+  BOMD{qm_grd, mm_grd}
+{};
 
 
 /*
@@ -125,7 +118,7 @@ FSSH::FSSH(FileHandle& fh,
 arma::uword FSSH::sample_discrete(const arma::vec &p){
   /*
     Sanity checks; require:
-    * Pi >= 0 forall i 
+    * Pi >= 0 forall i
     * Sum(Pi) == 1
   */
   if (p.has_nan()){throw std::logic_error("P is malformed; it contains NaN!");}
@@ -142,14 +135,14 @@ void FSSH::electonic_evolution(void){
   if (hopping){
     throw std::logic_error("Should never be hopping at start of electronic evolution!");
   }
-  
+
   PropMap props{};
   props.emplace(QMProperty::wfoverlap,  &U);
   qm->get_properties(props);
-  
+
   Electronic::phase_match(U);
   T = real(arma::logmat(U)) / dtc;
-    
+
   arma::mat V = diagmat(energy.tail(shstates));
 
   /*
@@ -169,12 +162,12 @@ void FSSH::electonic_evolution(void){
 				    0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
 				    )
 			   );
-  
+
     dtq = dtc / std::round(dtc / dtq_);
   }
   const size_t n_steps = (size_t) dtc / dtq;
   const std::complex<double> I(0,1);
-  
+
   // Propagate electronic coefficients and compute hopping probabilities for dtc
   for (size_t nt = 0; nt < n_steps; nt++){
     /*
@@ -199,7 +192,7 @@ void FSSH::electonic_evolution(void){
       arma::vec g = -2 * arma::real(c(a) * arma::conj(c()) % T.col(a)) * dtq / std::norm(c(a));
       // set negative elements to 0
       g.elem( arma::find(g < 0) ).zeros();
-      
+
       /*
 	Ensure that g is normed by adding any residual density to the
 	active state. This maintains the correct transition
@@ -233,24 +226,24 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     (Thank you, Ou Qi!)  and, we believe, decays with distance. See
     the calculation of vd below.
   */
-  
+
   if (mass.n_elem != NQM() + NMM()){
     throw std::range_error("mass of improper size!");
   }
 
   nac.set_size(3, NQM() + NMM());
-  
+
   PropMap props{};
   props.emplace(QMProperty::nacvector, {min_state + active_state, min_state + target_state}, &nac);
-  
+
   qm->get_properties(props);
 
   // Make 3N vector versions of the NAC, velocity, and mass
   // FIXME: How do each of these interact with link atoms?
   const arma::vec nacv(nac.memptr(), 3 * (NQM() + NMM()), false, true);
   arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
-  
-  
+
+
   arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
   for(arma::uword i = 0 ; i < m.n_elem ; i++){
     m[i] =  mass[i/3]; // without bounds check
@@ -261,7 +254,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
 
   // The hopping energy-conservation equations are documented in documented Vale's GQSH notes Sept 11, 2020
-  
+
   double dmv = arma::as_scalar(nacv.t() * (vel % m));
   double dmd = arma::as_scalar(nacv.t() * (nacv % m));
 
@@ -287,7 +280,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
       to track which gradients are up-to-date is a complication for
       later.
     */
-    
+
     props = {};
     props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
     if (NMM() > 0){
@@ -302,7 +295,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     if (NMM() > 0){
       gradv.tail(3*NMM()) = arma::vectorise(mmg_new);
     }
-    
+
     /*
       Velocity reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
@@ -319,7 +312,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     }
     else{
       std::cerr << "velocities, unchanged." << std::endl;
-      // Ignore the unsuccessful hop; active_state remains unchanged 
+      // Ignore the unsuccessful hop; active_state remains unchanged
     }
   }
   hopping = false;
@@ -345,7 +338,7 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
   PropMap props = {};
   arma::mat qmg_new, mmg_new;
   qmg_new.set_size(3,NQM());
-  
+
   props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
   if (NMM() > 0){
     mmg_new.set_size(3, NMM());
@@ -353,7 +346,7 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
   }
   qm->get_properties(props);
 
-  // 3xN  mass matrix 
+  // 3xN  mass matrix
   arma::mat m (3, (NQM() + NMM()), arma::fill::zeros);
   for (arma::uword i = 0; i < masses.n_elem; i++){
     m.col(i) = masses(i);
@@ -361,20 +354,20 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
 
   auto rows=arma::span(arma::span::all); auto cols = arma::span(0, NQM() - 1);
   total_gradient(rows, cols) += qmg_new - qm_grd;
-  // a = -g/m 
+  // a = -g/m
   velocities(rows, cols) += -1.0*(qmg_new - qm_grd)/m(rows, cols)*dtc/2;
   qm_grd = qmg_new;
 
   if (NMM() > 0){
     cols = arma::span(NQM(), NQM() + NMM() - 1);
-    total_gradient(rows, cols) += mmg_new - mm_grd;    
+    total_gradient(rows, cols) += mmg_new - mm_grd;
     velocities(rows, cols) += -1.0*(mmg_new - mm_grd)/m(rows, cols)*dtc/2;
     mm_grd = mmg_new;
-  }  
+  }
 }
 
 
-// This is our primary hook into the Gromacs (or other) MD loop 
+// This is our primary hook into the Gromacs (or other) MD loop
 double FSSH::update_gradient(void){
   qm->update();
 

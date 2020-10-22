@@ -8,7 +8,7 @@
 QMInterface*
 select_interface(ConfigBlockReader& reader,
                  FileHandle& fh,
-                 arma::uvec& qmids, 
+                 const arma::uvec& qmids, 
 	             arma::mat& qm_crd, 
 	             arma::mat& mm_crd, 
 	             arma::vec& mm_chg)
@@ -28,15 +28,18 @@ select_interface(ConfigBlockReader& reader,
 }
 
 
-BOMD::BOMD(FileHandle& fh,
-           arma::uvec& atomicnumbers,
-           arma::mat& qm_crd, 
-           arma::mat& mm_crd, 
-           arma::vec& mm_chg, 
-           arma::mat& qm_grd,
+BOMD::BOMD(arma::mat& qm_grd,
            arma::mat& mm_grd) :
     qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
-{
+{};
+
+void
+BOMD::setup(FileHandle& fh,
+            const arma::uvec& atomicnumbers,
+            arma::mat& qm_crd, 
+            arma::mat& mm_crd, 
+            arma::vec& mm_chg
+        ) {
   auto reader = setup_reader();
   add_necessary_keys(reader);
   reader.parse(fh);
@@ -44,11 +47,13 @@ BOMD::BOMD(FileHandle& fh,
   get_reader_data(reader);
 };
 
+
 void
 BOMD::get_reader_data(ConfigBlockReader& reader) {
     const auto& reader2 = reader;
     (void) reader2;
 };
+
 
 void
 BOMD::add_necessary_keys(ConfigBlockReader& reader) 

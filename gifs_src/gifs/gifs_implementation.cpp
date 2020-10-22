@@ -157,23 +157,23 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
              arma::mat& qm_grd,
              arma::mat& mm_grd) 
 {
+    BOMD* bomd;
     std::string runtype;
     reader.get_data("runtype", runtype);
     if (runtype == "bomd") {
-        return new BOMD(fh, atomicnumbers, qm_crd, mm_crd, 
-                        mm_chg, qm_grd, mm_grd);
+        bomd = new BOMD(qm_grd, mm_grd);
     }
     else if (runtype == "fssh") {
-        return new FSSH(fh, atomicnumbers, qm_crd, mm_crd, 
-                        mm_chg, qm_grd, mm_grd);
+        bomd = new FSSH(qm_grd, mm_grd);
     }
     else if (runtype == "rescale bomd") {
-        return new RescaleBomd(fh, atomicnumbers, qm_crd, mm_crd, 
-                        mm_chg, qm_grd, mm_grd);
+        bomd = new RescaleBomd(qm_grd, mm_grd);
     }
     else {
         throw "unknown runtype";
     }
+    bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
+    return bomd;
 };
 
 ConfigBlockReader

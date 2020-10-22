@@ -11,13 +11,13 @@
 class QMInterface{
   friend class PrintBomd;
 public:
-  QMInterface(arma::uvec& in_qmids, 
+  QMInterface(const arma::uvec& in_qmids, 
 	      arma::mat& in_qm_crd, 
 	      arma::mat& in_mm_crd, 
 	      arma::vec& in_mm_chg, 
-	      int charge, 
-	      int mult,
-	      int excited_states);
+	      const int charge, 
+	      const int mult,
+	      const int excited_states);
   virtual void update(); // if overriding, be sure to call the parent too.
   inline size_t nqm() const noexcept { return NQM; };
   inline int call_idx() const noexcept { return qm_call_idx; };
@@ -33,7 +33,7 @@ protected:
   const size_t excited_states;
   
   //  fixed size
-  arma::uvec& atomids;    // NQM
+  const arma::uvec& atomids;    // NQM
   arma::mat& crd_qm;      // NQM*3
   // flexible
   size_t NMM;

@@ -37,13 +37,13 @@ QM_QChem::qchem_reader() {
   the number requested to the origional number.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
-           arma::uvec& in_qmids, 
+           const arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
 		   arma::mat& in_mm_crd, 
 		   arma::vec& in_mm_chg, 
-		   int charge, 
-		   int mult,
-		   size_t excited_states):
+		   const int charge, 
+		   const int mult,
+		   const size_t excited_states):
   QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states)
 {
   /*

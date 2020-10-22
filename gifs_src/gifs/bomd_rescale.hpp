@@ -9,14 +9,7 @@ class RescaleBomd:
     public BOMD 
 {
 public:
-  explicit RescaleBomd(FileHandle& fh,
-        arma::uvec& atomicnumbers,
-		arma::mat& qm_crd,
-		arma::mat& mm_crd,
-		arma::vec& mm_chg,
-		arma::mat& qm_grd,
-		arma::mat& mm_grd): 
-      BOMD(fh, atomicnumbers, qm_crd, mm_crd, mm_chg, qm_grd, mm_grd) {}
+  explicit RescaleBomd(arma::mat& qm_grd, arma::mat& mm_grd): BOMD(qm_grd, mm_grd) {}
       
   ~RescaleBomd() {delete qm;}
   
