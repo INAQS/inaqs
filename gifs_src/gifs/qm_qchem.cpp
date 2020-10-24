@@ -300,13 +300,18 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 }
 
 
-// FIXME: Mid-Feb QC trunk + Qi's additions crash when computing MM NAC
 // Should we split mm/qm nac?
 void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
 	    {"calc_nac", "true"},
 	    {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
+
+  if (NMM > 0){
+    k.insert({{"nac_pointcharge", "1"},
+              {"qm_mm", "true"},
+              {"qm_mm_interface", "janus"}});
+  }
   
   std::ofstream input = get_input_handle();
   write_rem_section(input, k);
