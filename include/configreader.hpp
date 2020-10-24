@@ -206,9 +206,13 @@ public:
     int parse(FileHandle& file);
     // get results
     template<typename T>
-    inline bool get_data(const std::string& key, T& val) {if (!parsed){throw std::logic_error("Must parse before read!");} return data.at(key).get_data(val); }
+    inline bool get_data(const std::string& key, T& val) {
+      //if (!parsed){throw std::logic_error("Must parse before read!");}
+      return data.at(key).get_data(val); }
 
     Data operator[](const std::string& key) {return data.at(key);}
+
+  std::vector<std::string> enumerate_keys(void);
 
 private:
     void parse_line(const std::string& key, const std::string& value); 

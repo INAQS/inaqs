@@ -13,9 +13,10 @@ FSSH::setup_reader()
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", 1e-4);
-    reader.add_entry("min_state", (size_t) 1);
+
+    // FIXME: make ConfigBlockReader complain if adding the same key twice!
+    
     reader.add_entry("active_state", types::ULINT);
-    reader.add_entry("excited_states", types::ULINT);
 
     std::random_device rd; // generate default random seed
     reader.add_entry("random_seed", (size_t) rd());
@@ -34,10 +35,11 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   reader.get_data("delta_e_tol", delta_e_tol);
-
+  reader.get_data("active_state", active_state);
+  
+  /* added in BOMD::add_qm_keys() */
   reader.get_data("min_state", min_state);
   reader.get_data("excited_states", excited_states);
-  reader.get_data("active_state", active_state);
 
   {
     size_t seed = 0; // a default seed is set in setup_reader(); this value will not be propagated.
@@ -59,11 +61,11 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     throw std::range_error("Active state not in the range of computed states!");
   }
 
-  // FIXME!: How to pass min_state to QM_Interface?
-
   active_state -= min_state;
 
+  // FIXME: pass min-state to QM_interface
   if (min_state != 1){
+    std::cout << "min_state=" << min_state << std::endl;
     throw std::runtime_error("minimum states other than 1 not supported!");
   }
 

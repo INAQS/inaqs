@@ -12,20 +12,33 @@ select_interface(ConfigBlockReader& reader,
 	             arma::mat& qm_crd, 
 	             arma::mat& mm_crd, 
 	             arma::vec& mm_chg)
-{
+{ 
     std::string qmcode{};
-    int mult, chg, nstates;
-    reader.get_data("qm_code", qmcode);
-    reader.get_data("mult", mult);
-    reader.get_data("chg", chg);
-    reader.get_data("nstates", nstates);
+    int mult, chg;
+    size_t excited_states;
+    reader.get_data("qmcode", qmcode);
+    reader.get_data("multiplicity", mult);
+    reader.get_data("charge", chg);
+    
+    reader.get_data("excited_states", excited_states);
 
     if (qmcode == "qchem") {
-        return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, nstates);
+        return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states);
     } else {
         throw "qm interface  not implemented!";
     }
 }
+
+void
+BOMD::add_qm_keys(ConfigBlockReader& reader) 
+{
+    reader.add_entry("qmcode", "qchem");
+    reader.add_entry("charge", 0);
+    reader.add_entry("multiplicity", 1);
+    reader.add_entry("excited_states", (size_t) 0);
+    reader.add_entry("min_state", (size_t) 1); // for (A)FSSH only
+};
+
 
 
 BOMD::BOMD(arma::mat& qm_grd,
@@ -41,43 +54,46 @@ BOMD::setup(FileHandle& fh,
             arma::vec& mm_chg
         ) {
   auto reader = setup_reader();
-  add_necessary_keys(reader);
+  add_qm_keys(reader);
   reader.parse(fh);
-  qm = select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
   get_reader_data(reader);
+  qm = select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
 };
 
-
-void
-BOMD::get_reader_data(ConfigBlockReader& reader) {
-    const auto& reader2 = reader;
-    (void) reader2;
-};
-
-
-void
-BOMD::add_necessary_keys(ConfigBlockReader& reader) 
-{
-    reader.add_entry("qm_code", "qchem");
-    reader.add_entry("chg", 0);
-    reader.add_entry("mult", 1);
-    reader.add_entry("nstates", 1);
-};
 
 ConfigBlockReader
 BOMD::setup_reader() {
     //using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"bomd"};
-    //
-    reader.add_entry("active_state", 0);
+    reader.add_entry("active_state", (size_t) 0);
     return reader;
 };
+
+
+void
+BOMD::get_reader_data(ConfigBlockReader& reader) {
+  reader.get_data("active_state", active_state);
+
+  { // consistency checks
+    size_t excited_states = 0;
+    reader.get_data("excited_states", excited_states);
+    if (active_state > excited_states){
+      std::cerr << "active_state = " << active_state << " < " << excited_states << " = excited_states!" << std::endl; 
+      throw std::logic_error("The active state must be within the excited states!");
+    }
+
+    if (active_state > 1e3){
+      std::cerr << "active_state=" << active_state << "! This is probably a mistake." << std::endl;
+    }
+  }
+};
+
 
 double 
 BOMD::update_gradient()
 {
     qm->update();
-
+    // FIXME: wire-in support for active-state selection
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);
     props.emplace(QMProperty::mmgradient, &mm_grd);
@@ -90,9 +106,8 @@ BOMD::update_gradient()
 
 
 bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
-  (void) total_gradient;
-  (void) masses;
-  (void) velocities;
+  (void) total_gradient; (void) masses; (void) velocities;
+  
   edrift = (total_energy - elast)/elast;
   elast = total_energy;
   std::cout << "Total Energy: " << elast << ", " << edrift << std::endl;

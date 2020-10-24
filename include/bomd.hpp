@@ -24,11 +24,14 @@ public:
           );
   //
 protected:
-  virtual ConfigBlockReader setup_reader(void);
-  virtual void get_reader_data(ConfigBlockReader& reader);
-  void add_necessary_keys(ConfigBlockReader& reader);
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
+
+  void add_qm_keys(ConfigBlockReader& reader);
+  
+  /* Child classes will override these methods for own setup */
+  virtual ConfigBlockReader setup_reader(void);
+  virtual void get_reader_data(ConfigBlockReader& reader);
   
   QMInterface* qm{nullptr};
   // fixed size
@@ -37,6 +40,10 @@ protected:
   arma::mat& mm_grd;
   arma::vec energy{};
 
+  // On which surface are we running?
+  size_t active_state;
+
+  // To track energy drift from GMX
   double elast = 0, edrift = 0;
 };
 
