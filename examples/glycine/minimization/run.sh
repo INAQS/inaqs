@@ -4,6 +4,7 @@ export GMX_MAXBACKUP=-1
 
 readonly NAME=gly_minimize
 
+cp ../gifs_config.ini .
 grompp -f minim.mdp -c ../glycine.gro -p ../glycine.top -n ../gly.ndx -o ${NAME}.tpr
 mdrun -v -deffnm ${NAME}
 

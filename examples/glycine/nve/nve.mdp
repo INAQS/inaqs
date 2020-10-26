@@ -1,7 +1,7 @@
 ; Run parameters
 integrator              = md-vv     ; velocity verlet integrator
-nsteps                  = 25        ; 2 * 25 = 50 fs
-dt                      = 0.002     ; 2 fs
+nsteps                  = 100       ; 100 * 0.5 = 50 fs
+dt                      = 0.0005    ; 0.5 fs
 
 ; QMMM settings
 QMMM	    = yes
