@@ -63,7 +63,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
   active_state -= min_state;
 
-  // FIXME: pass min-state to QM_interface
   if (min_state != 1){
     std::cerr << "min_state=" << min_state << std::endl;
     throw std::runtime_error("minimum states other than 1 not supported!");

@@ -96,7 +96,6 @@ double
 BOMD::update_gradient()
 {
     qm->update();
-    // FIXME: wire-in support for active-state selection
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);
     props.emplace(QMProperty::mmgradient, &mm_grd);
