@@ -6,7 +6,7 @@ export GMX_MAXBACKUP=-1
 
 readonly NAME=gly_nvt
 
-cp ../gifs_config.ini .
+[ ! -f gifs_config.ini ] && cp ../gifs_config.ini .
 
 grompp -f nvt.mdp -c nvt.gro -p ../glycine.top -n ../gly.ndx -o ${NAME}.tpr
 mdrun -v -deffnm ${NAME}

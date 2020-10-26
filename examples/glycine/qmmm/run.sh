@@ -7,7 +7,7 @@ readonly NAME=gly_qmmm
 export GMX_MAXBACKUP=-1
 
 # pull in gifs_config
-cp ../gifs_config.ini .
+[ ! -f gifs_config.ini ] && cp ../gifs_config.ini .
 
 # the topology file will be modified so bring in our own
 cp ../glycine.top .
