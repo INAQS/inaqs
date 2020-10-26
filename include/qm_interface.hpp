@@ -17,7 +17,8 @@ public:
 	      arma::vec& in_mm_chg, 
 	      const int charge, 
 	      const int mult,
-	      const int excited_states);
+	      const int excited_states,
+              const int min_state);
   virtual void update(); // if overriding, be sure to call the parent too.
   inline size_t nqm() const noexcept { return NQM; };
   inline int call_idx() const noexcept { return qm_call_idx; };
@@ -31,6 +32,7 @@ protected:
   const int qm_charge;
   const int qm_multiplicity;
   const size_t excited_states;
+  const size_t min_state;
   
   //  fixed size
   const arma::uvec& atomids;    // NQM

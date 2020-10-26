@@ -1,3 +1,4 @@
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -34,7 +35,7 @@ QM_QChem::qchem_reader() {
   Happens in setman; to see where, search for "NRoots was altered as:"
 
   On subsequent invocation (as during AIMD), setman_init.F will reset
-  the number requested to the origional number.
+  the number requested to the original number.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
            const arma::uvec& in_qmids, 
@@ -43,8 +44,9 @@ QM_QChem::QM_QChem(FileHandle& fh,
 		   arma::vec& in_mm_chg, 
 		   const int charge, 
 		   const int mult,
-		   const size_t excited_states):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states)
+		   const int excited_states,
+                   const int min_state):
+  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states, min_state)
 {
   /*
     The environmental variables $QCSCRATCH, $QCTHREADS shall take
@@ -185,7 +187,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   if (! called(S::wfoverlap)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
-    	      {"namd_lowestsurface",std::to_string(lowest_surface)},
+    	      {"namd_lowestsurface",std::to_string(min_state)},
     	      {"dump_wf_overlap", "1"}});
 
     std::ofstream input = get_input_handle();
@@ -246,6 +248,7 @@ void QM_QChem::get_ground_energy(arma::vec *e){
 
 // Gets all energies: ground + excited states
 void QM_QChem::get_all_energies(arma::vec *e){
+  
   if (! called(S::ex_energy)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"}});
@@ -492,9 +495,9 @@ std::ofstream QM_QChem::get_input_handle(){
 }
 
 REMKeys QM_QChem::excited_rem(void){
-  if (! (excited_states > 0)){
-    throw std::logic_error("Cannot request multi-state property without excited states.");
-  }
+  // if (! (excited_states > 0)){
+  //   throw std::logic_error("Cannot request multi-state property without excited states.");
+  // }
 
   REMKeys excited
     {

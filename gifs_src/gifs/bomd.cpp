@@ -15,15 +15,17 @@ select_interface(ConfigBlockReader& reader,
 { 
     std::string qmcode{};
     int mult, chg;
-    size_t excited_states;
+    size_t excited_states, min_state;
     reader.get_data("qmcode", qmcode);
     reader.get_data("multiplicity", mult);
     reader.get_data("charge", chg);
     
     reader.get_data("excited_states", excited_states);
+    reader.get_data("min_state", min_state);
 
+    
     if (qmcode == "qchem") {
-        return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states);
+        return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else {
         throw "qm interface  not implemented!";
     }
@@ -74,18 +76,19 @@ void
 BOMD::get_reader_data(ConfigBlockReader& reader) {
   reader.get_data("active_state", active_state);
 
-  { // consistency checks
-    size_t excited_states = 0;
-    reader.get_data("excited_states", excited_states);
-    if (active_state > excited_states){
-      std::cerr << "active_state = " << active_state << " < " << excited_states << " = excited_states!" << std::endl; 
-      throw std::logic_error("The active state must be within the excited states!");
-    }
-
-    if (active_state > 1e3){
-      std::cerr << "active_state=" << active_state << "! This is probably a mistake." << std::endl;
-    }
+  // consistency checks
+  size_t excited_states = 0;
+  reader.get_data("excited_states", excited_states);
+  if (active_state > excited_states){
+    std::cerr << "active_state = " << active_state << " < " << excited_states << " = excited_states!" << std::endl; 
+    throw std::logic_error("The active state must be within the excited states!");
   }
+
+  if (active_state > 1e3){
+    std::cerr << "active_state=" << active_state << "! This is probably a mistake." << std::endl;
+  }
+
+  energy.set_size(excited_states + 1);
 };
 
 
@@ -97,11 +100,11 @@ BOMD::update_gradient()
     PropMap props{};
     props.emplace(QMProperty::qmgradient, &qm_grd);
     props.emplace(QMProperty::mmgradient, &mm_grd);
-    props.emplace(QMProperty::energies, &energy);
+    props.emplace(QMProperty::energies, {active_state}, &energy);
     //
     qm->get_properties(props);
     //
-    return energy[0];
+    return energy[active_state];
 };
 
 
@@ -110,6 +113,6 @@ bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   
   edrift = (total_energy - elast)/elast;
   elast = total_energy;
-  std::cout << "Total Energy: " << elast << ", " << edrift << std::endl;
+  std::cout << "Total Energy: " << elast << "; Fractional drift: " << edrift << std::endl;
   return false;
 };

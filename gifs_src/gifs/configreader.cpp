@@ -340,12 +340,6 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
 {
     if (key_in_map(key, data)) {
         data[key].set_from_string(value);
-        if (key == "min_state"){
-          std::cout << "[parsing]" << key << "<-" << value << std::endl;
-          size_t t;
-          get_data("min_state", t);
-          std::cout << "[parsing]" << key << " is " << t << std::endl;
-        }
     } else {
         std::cerr << "Unknown field " << key << std::endl;
     }
