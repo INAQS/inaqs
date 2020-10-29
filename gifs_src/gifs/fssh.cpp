@@ -4,7 +4,7 @@
 #include <armadillo>
 #include <complex>
 #include <cmath>
-
+#include <iostream>
 
 ConfigBlockReader
 FSSH::setup_reader()
@@ -13,6 +13,8 @@ FSSH::setup_reader()
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", 1e-4);
+
+    reader.add_entry("amplitude_file", "cs.dat");
 
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
     
@@ -41,6 +43,8 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   reader.get_data("min_state", min_state);
   reader.get_data("excited_states", excited_states);
 
+  reader.get_data("amplitude_file", amplitude_file);
+  
   {
     size_t seed = 0; // a default seed is set in setup_reader(); this value will not be propagated.
 
@@ -261,14 +265,14 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 
   double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){
-    std::cerr << "Hop, " << active_state << "->" << target_state << " succeeds; energy difference = " << deltaE << "."<< std::endl;
+    std::cerr << "Hop, " << active_state + min_state << "->" << target_state + min_state << " succeeds; energy difference = " << deltaE << "."<< std::endl;
     // test the sign of dmv to pick the root yielding the smallest value of alpha
     double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
     vel = vel + alpha * nacv;
     active_state = target_state;
   }
   else{  // frustrated hop
-    std::cerr << "Hop is frustrated---will remain on " << active_state << "; ";
+    std::cerr << "Hop is frustrated---will remain on " << active_state + min_state << "; ";
     // compute gradient of target_state to see if we reverse
     arma::mat qmg_new, mmg_new;
     qmg_new.set_size(3,NQM());
@@ -379,6 +383,11 @@ double FSSH::update_gradient(void){
   props.emplace(QMProperty::energies,   {excited_states}, &energy);
 
   qm->get_properties(props);
+
+  std::ofstream output(amplitude_file, std::ios_base::app);
+  c().t().print(output);
+  output.close();
+
   electonic_evolution();
 
   return energy(min_state + active_state);
@@ -398,14 +407,14 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
       for the TOTAL system, which is probably not what we want.
     */
     if(std::abs(edrift) > delta_e_tol){
-      std::cerr <<  "Trivial crossing: " << active_state << "->" << target_state << std::endl;
+      std::cerr <<  "Trivial crossing: " << active_state + min_state << "->" << target_state + min_state << std::endl;
       // Need to update global gradient & velocities
       backpropagate_gradient_velocities(total_gradient, velocities, masses);
       active_state = target_state;
       hopping = false;
     }
     else{
-      std::cerr <<  "Attempting hop: " << active_state << "->" << target_state << std::endl;
+      std::cerr <<  "Attempting hop: " << active_state + min_state << "->" << target_state + min_state << std::endl;
       hop_and_scale(velocities, masses);
       hopping = false;
     }

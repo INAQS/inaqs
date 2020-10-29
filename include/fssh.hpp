@@ -29,10 +29,12 @@ protected:
   double dtc;
   double delta_e_tol;
   double dtq;
-
+  
   size_t min_state, excited_states;
   int shstates;
 
+  std::string amplitude_file;
+  
   // size_t active_state; inherited from BOMD
   size_t target_state;
   bool hopping = false;
