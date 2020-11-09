@@ -385,6 +385,7 @@ double FSSH::update_gradient(void){
   qm->get_properties(props);
 
   std::ofstream output(amplitude_file, std::ios_base::app);
+  output << active_state + min_state << " ";
   c().t().print(output);
   output.close();
 
