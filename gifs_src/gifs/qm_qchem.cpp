@@ -312,8 +312,7 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
 
   if (NMM > 0){
     k.insert({{"nac_pointcharge", "1"},
-              {"qm_mm", "true"},
-              {"qm_mm_interface", "janus"}});
+              {"qm_mm", "true"}});
   }
   
   std::ofstream input = get_input_handle();
