@@ -22,7 +22,7 @@ public:
 	   const int excited_states,
            const int min_state);
   
-  void get_properties(PropMap &props);
+  void get_properties(PropMap &props) override;
 
 private:  
   void get_nac_vector(arma::mat *nac, size_t A, size_t B);

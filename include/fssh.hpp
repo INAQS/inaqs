@@ -9,15 +9,15 @@
 class FSSH: public BOMD{
 public:
   explicit FSSH(arma::mat& qm_grd,
-		        arma::mat& mm_grd);
+                arma::mat& mm_grd);
   virtual ~FSSH() {};
 
-  virtual double update_gradient(void);
-  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual double update_gradient(void) override;
+  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) override;
   
 protected:
-  virtual void get_reader_data(ConfigBlockReader& reader); 
-  virtual ConfigBlockReader setup_reader();
+  virtual void get_reader_data(ConfigBlockReader& reader) override; 
+  virtual ConfigBlockReader setup_reader() override;
   void electonic_evolution(void);
   void backpropagate_gradient_velocities(arma::mat &total_gradient, arma::mat &velocities, arma::vec &masses);
   void hop_and_scale(arma::mat &velocities, arma::vec &mass);

@@ -13,12 +13,12 @@ public:
       
   ~RescaleBomd() {delete qm;}
   
-  virtual double update_gradient(void);
-  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift);
+  virtual double update_gradient(void) override;
+  virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) override;
     //
 protected:
-  virtual ConfigBlockReader setup_reader(void);
-  virtual void get_reader_data(ConfigBlockReader& reader);
+  virtual ConfigBlockReader setup_reader(void) override;
+  virtual void get_reader_data(ConfigBlockReader& reader) override;
 private:
   double additional_energy{100.0};
   double dE{0.01};
