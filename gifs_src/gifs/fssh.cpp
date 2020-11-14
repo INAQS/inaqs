@@ -126,10 +126,17 @@ arma::uword FSSH::sample_discrete(const arma::vec &p){
     * Pi >= 0 forall i
     * Sum(Pi) == 1
   */
-  if (p.has_nan()){throw std::logic_error("P is malformed; it contains NaN!");}
-  if (arma::any(p < 0)){throw std::logic_error("P cannot have negative elements!");}
-  if (std::abs(arma::sum(p) - 1) > 1e-8){ throw std::logic_error("P is not normed!");}
+  std::string die = "";
+  const double eps = 1e-12;
+  if (p.has_nan()){die = "P is malformed; it contains NaN!";}
+  if (arma::any(p < -1 * eps)){die = "P cannot have negative elements!";}
+  if (std::abs(arma::sum(p) - 1) > eps){ die = "P is not normed!";}
 
+  if (die != ""){
+    p.t().print("P");
+    throw std::logic_error(die);
+  }
+  
   const double zeta = arma::randu();
   return as_scalar(arma::find(arma::cumsum(p) > zeta, 1));
 }
