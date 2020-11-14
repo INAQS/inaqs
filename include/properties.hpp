@@ -29,7 +29,7 @@ enum class QMProperty{
   To add support for another type:
   * Add a pointer member
   * Add a constructor
-  * Add an operator
+  * Add operators for & and *
   * Update the function std::string kind(void) with the new type
 */
 class ArmaWrap{
@@ -39,11 +39,16 @@ public:
   ArmaWrap(arma::mat  * x): m(x) {};
   ArmaWrap(arma::cube * x): c(x) {};
 
+  // FIXME: should the nullptr_t return be conditional?
   operator std::nullptr_t() const {return nullptr;};
   operator arma::vec  *() const {return notnull(v);};
   operator arma::mat  *() const {return notnull(m);};
   operator arma::cube *() const {return notnull(c);};
-  
+
+  operator arma::vec  &() const {return *notnull(v);};
+  operator arma::mat  &() const {return *notnull(m);};
+  operator arma::cube &() const {return *notnull(c);};
+
 private:
   // Member types
   arma::vec  * v = nullptr;
