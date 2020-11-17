@@ -405,6 +405,11 @@ double FSSH::update_gradient(void){
 // This hook comes after the first MD half-step (and before constraint forces are calculated in gromacs)
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy){
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy); // call parent to update edrift
+
+  if (masses.has_inf() || arma::any(masses==0)){
+    throw std::logic_error("Cannot do surface hopping with massless atoms or momentum sinks!");
+  }
+
   if (!hopping){
     // nothing to do
     return false;
