@@ -201,7 +201,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   }
 
   if (call_idx() < 2){ // if this is the first call, don't actually read from $QC; there will be no overlap to read
-    U.eye();
+    U->eye();
   }
   else{
     size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
