@@ -196,7 +196,7 @@ def getArgs():
     return parser.parse_args()
 
 
-ffDict = defaultdict(lambda: "ff_???")
+ffDict = defaultdict(lambda: print("Warning: unknown atom in forcefield", file=sys.stderr) or "ff_???")
 
 s2z = {
     'H':   1, 'He':  2, 'Li':  3, 'Be':  4, 'B':   5, 'C':   6,
