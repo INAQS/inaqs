@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import fileinput
 import numpy as np
 import re
@@ -5,7 +7,7 @@ import os
 from collections import defaultdict
 import argparse
 import sys
-
+from pathlib import Path
 
 
 class Atom:
@@ -91,47 +93,39 @@ def writeGRO(atoms, name="GIFS", residue="QM", output=sys.stdout):
         print("%5d%-5s%5s%5d%8.3f%8.3f%8.3f" %
               (1, residue, a.S, i, a.x[0], a.x[1], a.x[2]), file=output)
 
-    print("1 1 1", file=output)
+    print("0 0 0", file=output)
 
 
-def writeTOP(atoms, name="GIFS", residue="QM", output=sys.stdout):
+def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, output=sys.stdout):
     # FIXME: want to be able to choose the water topology
-    print(f"""
-; Include forcefield parameters
-#include "oplsaa.ff/forcefield.itp"
 
-; Include Position restraint file
-#ifdef POSRES
-#include "posre.itp"
-#endif
+    top = []
+    
+    if forcefield is not None:
+        top.append('; Include forcefield parameters')
+        top.append(f'#include "{forcefield}/forcefield.itp"')
+    
+    top.append("[ moleculetype ]")
+    top.append("; Name         nrexcl")
+    top.append(f"{name}        3")
 
-; Include water topology; this is for tip3p, but one could use whatever
-#include "oplsaa.ff/tip3p.itp"
-
-; Include topology for ions
-#include "oplsaa.ff/ions.itp"
-
-[ moleculetype ]
-; Name            nrexcl
-{name}_QM        3
-
-[ atoms ]
-;  nr type         resnr residue atom      cgnr   charge       mass""", file=output)
+    top.append("[ atoms ]")
+    top.append(";  nr type         resnr residue atom      cgnr   charge       mass")
     for (i, a) in enumerate(atoms, start=1):
-        print(fmtOPLSTop(i, a, residue), file=output)
+        top.append(fmtTopAtoms(i, a, residue))
 
-    print(f"""
-[ system ]
-; Name
-{residue}
+    top.append("[ system ]")
+    top.append("; Name")
+    top.append(f"QMMM {name}")
+    top.append("[ molecules ]")
+    top.append("; Compound        #mols")
+    top.append(f"{name}        1")
 
-[ molecules ]
-; Compound        #mols
-{name}_QM        1
-""", file=output)
+    print("\n".join(top), file=output)
 
 
-def fmtOPLSTop(nr, atom, residue, resnr=1):
+
+def fmtTopAtoms(nr, atom, residue, resnr=1):
     #  nr  type       resnr residue  atom    cgnr     charge   mass
     #  1   opls_287      1    GLY      N      1
     #  2   opls_290      1    GLY     H1      1
@@ -145,30 +139,31 @@ def fmtOPLSTop(nr, atom, residue, resnr=1):
     # set the charge to 0. Charge groups, cgnr, are constructed such
     # that there are no more than 6 atoms in a single charge group (Gromacs' max is 32).
     # The name in the atom field must match that defined in type
-    sym = oplsDict[atom.S]
+    sym = ffDict[s2z[atom.S]]
     cgnr = int(nr/(6+1))
     chg = 0.0
     return f"{nr:5} {sym:12} {resnr:5} {residue:7} {atom.S:5} {cgnr:5} {chg:8.3}"
 
 
-oplsDict = defaultdict(lambda: "opls_???")
+def genffD(forcefield):
 
+    ff = Path(forcefield)
+    if not ff.exists():
+        ff = Path(os.environ['GMXDATA']) / "top" / (forcefield + ".ff")
 
-def buildOPLSDict():
-    gmxdata = os.environ['GMXDATA']
-
-    opls = re.compile("opls_")
-
-    with open(gmxdata + "/top/oplsaa.ff/ffnonbonded.itp") as f:
+    with open (ff / "ffnonbonded.itp") as f:
+        o = 0  # special case offset for OPLS-AA
+        if forcefield == "oplsaa":
+            o = 1
         for line in f:
             field = line.split()
-            if opls.match(field[0]):
-                oplsDict[field[1]] = field[0]
-
+            if len(field) > 4 + o and field[4+o] == 'A':
+                ffDict[int(field[1+o])] = field[0]
+                    
 
 def main():
     args = getArgs()
-    buildOPLSDict()
+    genffD(args.ff)
 
     print("reading", args.f)
     with open(args.f) as f:
@@ -179,7 +174,7 @@ def main():
     print("wrote", args.o + ".gro")
 
     with open(args.o + ".top", 'w') as f:
-        writeTOP(molecule, name=args.n, residue=args.r, output=f)
+        writeTOP(molecule, name=args.n, residue=args.r, forcefield=args.ff, output=f)
     print("wrote", args.o + ".top")
 
     print("Be sure to check your topology file for missing atoms")
@@ -196,10 +191,40 @@ def getArgs():
                         help="name for residue; defaults to QM")
     parser.add_argument("-n", metavar="name", default="GIFS",
                         help="system name; defaults to GIFS")
+    parser.add_argument("--ff", metavar="forcefield", default="oplsaa",
+                        help="forcefield to use; defaults to oplsaa")
     return parser.parse_args()
 
 
+ffDict = defaultdict(lambda: "ff_???")
+
+s2z = {
+    'H':   1, 'He':  2, 'Li':  3, 'Be':  4, 'B':   5, 'C':   6,
+    'N':   7, 'O':   8, 'F':   9, 'Ne': 10, 'Na': 11, 'Mg': 12,
+    'Al': 13, 'Si': 14, 'P':  15, 'S':  16, 'Cl': 17, 'Ar': 18,
+    'K':  19, 'Ca': 20, 'Sc': 21, 'Ti': 22, 'V':  23, 'Cr': 24,
+    'Mn': 25, 'Fe': 26, 'Co': 27, 'Ni': 28, 'Cu': 29, 'Zn': 30,
+    'Ga': 31, 'Ge': 32, 'As': 33, 'Se': 34, 'Br': 35, 'Kr': 36,
+    'Rb': 37, 'Sr': 38, 'Y':  39, 'Zr': 40, 'Nb': 41, 'Mo': 42,
+    'Tc': 43, 'Ru': 44, 'Rh': 45, 'Pd': 46, 'Ag': 47, 'Cd': 48,
+    'In': 49, 'Sn': 50, 'Sb': 51, 'Te': 52, 'I':  53, 'Xe': 54,
+    'Cs': 55, 'Ba': 56, 'La': 57, 'Ce': 58, 'Pr': 59, 'Nd': 60,
+    'Pm': 61, 'Sm': 62, 'Eu': 63, 'Gd': 64, 'Tb': 65, 'Dy': 66,
+    'Ho': 67, 'Er': 68, 'Tm': 69, 'Yb': 70, 'Lu': 71, 'Hf': 72,
+    'Ta': 73, 'W':  74, 'Re': 75, 'Os': 76, 'Ir': 77, 'Pt': 78,
+    'Au': 79, 'Hg': 80, 'Tl': 81, 'Pb': 82, 'Bi': 83, 'Po': 84,
+    'At': 85, 'Rn': 86, 'Fr': 87, 'Ra': 88, 'Ac': 89, 'Th': 90,
+    'Pa': 91, 'U':  92, 'Np': 93, 'Pu': 94, 'Am': 95, 'Cm': 96,
+    'Bk': 97, 'Cf': 98, 'Es': 99, 'Fm': 100, 'Md': 101, 'No': 102,
+    'Lr': 103, 'Rf': 104, 'Db': 105, 'Sg': 106, 'Bh': 107, 'Hs': 108,
+    'Mt': 109, 'Ds': 110, 'Rg': 111, 'Cn': 112, 'Nh': 113, 'Fl': 114,
+    'Mc': 115, 'Lv': 116, 'Ts': 117, 'Og': 118,
+}
+
+z2s = {v:k for k,v in s2z.items()}
+
 if __name__ == "__main__":
     main()
-    # buildOPLSDict()
-    # print(oplsDict)
+    # genffD("oplsaa.ff")
+    # buildffDict()
+    # print(ffDict)
