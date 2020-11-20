@@ -361,7 +361,7 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
   // 3xN  mass matrix
   arma::mat m (3, (NQM() + NMM()), arma::fill::zeros);
   for (arma::uword i = 0; i < masses.n_elem; i++){
-    m.col(i) = masses(i);
+    m.col(i).fill(masses(i));
   }
 
   auto rows=arma::span(arma::span::all); auto cols = arma::span(0, NQM() - 1);
