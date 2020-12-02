@@ -23,7 +23,8 @@ QM_QChem::qchem_reader() {
   // FIXME: ConfigReader should support bool
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
-
+  reader.add_entry("state_analysis", 0);
+  
   return reader;
 }
 
@@ -59,16 +60,20 @@ QM_QChem::QM_QChem(FileHandle& fh,
   reader.get_data("basis", basis_set);
   reader.get_data("exchange", exchange_method);
 
-  int in;
-  reader.get_data("singlets", in);
-  singlets = in;
-  reader.get_data("triplets", in);
-  triplets = in;
+  {
+    int in;
+    reader.get_data("singlets", in);
+    singlets = in;
+    reader.get_data("triplets", in);
+    triplets = in;
+    reader.get_data("state_analysis", in);
+    state_analysis = in;
+  }
   
   std::string conf_scratch;
   reader.get_data("qc_scratch", conf_scratch);
   qc_scratch_directory = get_qcscratch(conf_scratch);
-
+  
   /*
     Setting $QCTHREADS seems sufficient on the Subotnik cluster, but
     perhaps this is unique to our setup. Need to check with Evgeny to
@@ -177,6 +182,42 @@ void QM_QChem::get_properties(PropMap &props){
       break;
     }
   }
+
+  if (state_analysis){
+    do_state_analysis();
+  }
+}
+
+
+void QM_QChem::do_state_analysis(void){
+  REMKeys keys = {{"jobtype","sp"},
+                  {"make_cube_files", "false"},
+                  {"gui", "2"},
+                  {"state_analysis", "true"},
+                  {"molden_format", "true"}};
+
+  REMKeys ex = excited_rem();
+  keys.insert(ex.begin(), ex.end());
+  if (called(S::ex_energy)){
+    keys.insert({{"skip_setman", "1"},
+                 {"skip_scfman", "1"}});
+  }
+  else{
+    keys.insert({{"cis_rlx_dns", "1"}});
+  }
+
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, keys);  
+  write_molecule_section(input);
+  input.close();
+
+  {
+    std::string guifile = get_qcwdir() + "/" +
+      std::to_string(call_idx()) + ".fchk";
+    setenv("GUIFILE", guifile.c_str(), 1);
+  }
+  
+  exec_qchem();
 }
 
 
@@ -432,6 +473,23 @@ const std::string QM_QChem::get_qcprog(void){
 }
 
 
+const std::string QM_QChem::get_qcwdir(void){
+  char * pwd = std::getenv("PWD");
+  std::string qcwdir = std::string(pwd) + "/GQSH";
+
+  static bool create = true;
+
+  if (create){
+    struct stat st = {};
+    if (-1 == stat(qcwdir.c_str(), &st)){
+      mkdir(qcwdir.c_str(), 0700);
+    }
+    create = false;
+  }
+
+  return qcwdir;
+}
+
 /*
   In order of preference:
   1)               If $QCSCRATCH is set and an absolute path use it
@@ -478,12 +536,15 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
 }
 
 
+// FIXME: redirect stderr too? 2>&1 >  
 void QM_QChem::exec_qchem(void){
-  std::string cmd = // "cd " + qc_scratch_directory + "; " + // change WD->$QCSCRATCH
-    qc_executable + " " + qc_scratch_directory + "/" + qc_input_file + " " + qc_scratch_directory + " >" + qc_log_file;
+  std::string cmd = "cd " + get_qcwdir() + "; " + // change to  target WD
+    qc_executable + " " +
+    qc_scratch_directory + "/" + qc_input_file + " " +
+    qc_scratch_directory + " >" + qc_log_file;
   int status = std::system(cmd.c_str());
   if (status){
-    throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + qc_log_file);
+    throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + get_qcwdir() + "/" + qc_log_file);
   }
   first_call = false;
 }

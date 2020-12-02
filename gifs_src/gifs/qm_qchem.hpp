@@ -35,6 +35,8 @@ private:
   void get_ground_energy(arma::vec *e);
   void get_all_energies(arma::vec *e);
 
+  void do_state_analysis(void);
+  
   std::ofstream get_input_handle(void);
   void write_molecule_section(std::ostream &ifile);
   void write_rem_section(std::ostream &os, const REMKeys &options);
@@ -44,6 +46,8 @@ private:
   void parse_qm_gradient(arma::mat &g_qm);
   void parse_mm_gradient(arma::mat &g_mm);
   void parse_energies(arma::vec &e);
+
+  
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
 
@@ -51,11 +55,12 @@ private:
   
   const std::string get_qcprog(void);
   const std::string get_qcscratch(std::string conf_dir);
+  const std::string get_qcwdir(void);
 
   std::string qc_scratch_directory;
   std::string qc_executable;
   std::string qc_input_file = "GQSH.in";
-  std::string qc_log_file = "GQSH.out";
+  std::string qc_log_file = "QCHEM.out";
   std::string exchange_method;
   std::string basis_set;
   bool first_call = true;
@@ -63,6 +68,8 @@ private:
   bool singlets = true;  // Defaults for CIS calculation
   bool triplets = false;
 
+  bool state_analysis = false;
+  
   enum class S{
     energy,
     ex_energy,
