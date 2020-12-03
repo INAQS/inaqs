@@ -24,7 +24,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
   reader.add_entry("state_analysis", 0);
-  
+  reader.add_entry("save_nacvector", 0);
   return reader;
 }
 
@@ -68,6 +68,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     triplets = in;
     reader.get_data("state_analysis", in);
     state_analysis = in;
+    reader.get_data("save_nacvector", in);
+    save_nacvector = in;
   }
   
   std::string conf_scratch;
@@ -389,6 +391,14 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   size_t count = readQFMan(FILE_DERCOUP, nac->memptr(), 3 * (NMM + NQM), FILE_POS_BEGIN);
   if (count != 3 * (NMM + NQM)){
     throw std::runtime_error("Unable to parse NAC vector!");
+  }
+
+  //
+  if (save_nacvector){
+    std::string nacf = get_qcwdir() + "/" +
+      "nacvector." + std::to_string(call_idx());
+
+    nac->save(nacf);
   }
 }
 
