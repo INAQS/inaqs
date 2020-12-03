@@ -207,8 +207,12 @@ public:
     // get results
     template<typename T>
     inline bool get_data(const std::string& key, T& val) {
-      //if (!parsed){throw std::logic_error("Must parse before read!");}
-      return data.at(key).get_data(val); }
+      if (!parsed){throw std::logic_error("Must parse before read!");}
+      if (!data.at(key).get_data(val)){
+        throw std::logic_error("Unset option: " + key);
+      }
+      return true;
+    }
 
     Data operator[](const std::string& key) {return data.at(key);}
 

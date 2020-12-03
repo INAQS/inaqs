@@ -296,7 +296,9 @@ ConfigBlockReader::parse(FileHandle& file)
 
     char* line = file.find_line("[" + name + "]");
     if (!line) {
-        return -1;
+      parsed = true;
+      std::cerr << "Warning, no block found for "<< name << std::endl;
+      return -1;
     }
     // get next line
     line = file.get_line();
