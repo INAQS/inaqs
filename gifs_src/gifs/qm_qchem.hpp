@@ -69,6 +69,7 @@ private:
   bool triplets = false;
 
   bool state_analysis = false;
+  bool spin_flip = false;
   bool save_nacvector = false;
   
   enum class S{

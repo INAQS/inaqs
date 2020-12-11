@@ -24,6 +24,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
   reader.add_entry("state_analysis", 0);
+  reader.add_entry("spin_flip", 0);
   reader.add_entry("save_nacvector", 0);
   return reader;
 }
@@ -68,6 +69,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     triplets = in;
     reader.get_data("state_analysis", in);
     state_analysis = in;
+    reader.get_data("spin_flip", in);
+    spin_flip = in;
     reader.get_data("save_nacvector", in);
     save_nacvector = in;
   }
@@ -397,7 +400,6 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
       "nacvector." + std::to_string(call_idx());
-
     nac->save(nacf);
   }
 }
@@ -595,8 +597,11 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"max_scf_cycles", "500"},
      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
-  
-  if (first_call ){
+
+  if (spin_flip){
+    rem_keys.emplace("spin_flip", "1");
+  }
+  if (first_call){
     rem_keys.emplace("qmmm_ext_gifs", "1");
   }
   else{
