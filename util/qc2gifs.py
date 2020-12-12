@@ -96,28 +96,67 @@ def writeGRO(atoms, name="GIFS", residue="QM", output=sys.stdout):
     print("0 0 0", file=output)
 
 
-def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, output=sys.stdout):
+def get_block(block_name, f):
+    block = []
+    #start = re.compile('^\[ *' + block_name + ' *\].*', re.IGNORECASE|re.MULTILINE)
+    start = re.compile('default', re.IGNORECASE|re.MULTILINE)
+    stop = re.compile('^[\[#].*', re.MULTILINE)
+    copy = False
+    with open(f) as lines:
+        for line in lines:
+            line = line.strip()
+            if copy and stop.search(line) is not None:
+                copy = False
+                break
+            if start.search(line) is not None:
+                copy = True
+
+            if copy:
+                block.append(line.strip())
+    
+    return block
+
+
+def get_atomtypes(atoms, f):
+    ats = set([ ffDict[s2z[atom.S]] for atom in atoms])
+    output = []
+    with open(f) as lines:
+        for line in lines:
+            if ats & set(line.split()):
+                output.append(line.strip())
+    output.append('\n')
+    return output
+
+
+def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, noincludes=False, output=sys.stdout):
     # FIXME: want to be able to choose the water topology
 
     top = []
     
-    if forcefield is not None:
+    if noincludes:
+        top += get_block('defaults', ffDict['path'] / "forcefield.itp")
+        
+        top.append('[ atomtypes ]')
+        top.append('; name bond_type z mass charge ptype sigma espilon')
+        top += get_atomtypes(atoms, ffDict['path'] / "ffnonbonded.itp")
+
+    else:
         top.append('; Include forcefield parameters')
         top.append(f'#include "{forcefield}/forcefield.itp"')
     
-    top.append("[ moleculetype ]")
+    top.append("\n[ moleculetype ]")
     top.append("; Name         nrexcl")
     top.append(f"{name}        3")
 
-    top.append("[ atoms ]")
+    top.append("\n[ atoms ]")
     top.append(";  nr type         resnr residue atom      cgnr   charge       mass")
     for (i, a) in enumerate(atoms, start=1):
         top.append(fmtTopAtoms(i, a, residue))
 
-    top.append("[ system ]")
+    top.append("\n[ system ]")
     top.append("; Name")
     top.append(f"QMMM {name}")
-    top.append("[ molecules ]")
+    top.append("\n[ molecules ]")
     top.append("; Compound        #mols")
     top.append(f"{name}        1")
 
@@ -149,11 +188,13 @@ def genffD(forcefield):
 
     ff = Path(forcefield)
     if not ff.exists():
-        ff = Path(os.environ['GMXDATA']) / "top" / (forcefield + ".ff")
+        ff = Path(os.environ['GMXDATA']) / "top" / (forcefield)
+
+    ffDict['path']=ff
 
     with open (ff / "ffnonbonded.itp") as f:
         o = 0  # special case offset for OPLS-AA
-        if forcefield == "oplsaa":
+        if forcefield == "oplsaa.ff":
             o = 1
         for line in f:
             field = line.split()
@@ -174,7 +215,7 @@ def main():
     print("wrote", args.o + ".gro")
 
     with open(args.o + ".top", 'w') as f:
-        writeTOP(molecule, name=args.n, residue=args.r, forcefield=args.ff, output=f)
+        writeTOP(molecule, name=args.n, residue=args.r, forcefield=args.ff, noincludes=args.noincludes, output=f)
     print("wrote", args.o + ".top")
 
     print("Be sure to check your topology file for missing atoms")
@@ -191,8 +232,10 @@ def getArgs():
                         help="name for residue; defaults to QM")
     parser.add_argument("-n", metavar="name", default="GIFS",
                         help="system name; defaults to GIFS")
-    parser.add_argument("--ff", metavar="forcefield", default="oplsaa",
-                        help="forcefield to use; defaults to oplsaa")
+    parser.add_argument("--ff", metavar="forcefield", default="oplsaa.ff",
+                        help="forcefield to use; defaults to oplsaa.ff")
+    parser.add_argument("--noincludes", default=False, action='store_true',
+                        help="generate self-contained topology with no includes")
     return parser.parse_args()
 
 
