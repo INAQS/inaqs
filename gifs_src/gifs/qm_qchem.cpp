@@ -228,6 +228,7 @@ void QM_QChem::do_state_analysis(void){
 
 /*
   FIXME: Use another REM variable to save PREV_GEO
+  FIXME: Make sure this works with spin_slip methods
 */
 void QM_QChem::get_wf_overlap(arma::mat *U){  
   if (! called(S::wfoverlap)){
@@ -595,6 +596,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"sym_ignore",     "true"},
      {"qm_mm",          "true"},
      {"max_scf_cycles", "500"},
+     {"skip_charge_self_interact", "1"},
      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
 

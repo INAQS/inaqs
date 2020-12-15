@@ -1,7 +1,7 @@
 ; Run parameters
 integrator              = md-vv     ; velocity verlet integrator
-nsteps                  = 25        ; 2 * 25 = 50 fs
-dt                      = 0.002     ; 2 fs
+nsteps                  = 50        ; 0 * 25 = 50 fs
+dt                      = 0.0005    ; 2 fs
 
 ; QMMM settings
 QMMM	    = yes
@@ -28,8 +28,9 @@ lincs_order             = 4         ; also related to accuracy
 cutoff-scheme           = group     ; Buffered neighbor searching
 ns_type                 = grid      ; search neighboring grid cells
 nstlist                 = 10        ; 20 fs, largely irrelevant with Verlet
-rcoulomb                = 1.0       ; short-range electrostatic cutoff (in nm)
-rvdw                    = 1.0       ; short-range van der Waals cutoff (in nm)
+rcoulomb                = 100       ; short-range electrostatic cutoff (in nm)
+rvdw                    = 100       ; short-range van der Waals cutoff (in nm)
+rlist                   = 100 
 
 ; Electrostatics
 coulombtype             = Reaction-Field ;
@@ -45,7 +46,7 @@ ref_t                   = 300   300      ; reference temperature, one for each g
 pcoupl                  = no        ; no pressure coupling in NVT
 
 ; Periodic boundary conditions
-pbc                     = xyz        ; 3-D PBC
+pbc                     = no        ; 3-D PBC
 comm_mode 		= linear     ; angular>linear>none; remove center of mass translation and rotation
 
 ; Velocity generation
