@@ -98,8 +98,7 @@ def writeGRO(atoms, name="GIFS", residue="QM", output=sys.stdout):
 
 def get_block(block_name, f):
     block = []
-    #start = re.compile('^\[ *' + block_name + ' *\].*', re.IGNORECASE|re.MULTILINE)
-    start = re.compile('default', re.IGNORECASE|re.MULTILINE)
+    start = re.compile('^\[ *' + block_name + ' *\].*', re.IGNORECASE|re.MULTILINE)
     stop = re.compile('^[\[#].*', re.MULTILINE)
     copy = False
     with open(f) as lines:
@@ -128,7 +127,7 @@ def get_atomtypes(atoms, f):
     return output
 
 
-def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, noincludes=False, output=sys.stdout):
+def writeTOP(atoms, name="GIFS", system="GIFS", residue="QM", forcefield=None, noincludes=False, output=sys.stdout):
     # FIXME: want to be able to choose the water topology
 
     top = []
@@ -136,7 +135,7 @@ def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, noincludes=False
     if noincludes:
         top += get_block('defaults', ffDict['path'] / "forcefield.itp")
         
-        top.append('[ atomtypes ]')
+        top.append('\n[ atomtypes ]')
         top.append('; name bond_type z mass charge ptype sigma espilon')
         top += get_atomtypes(atoms, ffDict['path'] / "ffnonbonded.itp")
 
@@ -155,7 +154,7 @@ def writeTOP(atoms, name="GIFS", residue="QM", forcefield=None, noincludes=False
 
     top.append("\n[ system ]")
     top.append("; Name")
-    top.append(f"QMMM {name}")
+    top.append(f"QMMM {system}")
     top.append("\n[ molecules ]")
     top.append("; Compound        #mols")
     top.append(f"{name}        1")
@@ -215,7 +214,7 @@ def main():
     print("wrote", args.o + ".gro")
 
     with open(args.o + ".top", 'w') as f:
-        writeTOP(molecule, name=args.n, residue=args.r, forcefield=args.ff, noincludes=args.noincludes, output=f)
+        writeTOP(molecule, name=args.n, system=args.s, residue=args.r, forcefield=args.ff, noincludes=args.noincludes, output=f)
     print("wrote", args.o + ".top")
 
     print("Be sure to check your topology file for missing atoms")
@@ -231,6 +230,8 @@ def getArgs():
     parser.add_argument("-r", metavar="residue", default="QM",
                         help="name for residue; defaults to QM")
     parser.add_argument("-n", metavar="name", default="GIFS",
+                        help="molecule name; defaults to GIFS")
+    parser.add_argument("-s", metavar="name", default="GIFS",
                         help="system name; defaults to GIFS")
     parser.add_argument("--ff", metavar="forcefield", default="oplsaa.ff",
                         help="forcefield to use; defaults to oplsaa.ff")
