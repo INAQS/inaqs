@@ -1,0 +1,18 @@
+
+[ defaults ]
+;nbfunc   comb-rule   gen-pairs   fudgeLJ   fudgeQQ
+      1           1         yes       1.0       1.0
+
+
+; Include the molecule ITP
+#include "./135_HT_S0min_qforce.itp"
+
+
+[ system ]
+;       name
+135_HT_S0min
+
+
+[ molecules ]
+;   compound    n_mol
+135_HT_S0min        1
