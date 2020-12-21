@@ -1,4 +1,4 @@
-
+#include <ctime>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -530,6 +530,10 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   }
   else{
     scratch_path = std::string(qc_str);
+    // If using a global scratch path, make it unique
+    // FIXME: could still collide if QCSCRATCH is on a network device
+    std::srand(getpid());
+    scratch_path += "/GIFS_" + std::to_string(std::time(nullptr)) + "_" + std::to_string(rand());
   }
 
   /* Make sure the directory exists; create otherwise */
@@ -544,7 +548,9 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
      the empty string.
   */
   setenv("QCSCRATCH", scratch_path.c_str(), true);
+  std::cout << "taking scratch path to be: " << scratch_path << std::endl;
 
+  
   return scratch_path;
 }
 
@@ -554,7 +560,7 @@ void QM_QChem::exec_qchem(void){
   std::string cmd = "cd " + get_qcwdir() + "; " + // change to  target WD
     qc_executable + " " +
     qc_scratch_directory + "/" + qc_input_file + " " +
-    qc_scratch_directory + " >" + qc_log_file;
+    qc_scratch_directory + " >" + qc_log_file + " 2>&1";
   int status = std::system(cmd.c_str());
   if (status){
     throw std::runtime_error("Q-Chem could not be called or exited abnormally; see " + get_qcwdir() + "/" + qc_log_file);
