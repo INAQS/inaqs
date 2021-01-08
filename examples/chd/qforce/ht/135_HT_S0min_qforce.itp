@@ -11,9 +11,9 @@
 ;            ==============================
 
 [ atomtypes ]
-;   name     mass   charge  t           c6          c12
-      HC   0.0000   0.0000  A  8.46400e-05  1.51290e-08
-       C   0.0000   0.0000  A  2.34062e-03  4.93728e-06
+;   name at_num    mass   charge  t           c6          c12
+      HC  1  0.0000   0.0000  A  8.46400e-05  1.51290e-08
+       C  6  0.0000   0.0000  A  2.34062e-03  4.93728e-06
 
 [ nonbond_params ]
 ;  name1    name2   type             c6            c12
