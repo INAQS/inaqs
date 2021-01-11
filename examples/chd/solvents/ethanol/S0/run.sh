@@ -5,8 +5,8 @@ source /data/home/vale/projects/GQSH/vars.gqsh
 set -euo pipefail
 
 readonly NAME=13CHD_ethanol
-readonly VC=/data/home/vale/projects/GQSH/virtualchemistry.org
-readonly GIFS=/data/home/vale/projects/GQSH/gifs
+readonly VC=${VC:-/data/home/vale/projects/GQSH/virtualchemistry.org}
+readonly GIFS=${GIFS:-/data/home/vale/projects/GQSH/gifs}
 
 # FIXME: better to determine all of these from input or programatically
 ## Solute parameters
@@ -20,7 +20,7 @@ readonly solvent_name="ethanol_T298.15"
 readonly solvent_itp="$VC/GAFF/ITP/ethanol.itp"
 readonly solvent_pdb="$VC/GAFF/PDB/LIQ/${solvent_name}.pdb.gz"
 readonly RSOL="ETOH"
-readonly solvent_atoms=9
+readonly solvent_atoms=$(grep -c MOL $solvent_itp)
 
 # don't litter back-ups all over the place
 export GMX_MAXBACKUP=-1
