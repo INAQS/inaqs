@@ -74,6 +74,10 @@ QM_QChem::QM_QChem(FileHandle& fh,
     reader.get_data("save_nacvector", in);
     save_nacvector = in;
   }
+
+  if (singlets && triplets){
+    std::cerr << "WARNING: selecting singlets and triplets together not supported!" << std::endl;
+  }
   
   std::string conf_scratch;
   reader.get_data("qc_scratch", conf_scratch);
