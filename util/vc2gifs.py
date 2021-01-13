@@ -90,6 +90,8 @@ def mergeTop(old_top, itp, residue):
     top += getBlock('defaults', itp)
 
     top += mergeATypes(itp, old_top)
+
+    # what about the [ nonbond_params ] block?
     
     top += getBlock('moleculetype', old_top)
     top += getBlock('atoms', old_top)
