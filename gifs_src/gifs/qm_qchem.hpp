@@ -36,6 +36,7 @@ private:
   void get_all_energies(arma::vec *e);
 
   void do_state_analysis(void);
+  void do_record_spectrum(void);
   
   std::ofstream get_input_handle(void);
   void write_molecule_section(std::ostream &ifile);
@@ -67,10 +68,11 @@ private:
 
   bool singlets = true;  // Defaults for CIS calculation
   bool triplets = false;
-
-  bool state_analysis = false;
   bool spin_flip = false;
+  
+  bool state_analysis = false;
   bool save_nacvector = false;
+  bool record_spectrum = false;
   
   enum class S{
     energy,
@@ -93,7 +95,8 @@ private:
 #define FILE_EFIELD           329   // 
 #define FILE_DERCOUP          967   // Derrivative coupling 
 #define FILE_WF_OVERLAP       398   // wavefunction overlap
-#define FILE_DIAB_ROT_MAT     971   // for diabatization rotations
+#define FILE_DIAB_ROT_MAT     941   // for diabatization rotations
+#define FILE_TRANS_DIP_MOM    942   // Transition dipole moments: states along cols, rows: strength, x, y, z
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11

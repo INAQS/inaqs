@@ -26,6 +26,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("state_analysis", 0);
   reader.add_entry("spin_flip", 0);
   reader.add_entry("save_nacvector", 0);
+  reader.add_entry("record_spectrum", 0);
   return reader;
 }
 
@@ -73,6 +74,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     spin_flip = in;
     reader.get_data("save_nacvector", in);
     save_nacvector = in;
+    reader.get_data("record_spectrum", in);
+    record_spectrum = in;
   }
 
   if (singlets && triplets){
@@ -195,6 +198,49 @@ void QM_QChem::get_properties(PropMap &props){
   if (state_analysis){
     do_state_analysis();
   }
+
+  if (record_spectrum){
+    do_record_spectrum();
+  }
+}
+
+
+void QM_QChem::do_record_spectrum(void){
+  arma::vec e(1);
+  if (!called(S::ex_energy)){
+    // dummy call to make sure the transition dipoles and energies are written
+    get_all_energies(&e); 
+  }
+
+  e.set_size(excited_states);
+  arma::mat mu(4, excited_states);
+  // for mu, the first row is the oscillator strength
+  
+  if (excited_states != readQFMan(FILE_SET_ENERGY, e.memptr(), excited_states, FILE_POS_BEGIN)){
+    throw std::runtime_error("Unable to parse excited energies");
+  }
+
+  if( excited_states *4 != readQFMan(FILE_TRANS_DIP_MOM, mu.memptr(), excited_states * 4, FILE_POS_BEGIN)){
+    throw std::runtime_error("Unable to parse transition dipole moments");
+  }
+  
+  //write spectrum to file as [excitation energy] [strength]
+  {
+    arma::mat spec(excited_states,2);
+    spec.col(0) = e;
+    spec.col(1) = mu.row(0).t();
+    std::string specf = get_qcwdir() + "/" + "spectrum.dat";
+
+    std::ofstream stream;
+    stream.open(specf, std::ios::out | std::ios::app | std::ios::binary);
+    if (!stream){
+      throw std::runtime_error("Cannot open spectrum file, " + specf);
+    }
+    else{
+      spec.save(stream, arma::raw_ascii);
+    }
+  }
+
 }
 
 
