@@ -97,10 +97,9 @@ BOMD::update_gradient()
 {
     qm->update();
     PropMap props{};
-    props.emplace(QMProperty::qmgradient, &qm_grd);
-    props.emplace(QMProperty::mmgradient, &mm_grd);
+    props.emplace(QMProperty::qmgradient, {active_state}, &qm_grd);
+    props.emplace(QMProperty::mmgradient, {active_state}, &mm_grd);
     props.emplace(QMProperty::energies, {active_state}, &energy);
-    //
     qm->get_properties(props);
     //
     return energy[active_state];
