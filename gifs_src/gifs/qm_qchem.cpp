@@ -19,6 +19,8 @@ QM_QChem::qchem_reader() {
   reader.add_entry("qc_scratch", "DEFAULT");
   reader.add_entry("basis", types::STRING);
   reader.add_entry("exchange", types::STRING);
+  reader.add_entry("scf_algorithm", "DIIS");
+  // FIXME: add scf_guess and default to read
   reader.add_entry("nthreads", 1);
   // FIXME: ConfigReader should support bool
   reader.add_entry("singlets", 1);
@@ -61,6 +63,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
   reader.get_data("basis", basis_set);
   reader.get_data("exchange", exchange_method);
+  reader.get_data("scf_algorithm", scf_algorithm);
 
   {
     int in;
@@ -636,6 +639,7 @@ REMKeys QM_QChem::excited_rem(void){
   REMKeys excited
     {
       {"cis_n_roots", std::to_string(excited_states)},
+      {"set_iter", "50"},
       {"cis_singlets", std::to_string(singlets)},  
       {"cis_triplets", std::to_string(triplets)} 
     };
@@ -649,6 +653,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
     {
      {"method",         exchange_method},
      {"basis",          basis_set},
+     {"scf_algorithm",  scf_algorithm},
      {"sym_ignore",     "true"},
      {"qm_mm",          "true"},
      {"max_scf_cycles", "500"},

@@ -58,12 +58,16 @@ private:
   const std::string get_qcscratch(std::string conf_dir);
   const std::string get_qcwdir(void);
 
+
+  // FIXME: should refactor these into an options class
   std::string qc_scratch_directory;
   std::string qc_executable;
   std::string qc_input_file = "GQSH.in";
   std::string qc_log_file = "QCHEM.out";
   std::string exchange_method;
+  std::string scf_algorithm;
   std::string basis_set;
+ 
   bool first_call = true;
 
   bool singlets = true;  // Defaults for CIS calculation
