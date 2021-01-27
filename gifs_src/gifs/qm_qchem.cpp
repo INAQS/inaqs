@@ -639,7 +639,7 @@ REMKeys QM_QChem::excited_rem(void){
   REMKeys excited
     {
       {"cis_n_roots", std::to_string(excited_states)},
-      {"set_iter", "50"},
+      {"max_cis_cycles", "500"}, // same as set_iter
       {"cis_singlets", std::to_string(singlets)},  
       {"cis_triplets", std::to_string(triplets)} 
     };
