@@ -2,6 +2,8 @@
 #define __GIFS_FSSH_HPP
 
 #include <armadillo>
+#include <memory>
+#include "decoherence.hpp"
 #include "bomd.hpp"
 #include "configreader.hpp"
 #include "electronic.hpp"
@@ -10,7 +12,7 @@ class FSSH: public BOMD{
 public:
   explicit FSSH(arma::mat& qm_grd,
                 arma::mat& mm_grd);
-  virtual ~FSSH() {};
+  virtual ~FSSH() { delete decoherence; };
 
   virtual double update_gradient(void) override;
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) override;
@@ -20,7 +22,7 @@ protected:
   virtual ConfigBlockReader setup_reader() override;
   void electonic_evolution(void);
   void backpropagate_gradient_velocities(arma::mat &total_gradient, arma::mat &velocities, arma::vec &masses);
-  void hop_and_scale(arma::mat &velocities, arma::vec &mass);
+  bool hop_and_scale(arma::mat &velocities, arma::vec &mass);
   arma::uword sample_discrete(const arma::vec &p);
 
   arma::mat U;
@@ -40,10 +42,9 @@ protected:
   bool hopping = false;
 
   Electronic c {};
-
-  arma::mat nac;
+  Decoherence *decoherence {nullptr};
   
-  std::mt19937_64 mt64_generator;
+  arma::mat nac;
 };
 
 #endif

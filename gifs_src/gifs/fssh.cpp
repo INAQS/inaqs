@@ -1,6 +1,7 @@
 #include "fssh.hpp"
 #include "electronic.hpp"
 #include "constants.hpp"
+#include "decoherence_afssh.hpp"
 #include <armadillo>
 #include <complex>
 #include <cmath>
@@ -15,6 +16,7 @@ FSSH::setup_reader()
     reader.add_entry("delta_e_tol", 1e-4);
 
     reader.add_entry("amplitude_file", "cs.dat");
+    reader.add_entry("decoherence", "");
 
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
     
@@ -44,18 +46,38 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   reader.get_data("excited_states", excited_states);
 
   reader.get_data("amplitude_file", amplitude_file);
-  
+
+
+  /* 
+     Must set rng seed before decoherence because Decoherence will use
+     armadillo random number generator
+  */
   {
     size_t seed = 0; // a default seed is set in setup_reader(); this value will not be propagated.
 
     // FIXME: ConfigReader won't throw an error if the wrong type is passed in
     reader.get_data("random_seed", seed);
-    mt64_generator.seed(seed);
     arma::arma_rng::set_seed(seed);
 
     std::cerr << "FSSH random seed=" << seed << std::endl;
   }
 
+  
+  {
+    std::string decoherence_in;
+    reader.get_data("decoherence", decoherence_in);
+
+    if (decoherence_in == "") {
+      // do nothing; already nullptr
+    } else if (decoherence_in == "afssh" ||
+               decoherence_in == "jain2016" ) {
+      decoherence = new AFSSH(qm, dtc);
+    }
+    else{
+      throw std::runtime_error("Decoherence class, '" + decoherence_in + "', not recognized!");
+    }
+  }
+  
   shstates = excited_states + 1 - min_state;
   if (shstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
@@ -225,11 +247,14 @@ void FSSH::electonic_evolution(void){
 
 
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
+// returns true if the hop succeeds without frustration
+bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   if (! hopping){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
 
+  bool hop_succeeds = false;
+  
   /*
     Recall that in our implementation, the kinetic energy reservoir to
     balance a hop includes the MM atoms, a region of arbitrary
@@ -277,6 +302,7 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
     vel = vel + alpha * nacv;
     active_state = target_state;
+    hop_succeeds = true;
   }
   else{  // frustrated hop
     std::cerr << "Hop is frustrated---will remain on " << active_state + min_state << "; ";
@@ -328,6 +354,8 @@ void FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     }
   }
   hopping = false;
+
+  return hop_succeeds;
 }
 
 
@@ -402,6 +430,8 @@ double FSSH::update_gradient(void){
 }
 
 
+// FIXME: should alter this interface so we take inverse masses
+
 // This hook comes after the first MD half-step (and before constraint forces are calculated in gromacs)
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy){
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy); // call parent to update edrift
@@ -410,14 +440,15 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     throw std::logic_error("Cannot do surface hopping with massless atoms or momentum sinks!");
   }
 
+  bool hopped = false;
   if (!hopping){
     // nothing to do
-    return false;
   }
   else{
     /*
-      FIXME: For QM/MM some species hidden from the QM, this energy is
-      for the TOTAL system, which is probably not what we want.
+      FIXME: For QM/MM with some species hidden from the QM region,
+      this energy is for the TOTAL system, which is probably not what
+      we want.
     */
     if(std::abs(edrift) > delta_e_tol){
       std::cerr <<  "Trivial crossing: " << active_state + min_state << "->" << target_state + min_state << std::endl;
@@ -428,9 +459,17 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     }
     else{
       std::cerr <<  "Attempting hop: " << active_state + min_state << "->" << target_state + min_state << std::endl;
-      hop_and_scale(velocities, masses);
+      if (hop_and_scale(velocities, masses)){
+        decoherence->hop(c);
+      }
       hopping = false;
     }
+    hopped = true;
   }
-  return true;
+
+  if (decoherence){
+    decoherence->decohere(active_state, c);
+  }
+  
+  return hopped;
 }

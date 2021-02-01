@@ -223,12 +223,21 @@ void QM_QChem::do_record_spectrum(void){
     throw std::runtime_error("Unable to parse excited energies");
   }
 
-  if( excited_states *4 != readQFMan(FILE_TRANS_DIP_MOM, mu.memptr(), excited_states * 4, FILE_POS_BEGIN)){
+  if( excited_states * 4 != readQFMan(FILE_TRANS_DIP_MOM, mu.memptr(), excited_states * 4, FILE_POS_BEGIN)){
     throw std::runtime_error("Unable to parse transition dipole moments");
   }
   
   //write spectrum to file as [excitation energy] [strength]
   {
+
+    // if (spin_flip && !triplets){
+    //   e = e - e[0]; // the true ground state is the first excited state
+    // }
+
+    if (e[0] < 0){ // the true ground state is the first excited state
+      e = e - e[0];
+    }
+    
     arma::mat spec(excited_states,2);
     spec.col(0) = e;
     spec.col(1) = mu.row(0).t();
@@ -663,6 +672,8 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
 
   if (spin_flip){
     rem_keys.emplace("spin_flip", "1");
+    // FIXME: perhaps only for record_spectrum?
+    rem_keys.emplace("sts_mom", "1");
   }
   if (first_call){
     rem_keys.emplace("qmmm_ext_gifs", "1");
