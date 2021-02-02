@@ -61,22 +61,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     std::cerr << "FSSH random seed=" << seed << std::endl;
   }
-
-  
-  {
-    std::string decoherence_in;
-    reader.get_data("decoherence", decoherence_in);
-
-    if (decoherence_in == "") {
-      // do nothing; already nullptr
-    } else if (decoherence_in == "afssh" ||
-               decoherence_in == "jain2016" ) {
-      decoherence = new AFSSH(qm, dtc);
-    }
-    else{
-      throw std::runtime_error("Decoherence class, '" + decoherence_in + "', not recognized!");
-    }
-  }
   
   shstates = excited_states + 1 - min_state;
   if (shstates < 2){
@@ -87,6 +71,23 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     throw std::range_error("Active state not in the range of computed states!");
   }
 
+  {
+    std::string decoherence_in;
+    reader.get_data("decoherence", decoherence_in);
+
+    if (decoherence_in == "") {
+      // do nothing; already nullptr
+    } else if (decoherence_in == "afssh" ||
+               decoherence_in == "jain2016" ) {
+      // FIXME: qm, at this point is a null pointer; could pass a pointer to a pointer such that it was resolved by the time we needed it...
+      decoherence = new AFSSH(qm, dtc, min_state, shstates, NQM(), NMM());
+    }
+    else{
+      throw std::runtime_error("Decoherence class, '" + decoherence_in + "', not recognized!");
+    }
+  }
+
+  
   active_state -= min_state;
 
   if (min_state != 1){
@@ -175,8 +176,9 @@ void FSSH::electonic_evolution(void){
   qm->get_properties(props);
 
   Electronic::phase_match(U);
-  T = real(arma::logmat(U)) / dtc;
+  T = arma::real(arma::logmat(U)) / dtc;
 
+  // R.B.: energy was updated in update_gradient()
   arma::mat V = diagmat(energy.tail(shstates));
 
   /*
@@ -283,8 +285,8 @@ bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
 
   arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
   for(arma::uword i = 0 ; i < m.n_elem ; i++){
-    m[i] =  mass[i/3]; // without bounds check
-    //m(i) =  mass(i/3); // with bounds check
+    // no reason to do this without a bounds [] check!
+    m(i) =  mass(i/3);
   }
 
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
@@ -409,7 +411,7 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
 
 // This is our primary hook into the Gromacs (or other) MD loop
 double FSSH::update_gradient(void){
-  qm->update();
+  qm->update(); // FIXME: perhaps move this call into the parent and then always call the parent at start of update_gradient() ?
 
   PropMap props{};
   props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
@@ -460,7 +462,10 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     else{
       std::cerr <<  "Attempting hop: " << active_state + min_state << "->" << target_state + min_state << std::endl;
       if (hop_and_scale(velocities, masses)){
-        decoherence->hop(c);
+        decoherence->hopped(c, active_state);
+      }
+      else{
+        decoherence->frustrated(c, active_state);
       }
       hopping = false;
     }
@@ -468,7 +473,13 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   }
 
   if (decoherence){
-    decoherence->decohere(active_state, c);
+    // FIXME: should do this at the start of this function and then pass it around 
+    arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
+    for(arma::uword i = 0 ; i < m.n_elem ; i++){
+      // no reason to do this without a bounds [] check!
+      m(i) =  masses(i/3);
+    }
+    decoherence->decohere(c, U, active_state, velocities.as_col(), m);
   }
   
   return hopped;

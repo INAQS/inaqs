@@ -11,21 +11,24 @@
 */
 class Decoherence {
 public:
-  explicit Decoherence (QMInterface *qm, double dtc): qm{qm}, dtc{dtc} {};
+  explicit Decoherence (QMInterface *qm, const double dtc,
+                        const size_t min_state,
+                        const size_t hopping_states,
+                        const size_t nqm, const size_t nmm):
+    qm{qm}, dtc{dtc}, min_state{min_state}, nstates{hopping_states}, nqm{nqm}, nmm{nmm} {};
   virtual ~Decoherence(void) {};
 
-  /*
-    FIXME: states in Electronic are indexed starting from min_state,
-    but Decoherence doesn't know what min_state is and therefore
-    cannot make calls to the QMInterface.
-  */
-  virtual bool decohere(size_t active, Electronic &c) = 0;
-  virtual void hop(Electronic &c) = 0;
+  virtual bool decohere(Electronic &c, const arma::mat U, const size_t active_state, const arma::vec v, const arma::vec m) = 0;
+  virtual void hopped(Electronic &c, size_t active_state) = 0;
+  virtual void frustrated(Electronic &c, size_t active_state) = 0;
   
 protected:
   QMInterface *qm;
-  double dtc;
-  std::mt19937_64 mt64_generator;
+  const double dtc;
+  const size_t min_state;
+  const size_t nstates;
+  const size_t nqm;
+  const size_t nmm;
 };
 
 #endif

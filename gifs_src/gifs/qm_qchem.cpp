@@ -290,7 +290,7 @@ void QM_QChem::do_state_analysis(void){
 
 /*
   FIXME: Use another REM variable to save PREV_GEO
-  FIXME: Make sure this works with spin_slip methods
+  FIXME: Make sure this works with spin_flip methods
 */
 void QM_QChem::get_wf_overlap(arma::mat *U){  
   if (! called(S::wfoverlap)){
