@@ -9,7 +9,7 @@
 
 class AFSSH: public Decoherence{
 public:
-  explicit AFSSH(QMInterface *qm, const double dtc,
+  explicit AFSSH(QMInterface ** const qm, const double dtc,
                  const size_t min_state,
                  const size_t shstates,
                  const size_t nqm, const size_t nmm);

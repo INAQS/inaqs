@@ -11,7 +11,7 @@
 */
 class Decoherence {
 public:
-  explicit Decoherence (QMInterface *qm, const double dtc,
+  explicit Decoherence (QMInterface ** const qm, const double dtc,
                         const size_t min_state,
                         const size_t hopping_states,
                         const size_t nqm, const size_t nmm):
@@ -23,7 +23,7 @@ public:
   virtual void frustrated(Electronic &c, size_t active_state) = 0;
   
 protected:
-  QMInterface *qm;
+  QMInterface ** const qm;
   const double dtc;
   const size_t min_state;
   const size_t nstates;

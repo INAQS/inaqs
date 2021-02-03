@@ -80,7 +80,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     } else if (decoherence_in == "afssh" ||
                decoherence_in == "jain2016" ) {
       // FIXME: qm, at this point is a null pointer; could pass a pointer to a pointer such that it was resolved by the time we needed it...
-      decoherence = new AFSSH(qm, dtc, min_state, shstates, NQM(), NMM());
+      decoherence = new AFSSH(&qm, dtc, min_state, shstates, NQM(), NMM());
     }
     else{
       throw std::runtime_error("Decoherence class, '" + decoherence_in + "', not recognized!");

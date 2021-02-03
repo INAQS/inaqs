@@ -1,7 +1,7 @@
 #include "decoherence_afssh.hpp"
 
 // FIXME: should we include a way to specify the initial moments?
-AFSSH::AFSSH(QMInterface *qm, const double dtc,
+AFSSH::AFSSH(QMInterface ** const qm, const double dtc,
              const size_t min_state,
              const size_t shstates,
              const size_t nqm, const size_t nmm):
@@ -11,9 +11,9 @@ AFSSH::AFSSH(QMInterface *qm, const double dtc,
   dP.set_size(shstates);
   dF.set_size(shstates);
 
-  for (auto &v: dR) {v.set_size(nqm + nmm);}
-  for (auto &v: dP) {v.set_size(nqm + nmm);}
-  for (auto &v: dF) {v.set_size(nqm + nmm);}
+  for (auto &v: dR) {v.set_size(3*(nqm + nmm));}
+  for (auto &v: dP) {v.set_size(3*(nqm + nmm));}
+  for (auto &v: dF) {v.set_size(3*(nqm + nmm));}
 
   V.set_size(shstates);
 }
@@ -36,7 +36,7 @@ bool AFSSH::decohere(Electronic &c, const arma::mat U, const size_t active_state
   build_invtau(invtau_d, invtau_r, U, active_state, v);
 
   {
-    // FIXME: (zeyu?) verify that we do this for *all* states; not just the largest inverse tau
+    // N.B. we do this for states; multiple collapses update ca appropriately
     const double eta = arma::randu();
     for (arma::uword j = 0; j < nstates; j++){
       if (eta < dtc * invtau_d(j)){
@@ -70,13 +70,10 @@ void AFSSH::build_invtau(arma::vec &invtau_d, arma::vec &invtau_r, const arma::m
   for (arma::uword n = 0; n < nstates; n++){
     // jain eq. 19
     invtau_r(n) = -1.0 * arma::as_scalar(dF(n).t() * (dR(n) - dR(a))) / 2;
-      
+    
     // jain eq. 54
-    invtau_d(n) =
-      arma::as_scalar(
-                      (dF(n).t() * (dR(n) - dR(a)) / 2.0) -
-                      (2 * arma::norm(T(a,n) * (V(a) - V(n)) * v.t() * (dR(n) - dR(a))) / (v.t() * v))
-                      );
+    invtau_d(n) = -1.0 * invtau_r(n) -
+      2 * arma::norm( T(a,n) * (V(a) - V(n)) * v.t() * (dR(n) - dR(a)) ) / arma::as_scalar(v.t() * v);
   }
 }
 
@@ -92,10 +89,10 @@ void AFSSH::evolve_moments(const arma::mat U, const arma:: vec m){
   {
     /*
       Two notes on this seciont: 1) For all calls to
-      qm->get_properties(), we need to add min_state as in fssh.cpp. 2)
-      There's no need to attempt to get the active state gradient first;
-      qm_qchem will recalculate it, but will skip skip over
-      scfman/setman so it'll be fast.
+      (*qm)->get_properties(), we need to add min_state as in
+      fssh.cpp. 2) There's no need to attempt to get the active state
+      gradient first; qm_qchem will recalculate it, but will skip skip
+      over scfman/setman so it'll be fast.
     */
     
     arma::uvec states(nstates);
@@ -112,19 +109,16 @@ void AFSSH::evolve_moments(const arma::mat U, const arma:: vec m){
     // R.B.: with any idx, energies will get all (excited_states + 1) states
     // FIXME: should make energies behavior consistent with gradients
     props.emplace(QMProperty::energies, {nstates}, &energy);
-    qm->get_properties(props);
+    (*qm)->get_properties(props);
 
     // trim the energies that are not needed
     V = energy.tail(nstates);
   }
   
-  
   // FIXME: (joe?) How to deal with mm forces in moment evolution?
   
   // FIXME: fill in moment evolution
 
-
-  
   }
 
 /* Jain 2016 step 6; reset moments in event of hop */
