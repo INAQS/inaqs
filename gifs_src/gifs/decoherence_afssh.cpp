@@ -7,13 +7,15 @@ AFSSH::AFSSH(QMInterface ** const qm, const double dtc,
              const size_t nqm, const size_t nmm):
   Decoherence{qm, dtc, min_state, shstates, nqm, nmm} {
   // Set sizes for momments and potentials
-  dR.set_size(shstates);
-  dP.set_size(shstates);
-  dF.set_size(shstates);
-
+  dR.set_size(shstates); dP.set_size(shstates); dF.set_size(shstates);
   for (auto &v: dR) {v.set_size(3*(nqm + nmm));}
   for (auto &v: dP) {v.set_size(3*(nqm + nmm));}
   for (auto &v: dF) {v.set_size(3*(nqm + nmm));}
+
+  dR_.set_size(shstates); dP_.set_size(shstates); dF_.set_size(shstates);
+  for (auto &v: dR_) {v.set_size(3*(nqm + nmm));}
+  for (auto &v: dP_) {v.set_size(3*(nqm + nmm));}
+  for (auto &v: dF_) {v.set_size(3*(nqm + nmm));}
 
   V.set_size(shstates);
 }
@@ -25,7 +27,7 @@ bool AFSSH::decohere(Electronic &c, const arma::mat U, const size_t active_state
   bool collapsed = false;
 
   /* Jain step 7 */
-  evolve_moments(U, m);
+  evolve_moments(c, U, active_state, m);
 
   /* Jain step 8 */
 
@@ -41,6 +43,7 @@ bool AFSSH::decohere(Electronic &c, const arma::mat U, const size_t active_state
     for (arma::uword j = 0; j < nstates; j++){
       if (eta < dtc * invtau_d(j)){
         collapse(c, active_state, j);
+        // FIXME: this should take the state as a parameter
         reset_moments();
         collapsed = true;
       }
@@ -78,7 +81,7 @@ void AFSSH::build_invtau(arma::vec &invtau_d, arma::vec &invtau_r, const arma::m
 }
 
 /* Jain step 7 */
-void AFSSH::evolve_moments(const arma::mat U, const arma:: vec m){
+void AFSSH::evolve_moments(const Electronic &c, const arma::mat U, const size_t a, const arma::vec m){
   (void) U;
   (void) m;
 
@@ -86,13 +89,14 @@ void AFSSH::evolve_moments(const arma::mat U, const arma:: vec m){
   arma::cube gqm(3, nqm, nstates);
   arma::cube gmm(3, nmm, nstates);
 
+  // This block fills gqm, gmm, and V with nstates objects
   {
     /*
-      Two notes on this seciont: 1) For all calls to
+      Two notes on this secion: 1) For all calls to
       (*qm)->get_properties(), we need to add min_state as in
       fssh.cpp. 2) There's no need to attempt to get the active state
-      gradient first; qm_qchem will recalculate it, but will skip skip
-      over scfman/setman so it'll be fast.
+      gradient first; qm_qchem will recalculate it, but will skip over
+      scfman/setman so it'll be fast.
     */
     
     arma::uvec states(nstates);
@@ -114,12 +118,55 @@ void AFSSH::evolve_moments(const arma::mat U, const arma:: vec m){
     // trim the energies that are not needed
     V = energy.tail(nstates);
   }
-  
-  // FIXME: (joe?) How to deal with mm forces in moment evolution?
-  
-  // FIXME: fill in moment evolution
 
+  // Set dF
+  for(arma::uword j = 0; j < nstates; j++){
+    dF(j) = arma::vectorise(arma::join_horiz(gqm.slice(j) - gqm.slice(a),
+                                             gmm.slice(j) - gmm.slice(a)));
   }
+
+  // diabatic dF; eq 49
+  for(arma::uword j = 0; j < nstates; j++){
+    dF_(j).zeros();
+    for(arma::uword k = 0; k < nstates; k++){
+      dF_(j) += dF(k) * U(j,k) * U(j,k);
+    }
+  }
+
+
+  /* 
+     FIXME: Need to think carefully about when this is called and how
+     to make sure we have the correct forces (at t0 and (t0 + dtc));
+     it may be that we need to have mutiple hooks and conform to
+     Gromacs' verlet-as-leapfrog implementation.
+  */
+
+  
+  
+  // evolve diabatic moments; eqs 47, 48
+  for(arma::uword j = 0; j < nstates; j++){
+    dR_(j) += dtc * (dP_(j)  + 0.5*dtc*dF_(j)*std::real(c.p(j,j))) / m ;
+  }
+
+  for (arma::uword j = 0; j < nstates; j++){
+    // FIXME: need to do this in two passes with 0.5 F(t0) + 0.5 F(t0 + dtc);
+    dP_(j) += dtc * dF_(j) * std::real(c.p(j,j));
+  }
+  
+
+  // diabatic -> adiabatic R and P moments; eqs 50, 51
+  for(arma::uword j = 0; j < nstates; j++){
+    dR(j).zeros();
+    dP(j).zeros();
+    for(arma::uword k = 0; k < nstates; k++){
+      dR(j) += dR_(k) * U(k,j) * U(k,j);
+      dP(j) += dP_(k) * U(k,j) * U(k,j);
+    }
+  }
+
+  // FIXME: (joe?) How to deal with mm region/forces in moment evolution?
+  // FIXME: (joe?) From which classical time-step should we use the density matrix?  
+}
 
 /* Jain 2016 step 6; reset moments in event of hop */
 void AFSSH::hopped(Electronic &c, size_t active_state){
@@ -154,7 +201,6 @@ void AFSSH::collapse(Electronic &c, size_t active_state, size_t collapse_state){
 
 /* Jain 8b */
 void AFSSH::reset_moments(void){
-  for (auto &v: dR) {v.zeros();}
-  for (auto &v: dP) {v.zeros();}
-  for (auto &v: dF) {v.zeros();}
+  for (auto &v: dR) {v.zeros();}  for (auto &v: dR_) {v.zeros();}
+  for (auto &v: dP) {v.zeros();}  for (auto &v: dP_) {v.zeros();}
 }

@@ -25,6 +25,11 @@ public:
   const std::complex<double> operator()(arma::uword i, arma::uword j) const {return amplitudes(i,j);}
   const std::complex<double> operator()(arma::uword i) const {return amplitudes(i,0);}
   const arma::cx_vec operator()(void) const {return amplitudes.col(0);}
+
+  const arma::cx_mat p(void) const { return amplitudes.col(0) * amplitudes.col(0).t();}
+  const std::complex<double> p(arma::uword i, arma::uword j) const {return amplitudes(i,0) * std::conj(amplitudes(j,0));}
+  
+  // modification operator
   std::complex<double> & operator[](arma::uword i) {return amplitudes(i,0);}
 
   const arma::cx_mat get(void) const { return amplitudes; }

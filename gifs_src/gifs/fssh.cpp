@@ -462,10 +462,9 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     else{
       std::cerr <<  "Attempting hop: " << active_state + min_state << "->" << target_state + min_state << std::endl;
       if (hop_and_scale(velocities, masses)){
-        decoherence->hopped(c, active_state);
-      }
-      else{
-        decoherence->frustrated(c, active_state);
+        if (decoherence){
+          decoherence->hopped(c, active_state);
+        }
       }
       hopping = false;
     }

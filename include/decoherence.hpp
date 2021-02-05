@@ -20,7 +20,6 @@ public:
 
   virtual bool decohere(Electronic &c, const arma::mat U, const size_t active_state, const arma::vec v, const arma::vec m) = 0;
   virtual void hopped(Electronic &c, size_t active_state) = 0;
-  virtual void frustrated(Electronic &c, size_t active_state) = 0;
   
 protected:
   QMInterface ** const qm;
