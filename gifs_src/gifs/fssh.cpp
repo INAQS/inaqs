@@ -79,7 +79,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
       // do nothing; already nullptr
     } else if (decoherence_in == "afssh" ||
                decoherence_in == "jain2016" ) {
-      // FIXME: qm, at this point is a null pointer; could pass a pointer to a pointer such that it was resolved by the time we needed it...
       decoherence = new AFSSH(&qm, dtc, min_state, shstates, NQM(), NMM());
     }
     else{
@@ -411,21 +410,27 @@ void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::ma
 
 // This is our primary hook into the Gromacs (or other) MD loop
 double FSSH::update_gradient(void){
-  qm->update(); // FIXME: perhaps move this call into the parent and then always call the parent at start of update_gradient() ?
+  qm->update();
 
-  PropMap props{};
-  props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
-  props.emplace(QMProperty::mmgradient, {min_state + active_state}, &mm_grd);
-  // R.B.: with any idx, energies will get all (excited_states + 1) states
-  props.emplace(QMProperty::energies,   {excited_states}, &energy);
-
-  qm->get_properties(props);
-
-  std::ofstream output(amplitude_file, std::ios_base::app);
-  output << active_state + min_state << " ";
-  c().t().print(output);
-  output.close();
-
+  // get gradients and energies
+  {
+    PropMap props{};
+    props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
+    props.emplace(QMProperty::mmgradient, {min_state + active_state}, &mm_grd);
+    // R.B.: with any idx, energies will get all (excited_states + 1) states
+    // FIXME: should make energies behavior consistent with gradients
+    props.emplace(QMProperty::energies,   {excited_states}, &energy);
+    qm->get_properties(props);
+  }
+  
+  // write amplitudes
+  {
+    std::ofstream output(amplitude_file, std::ios_base::app);
+    output << active_state + min_state << " ";
+    c().t().print(output);
+    output.close();
+  }
+  
   electonic_evolution();
 
   return energy(min_state + active_state);
@@ -472,7 +477,9 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   }
 
   if (decoherence){
-    // FIXME: should do this at the start of this function and then pass it around 
+    // FIXME: should do this at the start of this function and then
+    // pass it around. When we do, make sure we preserve
+    // modifiability.
     arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
     for(arma::uword i = 0 ; i < m.n_elem ; i++){
       // no reason to do this without a bounds [] check!

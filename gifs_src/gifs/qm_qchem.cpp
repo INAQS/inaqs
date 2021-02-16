@@ -41,6 +41,8 @@ QM_QChem::qchem_reader() {
 
   On subsequent invocation (as during AIMD), setman_init.F will reset
   the number requested to the original number.
+
+  FIXME: we need to fix the above for our AFSSH routines.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
            const arma::uvec& in_qmids, 
@@ -648,6 +650,7 @@ REMKeys QM_QChem::excited_rem(void){
   REMKeys excited
     {
       {"cis_n_roots", std::to_string(excited_states)},
+      {"set_roots_orig", std::to_string(excited_states)}, // make sure we always use the same number of states
       {"max_cis_cycles", "500"}, // same as set_iter
       {"cis_singlets", std::to_string(singlets)},  
       {"cis_triplets", std::to_string(triplets)} 

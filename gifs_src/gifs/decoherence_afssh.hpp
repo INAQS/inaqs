@@ -20,11 +20,13 @@ public:
 
 private:
   void evolve_moments(const Electronic &c, const arma::mat U, const size_t a, const arma::vec m);
-  void build_invtau(arma::vec &invtau_d, arma::vec &invtau_r, const arma::mat U, const size_t a, const arma::vec v);
+  void build_rates(arma::vec &invtau_d, arma::vec &invtau_r, const arma::mat U, const size_t a, const arma::vec v);
   
   void collapse(Electronic &c, size_t active_state, size_t collapse_state);
-  void reset_moments(void);
+  void reset_moments(arma::uword n);
 
+  void save(const arma::field<arma::vec> &dF_, const Electronic &c);
+  
   // current energies
   arma::vec V;
   
@@ -32,6 +34,10 @@ private:
   arma::field<arma::vec> dR, dP, dF;
   // diabatic moments
   arma::field<arma::vec> dR_, dP_, dF_;
+  arma::field<arma::vec> dF_last;
+
+  // density matrix from previous timestep
+  arma::vec rho;
 };
 
 #endif
