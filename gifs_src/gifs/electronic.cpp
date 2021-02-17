@@ -43,9 +43,19 @@ void Electronic::reserve(void){
   https://en.wikipedia.org/wiki/Polar_decomposition
 */
 void Electronic::unitarize(arma::mat &U){
-  arma::cx_mat R; arma::cx_vec s;
-  arma::eig_gen(s, R, U*U.t());
-  U = arma::real(R * diagmat(arma::pow(s, -0.5)) * R.t()) * U;
+  // arma::cx_mat R; arma::cx_vec s;
+  // arma::eig_gen(s, R, U*U.t());
+  // U = arma::real(R * diagmat(arma::pow(s, -0.5)) * R.t()) * U;
+
+  /*
+    These algorithms are equivalent but the below has better numerical
+    stability properties; namely the above returns 2*I for the
+    identity (I) rather than I itself.
+  */
+
+  arma::mat W,V; arma::vec s;
+  arma::svd(W,s,V,U);
+  U = W*V;
 }
 
 /*

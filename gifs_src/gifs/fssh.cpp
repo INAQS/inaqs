@@ -430,7 +430,7 @@ double FSSH::update_gradient(void){
     c().t().print(output);
     output.close();
   }
-  
+
   electonic_evolution();
 
   return energy(min_state + active_state);
