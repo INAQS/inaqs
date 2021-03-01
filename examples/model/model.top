@@ -1,0 +1,25 @@
+[ defaults ]
+; nbfunc	comb-rule	gen-pairs	fudgeLJ	fudgeQQ
+1		3		yes		0.5	0.5
+
+
+[ atomtypes ]
+; name bond_type z   mass      charge  ptype  sigma espilon
+  H    H         1   1.09716   0       A      0     0
+
+
+[ moleculetype ]
+; Name            nrexcl
+model             3
+
+[ atoms ]
+;  nr type         resnr residue atom      cgnr   charge       mass
+    1 H            1     QM      H         0      0.0          1.097
+
+[ system ]
+; Name
+QM model
+
+[ molecules ]
+; Compound        #mols
+model        1
