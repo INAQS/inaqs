@@ -1,6 +1,6 @@
 ; Run parameters
 integrator              = md-vv    ; velocity verlet integrator
-nsteps                  = 10        ; 2 * 25 = 50 fs
+nsteps                  = 800      ; 2 * 25 = 50 fs
 dt                      = 0.0005   ; 0.5 fs
 
 ; QMMM settings
@@ -40,9 +40,9 @@ pcoupl                  = no        ; pressure
 
 ; Periodic boundary conditions
 pbc                     = no        ; 3-D PBC
-comm_mode 		= angular   ; angular>linear>none; remove center of mass translation and rotation
+comm_mode 		= none    ; angular>linear>none; remove center of mass translation and rotation
 
 ; Velocity generation
-gen_vel                 = yes       ; assign velocities from Maxwell distribution
+gen_vel                 = no        ; assign velocities from Maxwell distribution
 gen_temp                = 300       ; temperature for Maxwell distribution
 gen_seed                = 1234      ; random seed

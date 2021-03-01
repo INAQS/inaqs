@@ -2,6 +2,7 @@
 #include "constants.hpp"
 #include "bomd.hpp"
 #include "qm_qchem.hpp"
+#include "qm_model.hpp"
 //
 #include <armadillo>
 //
@@ -26,6 +27,8 @@ select_interface(ConfigBlockReader& reader,
     
     if (qmcode == "qchem") {
         return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+    } else if (qmcode == "qmmodel") {
+        return new QM_Model(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else {
         throw "qm interface  not implemented!";
     }
