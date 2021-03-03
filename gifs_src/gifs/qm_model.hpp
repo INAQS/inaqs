@@ -9,7 +9,7 @@
 
 class HamiltonianDynamics{
 public:
-  HamiltonianDynamics(void);
+  HamiltonianDynamics(void) {}
   virtual ~HamiltonianDynamics() {};
 
   virtual void update(double x) =0;
@@ -20,6 +20,9 @@ public:
   const arma::mat & overlaps(void)  const {return overlap;}
   
 protected:
+  // updates overlap and, phase matches the new eigen vectors to the old ones.
+  void update_overlap(arma::mat &evec);
+  
   arma::vec energy;
   arma::vec gradient;
   arma::mat nac;
@@ -36,7 +39,7 @@ public:
   void update(double x) override;
 
 private:
-  const double A = 0.02;
+  const double A = 0.03;
   const double B = 1.6;
   const double C = 0.005;
 };

@@ -139,6 +139,23 @@ void QM_Model::get_properties(PropMap &props){
   }
 }
 
+
+// updates overlap and, phase matches the new eigen vectors to the old ones.
+void HamiltonianDynamics::update_overlap(arma::mat &evec){
+  static arma::mat evec_last = evec;
+  overlap = evec_last.t() * evec;
+
+  while (arma::any(overlap.diag() < 0)){ // phase match
+    arma::uword c = overlap.diag().index_min();
+    evec.col(c) *= -1.0;
+    
+    overlap = evec_last.t() * evec;
+  }
+  
+  evec_last = evec;
+}
+
+
 AvoidedCrossing::AvoidedCrossing(void){
   energy.set_size(2);
   gradient.set_size(2);
@@ -146,19 +163,63 @@ AvoidedCrossing::AvoidedCrossing(void){
   overlap.set_size(2,2);
 }
 
-void  AvoidedCrossing::update(double x){
+void AvoidedCrossing::update(double x){
   x = x+7;
   
-  double e = A*std::tanh(B*x);
+  double e = A * std::tanh(B*x);
   double v = C * std::exp(-1.0*x*x);
 
-  energy(1) = std::sqrt(e*e + v*v);
-  energy(0) = -1.0 * energy(1);
+  arma::mat H = {{e,  v},
+                 {v, -e}};
 
+  arma::vec eval;
+  arma::mat evec;
+  eig_sym(eval, evec, H);
+
+  update_overlap(evec);
+  
+  energy = eval;
+
+  // compute gradients
   double f;
   {
     double sech = 1.0 / std::cosh(B*x);
     f = e*A*B*sech*sech + -2.0*x*v*v;
   }
   gradient = f / energy;
+
+
+  // compute NAC
+  nac = evec.t() * arma::diagmat(gradient) * evec;
+  nac.diag().zeros();
+  {
+    double gap = energy(1) - energy(0);
+    nac(0,1) /=  gap;
+    nac(1,0) /= -gap;
+  }
+
+  // save a bunch of things
+  if(false)
+  {
+    std::vector<double> state;
+     
+    state.push_back( x );
+    state.push_back( energy(0) );
+    state.push_back( energy(1) );
+    state.push_back( gradient(0) );
+    state.push_back( overlap(0,1) );
+    state.push_back( nac(0,1) );
+    
+    std::ofstream stream;
+    stream.open("./out.dat", std::ios::out | std::ios::app | std::ios::binary);
+    if (!stream){
+      throw std::runtime_error("Cannot open data file!");
+    }
+    else{
+      for (auto e: state){
+        stream << e << " ";
+      }
+      stream << std::endl;
+    }
+  }
 }
