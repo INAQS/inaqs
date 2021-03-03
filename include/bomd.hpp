@@ -27,7 +27,8 @@ protected:
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
 
-  void add_qm_keys(ConfigBlockReader& reader);
+  /* Config for keys common to all dynamics classes */
+  void add_common_keys(ConfigBlockReader& reader);
   
   /* Child classes will override these methods for own setup */
   virtual ConfigBlockReader setup_reader(void);

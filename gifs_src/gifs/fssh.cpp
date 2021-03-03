@@ -20,8 +20,6 @@ FSSH::setup_reader()
 
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
     
-    reader.add_entry("active_state", types::ULINT);
-
     std::random_device rd; // generate default random seed
     reader.add_entry("random_seed", (size_t) rd());
     return reader;
@@ -39,7 +37,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   reader.get_data("delta_e_tol", delta_e_tol);
-  reader.get_data("active_state", active_state);
   
   /* added in BOMD::add_qm_keys() */
   reader.get_data("min_state", min_state);
@@ -91,7 +88,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
   if (min_state != 1){
     std::cerr << "min_state=" << min_state << std::endl;
-    throw std::runtime_error("minimum states other than 1 not supported!");
+    std::cerr << "Warning, minimum states other than 1 not supported in QChem!" << std::endl;
   }
 
   /*

@@ -35,13 +35,14 @@ select_interface(ConfigBlockReader& reader,
 }
 
 void
-BOMD::add_qm_keys(ConfigBlockReader& reader) 
+BOMD::add_common_keys(ConfigBlockReader& reader) 
 {
     reader.add_entry("qmcode", "qchem");
     reader.add_entry("charge", 0);
     reader.add_entry("multiplicity", 1);
-    reader.add_entry("excited_states", (size_t) 0);
     reader.add_entry("min_state", (size_t) 1); // for (A)FSSH only
+    reader.add_entry("active_state", (size_t) 0);
+    reader.add_entry("excited_states", (size_t) 0);
 };
 
 
@@ -58,19 +59,18 @@ BOMD::setup(FileHandle& fh,
             arma::mat& mm_crd, 
             arma::vec& mm_chg
         ) {
-  auto reader = setup_reader();
-  add_qm_keys(reader);
+  auto reader = setup_reader();   // keys and block for child class
+  add_common_keys(reader);        // active_state + keys for qm_interface 
   reader.parse(fh);
-  get_reader_data(reader);
+  BOMD::get_reader_data(reader);  // call base to set/check active_state
+  get_reader_data(reader);        // call child to conclude setup_reader(); base keys already parsed
   qm = select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
 };
 
 
 ConfigBlockReader
 BOMD::setup_reader() {
-    //using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"bomd"};
-    reader.add_entry("active_state", (size_t) 0);
     return reader;
 };
 
