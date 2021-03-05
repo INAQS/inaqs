@@ -1242,8 +1242,10 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
              * second half-step. See subsequent calls to:
              * update_coords() and update_constraints()
             */
-	        float gifs_energy = enerd->term[F_ETOT]; 
-            gifs_scale_velocities(gifs_energy, &state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
+            if (fr->bQMMM){
+              float gifs_energy = enerd->term[F_ETOT];
+              gifs_scale_velocities(gifs_energy, &state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
+            }
 #endif
             if (bIterativeCase && do_per_step(step-1, ir->nstpcouple) && !bInitStep)
             {
