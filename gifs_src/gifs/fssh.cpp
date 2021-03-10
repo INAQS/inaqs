@@ -121,11 +121,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 };
 
 
-FSSH::FSSH(arma::mat& qm_grd, arma::mat& mm_grd):
-  BOMD{qm_grd, mm_grd}
-{};
-
-
 /*
   For a discrete probability distribution Pi = p(i), returns the index
   of an element randomly selected by sampling the distribution.
@@ -175,7 +170,8 @@ void FSSH::electonic_evolution(void){
   T = arma::real(arma::logmat(U)) / dtc;
 
   // R.B.: energy was updated in update_gradient()
-  arma::mat V = diagmat(energy.tail(shstates));
+  //arma::mat V = diagmat(energy.tail(shstates));
+  V = diagmat(energy.tail(shstates));
 
   /*
     Since the off-diagonal elements of V are always 0 in this
@@ -239,14 +235,14 @@ void FSSH::electonic_evolution(void){
       	hopping = true;
       	target_state = j;
       }
-    }
-  }
+    }  // end hopping check
+  }  // end loop over dtq
 }
 
 
 // For use within the velocity_rescale() call; Jain steps 5 & 6
-// returns true if the hop succeeds without frustration
-bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
+// returns energy gap if the hop succeeds without frustration
+double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, const arma::vec &m){
   if (! hopping){
     throw std::logic_error("Should not be attempting a hop right now!");
   }
@@ -262,76 +258,75 @@ bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     the calculation of vd below.
   */
 
-  if (mass.n_elem != NQM() + NMM()){
-    throw std::range_error("mass of improper size!");
-  }
-
   nac.set_size(3, NQM() + NMM());
 
-  PropMap props{};
-  props.emplace(QMProperty::nacvector, {min_state + active_state, min_state + target_state}, &nac);
+  arma::mat qmg_new, mmg_new;
+  qmg_new.set_size(3,NQM());
 
-  qm->get_properties(props);
-
-  // Make 3N vector versions of the NAC, velocity, and mass
-  // FIXME: How do each of these interact with link atoms?
-  const arma::vec nacv(nac.memptr(), 3 * (NQM() + NMM()), false, true);
-  arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
-
-
-  arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
-  for(arma::uword i = 0 ; i < m.n_elem ; i++){
-    // no reason to do this without a bounds [] check!
-    m(i) =  mass(i/3);
-  }
-
-  // Unlike all other state-properties, must use min_state as floor for indexing into energy
-  double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
-
-  // The hopping energy-conservation equations are documented in documented Vale's GQSH notes Sept 11, 2020
-
-  double dmv = arma::as_scalar(nacv.t() * (vel % m));
-  double dmd = arma::as_scalar(nacv.t() * (nacv % m));
-
-  double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
-  if (discriminant > 0){
-    std::cerr << "Hop, " << active_state + min_state << "->" << target_state + min_state << " succeeds; energy difference = " << deltaE << "."<< std::endl;
-    // test the sign of dmv to pick the root yielding the smallest value of alpha
-    double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
-    vel = vel + alpha * nacv;
-    active_state = target_state;
-    hop_succeeds = true;
-  }
-  else{  // frustrated hop
-    std::cerr << "Hop is frustrated---will remain on " << active_state + min_state << "; ";
-    // compute gradient of target_state to see if we reverse
-    arma::mat qmg_new, mmg_new;
-    qmg_new.set_size(3,NQM());
-
-    /*
-      There is, perhaps, a modest performance advantage to be gained
-      by saving this gradient for use below in
-      backpropagate_gradient_velocities(). This would be most important for
-      situations where we had many frustrated hops. The infrastructure
-      to track which gradients are up-to-date is a complication for
-      later.
-    */
-
-    props = {};
+  {
+    PropMap props{};
+    props.emplace(QMProperty::nacvector, {min_state + active_state, min_state + target_state}, &nac);
     props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
+
     if (NMM() > 0){
       mmg_new.set_size(3, NMM());
       props.emplace(QMProperty::mmgradient, {min_state + target_state}, &mmg_new);
     }
+
     qm->get_properties(props);
+  }
+  
+  // Make 3N vector versions of the NAC, velocity, and new
+  // gradient. (m comes in as 3N.)
+  // FIXME: How do each of these interact with link atoms?
+  const arma::vec & nacv = nac.as_col();
 
-    // 3N vector version of new gradient
-    arma::vec gradv(3 * (NQM() + NMM()));
-    gradv.head(3*NQM()) = arma::vectorise(qmg_new);
+  // FIXME: find a safer way to have a writeable velocity view
+  arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
+
+  arma::vec gradv(3 * (NQM() + NMM()));
+  gradv.head(3*NQM()) = arma::vectorise(qmg_new);
+  if (NMM() > 0){
+    gradv.tail(3*NMM()) = arma::vectorise(mmg_new);
+  }
+  
+  // Unlike all other state-properties, must use min_state as floor for indexing into energy
+  double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
+
+  /*
+    The hopping energy-conservation equations are documented in
+    Vale's GQSH notes dated Sept 11, 2020.
+  */
+
+  double dmv = arma::as_scalar(nacv.t() * (vel % m));
+  double dmd = arma::as_scalar(nacv.t() * (nacv % m));
+  
+  double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
+  if (discriminant > 0){
+    hop_succeeds = true;
+    std::cerr << "Hop, " << active_state + min_state << "->"
+              << target_state + min_state << " succeeds; energy difference = "
+              << deltaE << "."<< std::endl;
+    
+    // test the sign of dmv to pick the root yielding the smallest value of alpha
+    double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
+    vel = vel + alpha * nacv;
+    active_state = target_state;
+    
+    // Update the gradient with the new surface so that GMX can take its second step
+    auto rows=arma::span(arma::span::all); auto cols = arma::span(0, NQM() - 1);
+    total_gradient(rows, cols) += qmg_new - qm_grd;
+    qm_grd = qmg_new;
+
     if (NMM() > 0){
-      gradv.tail(3*NMM()) = arma::vectorise(mmg_new);
+      cols = arma::span(NQM(), NQM() + NMM() - 1);
+      total_gradient(rows, cols) += mmg_new - mm_grd;
+      mm_grd = mmg_new;
     }
-
+  }
+  else{
+    hop_succeeds = false;
+    std::cerr << "Hop is frustrated---will remain on " << active_state + min_state << "; ";
     /*
       Velocity reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
@@ -343,7 +338,7 @@ bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
     */
     if (arma::as_scalar((-gradv.t() * nacv)*(vel.t() * nacv)) < 0){
       std::cerr << "velocities reversed." << std::endl;
-      arma::vec nacu = arma::normalise(nacv);
+      const arma::vec nacu = arma::normalise(nacv);
       vel = vel - 2.0 * nacu * nacu.t() * vel;
     }
     else{
@@ -351,9 +346,9 @@ bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
       // Ignore the unsuccessful hop; active_state remains unchanged
     }
   }
-  hopping = false;
 
-  return hop_succeeds;
+  hopping = false;  // update class-level state
+  return hop_succeeds ? deltaE : 0;
 }
 
 
@@ -371,38 +366,16 @@ bool FSSH::hop_and_scale(arma::mat &velocities, arma::vec &mass){
   (so that all of the tooling for leap-frog still works) and then does
   position integration in a single step afterwards. See
   gifs/docs/GromacsVVImplementation.jpg for notes.
+
+  Conversation with Amber in Marhc 2021 indicated that it was faster
+  and didn't rely on an ad hoc selection of energy tolerance to simply
+  converge properties in dtc directly rather than use this scheme.
+
+  void FSSH::backpropagate_gradient_velocities(
+    arma::mat &total_gradient,
+    arma::mat &velocities,
+    arma::vec &masses);
 */
-void FSSH::backpropagate_gradient_velocities(arma::mat &total_gradient, arma::mat &velocities, arma::vec &masses){
-  PropMap props = {};
-  arma::mat qmg_new, mmg_new;
-  qmg_new.set_size(3,NQM());
-
-  props.emplace(QMProperty::qmgradient, {min_state + target_state}, &qmg_new);
-  if (NMM() > 0){
-    mmg_new.set_size(3, NMM());
-    props.emplace(QMProperty::mmgradient, {min_state + target_state}, &mmg_new);
-  }
-  qm->get_properties(props);
-
-  // 3xN  mass matrix
-  arma::mat m (3, (NQM() + NMM()), arma::fill::zeros);
-  for (arma::uword i = 0; i < masses.n_elem; i++){
-    m.col(i).fill(masses(i));
-  }
-
-  auto rows=arma::span(arma::span::all); auto cols = arma::span(0, NQM() - 1);
-  total_gradient(rows, cols) += qmg_new - qm_grd;
-  // a = -g/m
-  velocities(rows, cols) += -1.0*(qmg_new - qm_grd)/m(rows, cols)*dtc/2;
-  qm_grd = qmg_new;
-
-  if (NMM() > 0){
-    cols = arma::span(NQM(), NQM() + NMM() - 1);
-    total_gradient(rows, cols) += mmg_new - mm_grd;
-    velocities(rows, cols) += -1.0*(mmg_new - mm_grd)/m(rows, cols)*dtc/2;
-    mm_grd = mmg_new;
-  }
-}
 
 
 // This is our primary hook into the Gromacs (or other) MD loop
@@ -429,61 +402,53 @@ double FSSH::update_gradient(void){
   }
 
   electonic_evolution();
-
+  
   return energy(min_state + active_state);
 }
 
 
-// FIXME: should alter this interface so we take inverse masses
+/*
+  rescale_velocities() comes after the first MD half-step (and before
+  constraint forces are calculated in gromacs)
+*/
 
-// This hook comes after the first MD half-step (and before constraint forces are calculated in gromacs)
+// FIXME: should alter velocity rescale interface so we take inverse masses as 3N vector
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy){
-  BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy); // call parent to update edrift
+  // call parent to update edrift
+  BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
 
+  if (std::abs(edrift) > delta_e_tol){
+    std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
+  }
+  
   if (masses.has_inf() || arma::any(masses==0)){
     throw std::logic_error("Cannot do surface hopping with massless atoms or momentum sinks!");
   }
 
-  bool hopped = false;
-  if (!hopping){
-    // nothing to do
+  // 3N vector of masses
+  arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
+  for(arma::uword i = 0 ; i < m.n_elem ; i++){
+    // no reason to do this without a bounds [] check!
+    m(i) =  masses(i/3);
   }
-  else{
-    /*
-      FIXME: For QM/MM with some species hidden from the QM region,
-      this energy is for the TOTAL system, which is probably not what
-      we want.
-    */
-    if(std::abs(edrift) > delta_e_tol){
-      std::cerr <<  "Trivial crossing: " << active_state + min_state << "->" << target_state + min_state << std::endl;
-      // Need to update global gradient & velocities
-      backpropagate_gradient_velocities(total_gradient, velocities, masses);
-      active_state = target_state;
-      hopping = false;
+    
+  bool update = hopping;
+  double deltaE = 0;
+  if (hopping){
+    std::cerr <<  "Attempting hop: " << active_state + min_state
+              << "->" << target_state + min_state << std::endl;
+    
+    deltaE = hop_and_scale(total_gradient, velocities, m);
+    
+    if (decoherence && deltaE > 0){
+      decoherence->hopped(c, active_state);
     }
-    else{
-      std::cerr <<  "Attempting hop: " << active_state + min_state << "->" << target_state + min_state << std::endl;
-      if (hop_and_scale(velocities, masses)){
-        if (decoherence){
-          decoherence->hopped(c, active_state);
-        }
-      }
-      hopping = false;
-    }
-    hopped = true;
   }
 
   if (decoherence){
-    // FIXME: should do this at the start of this function and then
-    // pass it around. When we do, make sure we preserve
-    // modifiability.
-    arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
-    for(arma::uword i = 0 ; i < m.n_elem ; i++){
-      // no reason to do this without a bounds [] check!
-      m(i) =  masses(i/3);
-    }
     decoherence->decohere(c, U, active_state, velocities.as_col(), m);
   }
   
-  return hopped;
+  // update indicates we need to copy velocity and gradient back to GMX
+  return update;
 }
