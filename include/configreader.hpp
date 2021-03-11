@@ -7,7 +7,7 @@
 
 #include <exception>
 
-std::vector<std::string> split_string(const std::string& str, const std::string& delims=",");
+std::vector<std::string> split_string(const std::string& str, const std::string& delims=", ");
 
 class CannotOpenFile: 
     public std::exception
