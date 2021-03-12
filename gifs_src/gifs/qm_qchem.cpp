@@ -115,6 +115,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     setenv("QCTHREADS", std::to_string(conf_threads).c_str(), 0);
   }
 
+  // FIXME: should include MPI support
+
   qc_executable = get_qcprog();
 }
 
@@ -229,7 +231,8 @@ void QM_QChem::get_properties(PropMap &props){
 
 void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
-                  {"boys_cis_numstate", std::to_string(boys_states.size())}};
+                  {"boys_cis_numstate", std::to_string(boys_states.size())},
+                  {"sts_mom", "1"}};
 
   REMKeys ex = excited_rem();
   keys.insert(ex.begin(), ex.end());
@@ -728,8 +731,8 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
     };
 
   if (spin_flip){
+    // FIXME: include multiplicity check for spin_flip
     rem_keys.emplace("spin_flip", "1");
-    // FIXME: perhaps only for record_spectrum?
     rem_keys.emplace("sts_mom", "1");
   }
   if (first_call){
