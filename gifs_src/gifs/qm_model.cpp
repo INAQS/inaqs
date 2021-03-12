@@ -48,13 +48,16 @@ QM_Model::QM_Model(FileHandle& fh,
     if (model_in == "avoided-crossing"){
       model= new AvoidedCrossing();
     }
+    else if (model_in == "reflective-avoided-crossing"){
+      model= new ReflectiveAvoidedCrossing();
+    }
     else{
       throw std::runtime_error("Unknown Model: `" + model_in + "`!");
     }
   }
 }
 
-void QM_Model::update(void){
+void QM_Model::update(void){  
   QMInterface::update();
   // always take the x component of the first atom
   model->update(crd_qm(0));
@@ -155,6 +158,105 @@ void HamiltonianDynamics::update_overlap(arma::mat &evec){
   evec_last = evec;
 }
 
+void HamiltonianDynamics::save_state(double x){
+  std::vector<double> state;
+     
+  state.push_back( x );
+  state.push_back( energy(0) );
+  state.push_back( energy(1) );
+  state.push_back( gradient(0) );
+  state.push_back( gradient(1) );
+  state.push_back( overlap(0,1) );
+  state.push_back( nac(0,1) );
+    
+  std::ofstream stream;
+  stream.open(state_file, std::ios::out | std::ios::app | std::ios::binary);
+  if (!stream){
+    throw std::runtime_error("Cannot open data file!");
+  }
+  else{
+    for (auto e: state){
+      stream << e << " ";
+    }
+    stream << std::endl;
+  }
+}
+
+void HamiltonianDynamics::scan(double a, double b, int N){
+  record = true;
+
+  if ((b-a < 0) || (N < 0)){
+    throw::std::logic_error("Can only scan on [a,b) in N>0 steps!");
+  }
+  
+  const double dx = (b-a)/N;
+
+  for (double x = a; x < b; x += dx){
+    update(x);
+  }
+  
+}
+  
+ReflectiveAvoidedCrossing::ReflectiveAvoidedCrossing(void){
+  energy.set_size(2);
+  gradient.set_size(2);
+  nac.set_size(2,2);
+  overlap.set_size(2,2);
+}
+
+void ReflectiveAvoidedCrossing::update(double x){
+  double e2 = A*std::tanh(B*(x+7));
+  double e1 = e2 + 2*A*std::tanh(B*x) + 2*A;
+  
+  double v = C * std::exp(-1.0*(x+7)*(x+7));
+
+  arma::mat H = {{e1, v },
+                 {v, -e2}};
+
+  arma::vec eval;
+  arma::mat evec;
+  eig_sym(eval, evec, H);
+
+  update_overlap(evec);
+
+  energy = eval;
+
+  // compute gradients
+  {
+    double de2 = A*B / std::pow(std::cosh(B*(x+7)),2) ;
+    double de1 = A*B / std::pow(std::cosh(B*x)    ,2) + de2 ;
+    double dv = -C * 2 * (x+7) *  std::exp(-1.0*(x+7)*(x+7));
+
+    // gradient = 0.5*((de1 - de2) +
+    //                 ((de2-de1)*(e2-e1) + 2*(e1*de2 + e2*de1) + 4*v*dv) /
+    //                 ((e2-e1) + 2 * energy));
+
+    
+    double gl = 0.5 * (de1 - de2);
+    double gr = 0.5 * ((de2-de1)*(e2-e1) + 2*(e1*de2 + e2*de1) + 4*v*dv) /
+      std::sqrt((e2-e1)*(e2-e1) + 4*e1*e2+4*v*v);
+
+    gradient(0) = gl - gr;
+    gradient(1) = gl + gr;
+  }
+
+
+  // compute NAC
+  nac = evec.t() * arma::diagmat(gradient) * evec;
+  nac.diag().zeros();
+  {
+    double gap = energy(1) - energy(0);
+    nac(0,1) /=  gap;
+    nac(1,0) /= -gap;
+  }
+  
+
+  if(record){
+    save_state(x);
+  }
+}
+
+
 
 AvoidedCrossing::AvoidedCrossing(void){
   energy.set_size(2);
@@ -164,10 +266,10 @@ AvoidedCrossing::AvoidedCrossing(void){
 }
 
 void AvoidedCrossing::update(double x){
-  x = x+7;
+  double xs = x+7;
   
-  double e = A * std::tanh(B*x);
-  double v = C * std::exp(-1.0*x*x);
+  double e = A * std::tanh(B*xs);
+  double v = C * std::exp(-1.0*xs*xs);
 
   arma::mat H = {{e,  v},
                  {v, -e}};
@@ -177,14 +279,14 @@ void AvoidedCrossing::update(double x){
   eig_sym(eval, evec, H);
 
   update_overlap(evec);
-  
+
   energy = eval;
 
   // compute gradients
   double f;
   {
-    double sech = 1.0 / std::cosh(B*x);
-    f = e*A*B*sech*sech + -2.0*x*v*v;
+    double sech = 1.0 / std::cosh(B*xs);
+    f = e*A*B*sech*sech + -2.0*xs*v*v;
   }
   gradient = f / energy;
 
@@ -199,27 +301,8 @@ void AvoidedCrossing::update(double x){
   }
 
   // save a bunch of things
-  if(false)
+  if(record)
   {
-    std::vector<double> state;
-     
-    state.push_back( x );
-    state.push_back( energy(0) );
-    state.push_back( energy(1) );
-    state.push_back( gradient(0) );
-    state.push_back( overlap(0,1) );
-    state.push_back( nac(0,1) );
-    
-    std::ofstream stream;
-    stream.open("./out.dat", std::ios::out | std::ios::app | std::ios::binary);
-    if (!stream){
-      throw std::runtime_error("Cannot open data file!");
-    }
-    else{
-      for (auto e: state){
-        stream << e << " ";
-      }
-      stream << std::endl;
-    }
+    save_state(x);
   }
 }
