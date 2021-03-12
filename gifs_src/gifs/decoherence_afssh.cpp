@@ -51,10 +51,13 @@ bool AFSSH::decohere(Electronic &c, const arma::mat U, const size_t active_state
 
         reset_moments(j);
         collapsed = true;
+
+        std::cerr << "[AFSSH] Decoherence event: " << j << "->" << a << "."  << std::endl;
       }
 
       if (eta < dtc * invtau_r(j)){
         reset_moments(j);
+        std::cerr << "[AFSSH] Reset " << j << " moments" << std::endl;
       }
     }
   }
@@ -158,6 +161,16 @@ void AFSSH::evolve_moments(const Electronic &c, const arma::mat U, const size_t 
       dR(j) += dR_(k) * U(k,j) * U(k,j);
       dP(j) += dP_(k) * U(k,j) * U(k,j);
     }
+  }
+
+  /*
+    N.B.: The transformation taking dRj -> dRj - dRa
+    is missing from Jain (2016). Amber confirmed that
+    this is necessary in a call with DVCS on 2021.03.08
+  */
+  for(arma::uword j = 0; j < nstates; j++){
+    dR(j) -= dR(a);
+    dP(j) -= dP(a);
   }
 
   // store dF_ and rho for the next timestep 

@@ -56,7 +56,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     reader.get_data("random_seed", seed);
     arma::arma_rng::set_seed(seed);
 
-    std::cerr << "FSSH random seed=" << seed << std::endl;
+    std::cerr << "[FSSH] random_seed = " << seed << std::endl;
   }
   
   shstates = excited_states + 1 - min_state;
@@ -304,9 +304,9 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){
     hop_succeeds = true;
-    std::cerr << "Hop, " << active_state + min_state << "->"
+    std::cerr << "[FSSH] Hop, " << active_state + min_state << "->"
               << target_state + min_state << " succeeds; energy difference = "
-              << deltaE << "."<< std::endl;
+              << deltaE << std::endl;
     
     // test the sign of dmv to pick the root yielding the smallest value of alpha
     double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
@@ -326,7 +326,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   }
   else{
     hop_succeeds = false;
-    std::cerr << "Hop is frustrated---will remain on " << active_state + min_state << "; ";
+    std::cerr << "[FSSH] Hop is frustrated---will remain on " << active_state + min_state << "; ";
     /*
       Velocity reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
@@ -417,6 +417,7 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   // call parent to update edrift
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
 
+  // FIXME: don't fire on the first inf
   if (std::abs(edrift) > delta_e_tol){
     std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
   }
@@ -435,7 +436,7 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   bool update = hopping;
   double deltaE = 0;
   if (hopping){
-    std::cerr <<  "Attempting hop: " << active_state + min_state
+    std::cerr <<  "[FSSH] Attempting hop: " << active_state + min_state
               << "->" << target_state + min_state << std::endl;
     
     deltaE = hop_and_scale(total_gradient, velocities, m);
