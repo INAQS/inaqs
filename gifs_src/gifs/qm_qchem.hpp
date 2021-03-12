@@ -37,6 +37,7 @@ private:
 
   void do_state_analysis(void);
   void do_record_spectrum(void);
+  void do_boys_diabatization(void);
   
   std::ofstream get_input_handle(void);
   void write_molecule_section(std::ostream &ifile);
@@ -77,6 +78,9 @@ private:
   bool state_analysis = false;
   bool save_nacvector = false;
   bool record_spectrum = false;
+  std::vector<int> boys_states {};
+  bool boys_diabatization = false;
+  
   
   enum class S{
     energy,

@@ -20,6 +20,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("basis", types::STRING);
   reader.add_entry("exchange", types::STRING);
   reader.add_entry("scf_algorithm", "DIIS");
+  reader.add_entry("boys_states", std::vector<int> {}); // sentinel value
   // FIXME: add scf_guess and default to read
   reader.add_entry("nthreads", 1);
   // FIXME: ConfigReader should support bool
@@ -83,6 +84,18 @@ QM_QChem::QM_QChem(FileHandle& fh,
     record_spectrum = in;
   }
 
+  reader.get_data("boys_states", boys_states);
+  if (boys_states.size() > 1){
+    //FIXME: when we have capacity fo diabatic dynamics, will need to expand control
+    boys_diabatization = true;
+
+    for (auto s: boys_states){
+      if ((s < 0 ) || (s > excited_states)){
+        throw std::runtime_error("Boys states must be within the excited states!");
+      }
+    }
+  }
+  
   if (singlets && triplets){
     std::cerr << "WARNING: selecting singlets and triplets together not supported!" << std::endl;
   }
@@ -207,8 +220,49 @@ void QM_QChem::get_properties(PropMap &props){
   if (record_spectrum){
     do_record_spectrum();
   }
+
+  if (boys_diabatization){
+    do_boys_diabatization();
+  }
 }
 
+
+void QM_QChem::do_boys_diabatization(void){
+  REMKeys keys = {{"jobtype","sp"},
+                  {"boys_cis_numstate", std::to_string(boys_states.size())}};
+
+  REMKeys ex = excited_rem();
+  keys.insert(ex.begin(), ex.end());
+
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, keys);  
+  write_molecule_section(input);
+
+  input << "$localized_diabatization" << std::endl;
+  input << "Comment: states we mix" << std::endl;
+  for (const auto& s: boys_states){
+    input << s << " ";
+  }
+  input << std::endl << "$end" << std::endl;
+  
+  input.close();
+
+  exec_qchem();
+
+  // FIXME: write the relevant boys quantities in a better fashion
+  {
+    std::string src = get_qcwdir() + "/" + qc_log_file;
+    std::string dest = get_qcwdir() + "/" +
+      "boys." + std::to_string(call_idx()) + ".out";
+
+    std::string cmd = "cp -a " + src + " " + dest; 
+    int status = std::system(cmd.c_str());
+
+    if(status){
+      std::cerr << "Warning: unable to write " + dest << std::endl;
+    }
+  }
+}
 
 void QM_QChem::do_record_spectrum(void){
   arma::vec e(1);
@@ -464,7 +518,7 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
   //
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
-      "nacvector." + std::to_string(call_idx());
+      "nacvector." + std::to_string(call_idx()) + ".arma";
     nac->save(nacf);
   }
 }
