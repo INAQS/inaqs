@@ -200,7 +200,7 @@ def getBox(pdb):
     box  = re.compile('^CRYST1')
     for l in pdb:
         if box.match(l):
-            return np.array(list(map(float, l[7:34].split())))
+            return np.array(list(map(float, l[7:34].split())))/10
 
         
 def getAtoms(itp):
