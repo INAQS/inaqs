@@ -81,7 +81,7 @@ def mergeTop(old_top, itp, residue):
     # add moleculetype atoms, bonds, pairs, angles, dihedrals (moleculetype : end)
 
     solname = None
-    namere = re.compile("\w+\s+\d")
+    namere = re.compile("[\w-]+\s+\d")
     for l in getBlock('moleculetype', itp):
         if namere.match(l):
             solname = l.split()[0]
