@@ -107,13 +107,13 @@ def mergeTop(old_top, itp, residue):
             fields[3] = residue
 
             # strip trailing digits from symbol 
-            sym = ""
-            for c in fields[4]:
-                if c.isdigit():
-                    break
-                else:
-                    sym += c
-            fields[4] = sym
+            # sym = ""
+            # for c in fields[4]:
+            #     if c.isdigit():
+            #         break
+            #     else:
+            #         sym += c
+            # fields[4] = sym
         iatoms[i] = "   ".join(fields)
     
     top += iatoms
