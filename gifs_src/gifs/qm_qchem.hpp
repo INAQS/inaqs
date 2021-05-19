@@ -26,7 +26,7 @@ public:
 
 private:  
   void get_nac_vector(arma::mat *nac, size_t A, size_t B);
-  void get_wf_overlap(arma::mat *U);
+  void get_wf_overlap(arma::mat *U, size_t NSurf);
   void get_diabatic_rot_mat(arma::mat *U);
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
@@ -87,6 +87,7 @@ private:
     ex_energy,
     ex_grad,
     wfoverlap,
+    once,
   };
 
   // As long as QM_Interface.update() is called before

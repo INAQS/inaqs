@@ -17,6 +17,7 @@ FSSH::setup_reader()
 
     reader.add_entry("amplitude_file", "cs.dat");
     reader.add_entry("decoherence", "");
+    reader.add_entry("shstates", -1);
 
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
     
@@ -58,14 +59,29 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     std::cerr << "[FSSH] random_seed = " << seed << std::endl;
   }
+
+  {  
+    int shstates_in=-1;
+    reader.get_data("shstates", shstates_in);
+    if (shstates_in < 0){      
+      shstates = excited_states + 1 - min_state; // take default
+    }
+    else{
+      shstates = shstates_in;
+    }
+  }
   
-  shstates = excited_states + 1 - min_state;
   if (shstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }
 
-  if ((active_state < min_state) || (excited_states < active_state)){
-    throw std::range_error("Active state not in the range of computed states!");
+  if ((size_t) shstates > excited_states - (min_state - 1)){
+    throw std::logic_error("Cannot run FSSH on more surfaces than are computed! Try increasing excited_states.");
+  }
+  
+
+  if (!(min_state <= active_state && active_state <= min_state + shstates)){
+    throw std::range_error("Active state not in the range of hopping states!");
   }
 
   {
@@ -163,15 +179,14 @@ void FSSH::electonic_evolution(void){
   }
 
   PropMap props{};
-  props.emplace(QMProperty::wfoverlap,  &U);
+  props.emplace(QMProperty::wfoverlap, {(arma::uword) shstates}, &U);
   qm->get_properties(props);
 
   Electronic::phase_match(U);
   T = arma::real(arma::logmat(U)) / dtc;
 
   // R.B.: energy was updated in update_gradient()
-  //arma::mat V = diagmat(energy.tail(shstates));
-  V = diagmat(energy.tail(shstates));
+  V = diagmat(energy.subvec(min_state, min_state + shstates - 1));
 
   /*
     Since the off-diagonal elements of V are always 0 in this

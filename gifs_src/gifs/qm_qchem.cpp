@@ -43,10 +43,11 @@ QM_QChem::qchem_reader() {
   On subsequent invocation (as during AIMD), setman_init.F will reset
   the number requested to the original number.
 
-  FIXME: we need to fix the above for our AFSSH routines.
+  This is fixed by setting set_roots_orig and makeing sure we have
+  headroom on our hopping states.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
-           const arma::uvec& in_qmids, 
+                   const arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
 		   arma::mat& in_mm_crd, 
 		   arma::vec& in_mm_chg, 
@@ -86,7 +87,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
   reader.get_data("boys_states", boys_states);
   if (boys_states.size() > 1){
-    //FIXME: when we have capacity fo diabatic dynamics, will need to expand control
+    //FIXME: when we have capacity for diabatic dynamics, will need to expand control
     boys_diabatization = true;
 
     for (auto s: boys_states){
@@ -125,9 +126,15 @@ void QM_QChem::get_properties(PropMap &props){
   for (QMProperty p: props.keys()){
     switch(p){
       
-    case QMProperty::wfoverlap:
-      get_wf_overlap(props.get(QMProperty::wfoverlap));
+    case QMProperty::wfoverlap:{
+      // FIXME: possible to call with different numbers of sufaces! Will silently yield incorrect results!!
+      size_t NSurf = excited_states;
+        if (props.has_idx(QMProperty::wfoverlap)){
+          NSurf = (*props.get_idx(QMProperty::wfoverlap))[0];
+        }
+      get_wf_overlap(props.get(QMProperty::wfoverlap), NSurf);
       break;
+    }
 
     case QMProperty::diabatic_rot_mat:
       get_diabatic_rot_mat(props.get(QMProperty::diabatic_rot_mat));
@@ -215,16 +222,19 @@ void QM_QChem::get_properties(PropMap &props){
     }
   }
 
-  if (state_analysis){
-    do_state_analysis();
-  }
+  // everything here will be called exactly once per call to update()
+  if (!called(S::once)){
+    if (state_analysis){
+      do_state_analysis();
+    }
 
-  if (record_spectrum){
-    do_record_spectrum();
-  }
+    if (record_spectrum){
+      do_record_spectrum();
+    }
 
-  if (boys_diabatization){
-    do_boys_diabatization();
+    if (boys_diabatization){
+      do_boys_diabatization();
+    }
   }
 }
 
@@ -233,6 +243,10 @@ void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
                   {"boys_cis_numstate", std::to_string(boys_states.size())},
                   {"sts_mom", "1"}};
+  if (called(S::ex_energy)){
+    keys.insert({{"skip_setman", "1"},
+                 {"skip_scfman", "1"}});
+  }
 
   REMKeys ex = excited_rem();
   keys.insert(ex.begin(), ex.end());
@@ -351,13 +365,16 @@ void QM_QChem::do_state_analysis(void){
   FIXME: Use another REM variable to save PREV_GEO
   FIXME: Make sure this works with spin_flip methods
 */
-void QM_QChem::get_wf_overlap(arma::mat *U){  
+void QM_QChem::get_wf_overlap(arma::mat *U, size_t NSurf){
+  static bool first_call = true;
+  
   if (! called(S::wfoverlap)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
-    	      {"namd_lowestsurface",std::to_string(min_state)},
-    	      {"dump_wf_overlap", "1"}});
-
+    	      {"namd_lowestsurface", std::to_string(min_state)},
+              //{"wf_overlap_nsurf", std::to_string(NSurf)},
+    	      {"dump_wf_overlap", std::to_string(first_call ? 1 : 2)}});
+    
     std::ofstream input = get_input_handle();
     write_rem_section(input, k);
     write_molecule_section(input);
@@ -368,15 +385,18 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
     //don't recompute 
   }
 
-  if (call_idx() < 2){ // if this is the first call, don't actually read from $QC; there will be no overlap to read
+  if (first_call){ // if this is the first call, don't actually read from $QC; there will be no overlap to read
     U->eye();
   }
   else{
-    size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
-    if (count != excited_states * excited_states){
+    size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), NSurf*NSurf, FILE_POS_BEGIN);
+    if (count != NSurf * NSurf){
       throw std::runtime_error("Unable to parse wavefunction overlap");
     }
   }
+  U->print("U");
+  
+  first_call = false;
 }
 
 
@@ -478,18 +498,27 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 
 // Should we split mm/qm nac?
 void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
-  REMKeys k = excited_rem();
-  k.insert({{"jobtype","sp"},
+  REMKeys keys = excited_rem();
+  keys.insert({{"jobtype","sp"},
 	    {"calc_nac", "true"},
 	    {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
 
   if (NMM > 0){
-    k.insert({{"nac_pointcharge", "1"},
+    keys.insert({{"nac_pointcharge", "1"},
               {"qm_mm", "true"}});
   }
+
+  // FIXME: figure out why skip_setman broke
+  // if (called(S::ex_grad)){
+  //   keys.insert({{"skip_setman", "1"},
+  //                {"skip_scfman", "1"}});
+  // }
+  // else{
+  //   keys.insert({{"cis_rlx_dns", "1"}});
+  // }
   
   std::ofstream input = get_input_handle();
-  write_rem_section(input, k);
+  write_rem_section(input, keys);
 
   /*
     Section format:
@@ -676,7 +705,6 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
 }
 
 
-// FIXME: redirect stderr too? 2>&1 >  
 void QM_QChem::exec_qchem(void){
   std::string cmd = "cd " + get_qcwdir() + "; " + // change to  target WD
     qc_executable + " " +

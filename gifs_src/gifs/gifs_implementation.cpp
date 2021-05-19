@@ -239,17 +239,17 @@ void Gifs::update_global_index(int* indexQM, int* indexMM) {
 void 
 GifsImpl::update_global_index(int* indexQM, int* indexMM)
 {
-    std::cout << "Update GLOBAL INDICES\n";
+  //std::cout << "Update GLOBAL INDICES\n";
     for (arma::uword i=0; i<nqm; ++i) {
         qm_index[i] = indexQM[i];
-        std::cout << indexQM[i] << " ";
+        //std::cout << indexQM[i] << " ";
     };
-    std::cout << "\n";
+    //std::cout << "\n";
     for (arma::uword i=0; i<nmm; ++i) {
         mm_index[i] = indexMM[i];
-        std::cout << indexMM[i] << " ";
+        //std::cout << indexMM[i] << " ";
     };
-    std::cout << "\n";
+    //std::cout << "\n";
 }
 //
 GifsImpl* GifsImpl::impl = nullptr;
