@@ -1242,6 +1242,15 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
              * second half-step. See subsequent calls to:
              * update_coords() and update_constraints()
             */
+
+            // GIFSFIXME: debugging info
+            // F_EQM, F_EPOT, F_EKIN, F_ETOT,
+            // ETOT = EPOT + EKIN
+            // EPOT includes EQM; not sure when they're summed
+            // the erd file is basically the contents of the enerd array
+
+            // EKIN likely updated in the update_coords above; grep around!
+
             if (fr->bQMMM){
               float gifs_energy = enerd->term[F_ETOT];
               gifs_scale_velocities(gifs_energy, &state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
