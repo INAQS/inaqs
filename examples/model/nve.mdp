@@ -1,6 +1,6 @@
 ; Run parameters
 integrator              = md-vv      ; velocity verlet integrator
-nsteps                  = 1000       ; 1000 * 0.05 = 50 fs
+nsteps                  = 10000       ; 20000 * 0.05 = 1000 fs
 dt                      = 0.00005    ; 0.05 fs
 
 ; QMMM settings
@@ -11,10 +11,10 @@ QMbasis	    = 6-31G
 QMMMscheme  = normal
 
 ; Output control
-nstxout                 = 1       ; save coordinates every frame
-nstvout                 = 1       ; save velocities every frame
-nstenergy               = 1       ; save energies every frame
-nstlog                  = 1       ; update log file every frame
+nstxout                 = 20000       ; save coordinates every frame
+nstvout                 = 20000       ; save velocities every frame
+nstenergy               = 20000       ; save energies every frame
+nstlog                  = 20000       ; update log file every frame
 
 ; Bond parameters
 continuation            = no        ; first dynamics run
