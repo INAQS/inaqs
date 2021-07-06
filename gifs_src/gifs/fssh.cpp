@@ -173,7 +173,7 @@ arma::uword FSSH::sample_discrete(const arma::vec &p){
 
 
 // For use in the update_gradient() call; Jain step 4
-void FSSH::electonic_evolution(void){
+void FSSH::electronic_evolution(void){
   if (hopping){
     throw std::logic_error("Should never be hopping at start of electronic evolution!");
   }
@@ -310,13 +310,13 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
 
   /*
     The hopping energy-conservation equations are documented in
-    Vale's GQSH notes dated Sept 11, 2020.
+    Vale's GQSH notes dated May 14, 2021.
   */
 
-  double dmv = arma::as_scalar(nacv.t() * (vel % m));
-  double dmd = arma::as_scalar(nacv.t() * (nacv % m));
+  double vd  = arma::as_scalar(vel.t() * nacv);
+  double dmd = arma::as_scalar(nacv.t() * (nacv / m));
   
-  double discriminant = (dmv/dmd)*(dmv/dmd) - 2*deltaE/dmd;
+  double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){
     hop_succeeds = true;
     std::cerr << "[FSSH] Hop, " << active_state + min_state << "->"
@@ -324,8 +324,8 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
               << deltaE << std::endl;
     
     // test the sign of dmv to pick the root yielding the smallest value of alpha
-    double alpha = (dmv > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (dmv/dmd);
-    vel = vel + alpha * nacv;
+    double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
+    vel = vel + alpha * (nacv / m); // recall the nacv has dimension of momentum
     active_state = target_state;
     
     // Update the gradient with the new surface so that GMX can take its second step
@@ -343,7 +343,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     hop_succeeds = false;
     std::cerr << "[FSSH] Hop is frustrated---will remain on " << active_state + min_state << "; ";
     /*
-      Velocity reversal along nac as per Jasper, A. W.; Truhlar,
+      Momentum reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
 
       In Jain (2016) a second criterion was imposed. But, in January
@@ -351,10 +351,11 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
       follow the original Jasper-Truhlar prescription in line with
       Jain's updated advice.
     */
-    if (arma::as_scalar((-gradv.t() * nacv)*(vel.t() * nacv)) < 0){
+    if (arma::as_scalar((-gradv.t() * nacv)*(nacv.t() * (vel % m))) < 0){
       std::cerr << "velocities reversed." << std::endl;
       const arma::vec nacu = arma::normalise(nacv);
-      vel = vel - 2.0 * nacu * nacu.t() * vel;
+      //vel = vel - 2.0 * (nacu * nacu.t() * (vel % m))/m;
+      vel = vel - 2.0 * (nacu / m) * (nacu.t() * (vel % m));
     }
     else{
       std::cerr << "velocities, unchanged." << std::endl;
@@ -416,8 +417,8 @@ double FSSH::update_gradient(void){
     output.close();
   }
 
-  electonic_evolution();
-  
+  electronic_evolution();
+
   return energy(min_state + active_state);
 }
 

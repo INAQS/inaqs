@@ -22,7 +22,7 @@ protected:
   virtual void get_reader_data(ConfigBlockReader& reader) override; 
   virtual ConfigBlockReader setup_reader() override;
   
-  void electonic_evolution(void);
+  void electronic_evolution(void);
   double hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, const arma::vec &m);
   arma::uword sample_discrete(const arma::vec &p);
 

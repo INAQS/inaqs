@@ -394,8 +394,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U, size_t NSurf){
       throw std::runtime_error("Unable to parse wavefunction overlap");
     }
   }
-  U->print("U");
-  
+
   first_call = false;
 }
 
