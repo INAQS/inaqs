@@ -56,6 +56,23 @@ namespace util{
   // variant for [0, n)
   arma::uvec range(arma::uword n){ return range(0, n); }
 
+
+  /*
+    std::hypot() for complex<double>
+
+    returns sqrt(|a|^2 + |b|^2)
+
+    I'm not sure what is the "best" sequence for the real() operations.
+    The present choice---to call real() twice, once after each
+    multiplication---was made because that's the first time the
+    opperands mathematically lie on the real line. Waiting longer seemed
+    to invite the accumulation of small numerical deviations.
+  */
+  double hypot(std::complex<double> a, std::complex<double> b){
+    return std::sqrt(std::real(std::conj(a)*a) + std::real(std::conj(b)*b) );
+  }
+
+
   arma::vec center_of_mass(const arma::mat &R, const arma::vec &m){
     // R.B.: sum(A,1) gives the sum of the elements of each row of A
     return arma::sum(R.each_row() % m.t(), 1) / arma::sum(m);

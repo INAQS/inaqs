@@ -1,8 +1,6 @@
 #include "decoherence_afssh.hpp"
 #include "util.hpp"
 
-double hypot(std::complex<double> a, std::complex<double> b);
-
 AFSSH::AFSSH(QMInterface ** const qm, const double dtc,
              const size_t min_state,
              const size_t shstates,
@@ -47,7 +45,7 @@ bool AFSSH::decohere(Electronic &c, const arma::mat U, const size_t active_state
     for (arma::uword j = 0; j < nstates; j++){
       // Jain 8a
       if (eta < dtc * invtau_d(j)){
-        c[a] = c(a) / std::abs(c(a)) * hypot(c(a), c(j));
+        c[a] = c(a) / std::abs(c(a)) * util::hypot(c(a), c(j));
         c[j] = 0;
 
         reset_moments(j);
@@ -179,20 +177,6 @@ void AFSSH::hopped(Electronic &c, size_t active_state){
   }
 }
 
-/*
-  std::hypot() for complex<double>
-
-  returns sqrt(|a|^2 + |b|^2)
-
-  I'm not sure what is the "best" sequence for the real() operations.
-  The present choice---to call real() twice, once after each
-  multiplication---was made because that's the first time the
-  opperands mathematically lie on the real line. Waiting longer seemed
-  to invite the accumulation of small numerical deviations.
-*/
-double hypot(std::complex<double> a, std::complex<double> b){
-  return std::sqrt(std::real(std::conj(a)*a) + std::real(std::conj(b)*b) );
-}
 
 /* Jain 8b */
 void AFSSH::reset_moments(arma::uword n){

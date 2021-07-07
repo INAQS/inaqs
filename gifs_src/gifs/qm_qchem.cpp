@@ -631,7 +631,6 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
     throw std::runtime_error("Unable to parse NAC vector!");
   }
 
-  //
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
       "nacvector." + std::to_string(call_idx()) + ".arma";
