@@ -1,6 +1,7 @@
 #include "properties.hpp"
 #include "constants.hpp"
 #include "bomd.hpp"
+#include "util.hpp"
 #include "qm_qchem.hpp"
 #include "qm_model.hpp"
 //
@@ -105,7 +106,7 @@ BOMD::update_gradient()
     props.emplace(QMProperty::energies, {active_state}, &energy);
     qm->get_properties(props);
     //
-    return energy[active_state];
+    return energy(0);
 };
 
 

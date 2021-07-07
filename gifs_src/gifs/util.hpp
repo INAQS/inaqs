@@ -3,10 +3,14 @@
 
 #include <armadillo>
 
-namespace Util{
+namespace util{
   arma::vec center_of_mass(const arma::mat R, const arma::vec m);
   arma::vec sum_cross(const arma::mat A, const arma::mat B);
   //  arma::vec net(arma::vec (*op)(const arma::vec &a, const arma::vec &b), const arma::mat A, const arma::mat B);
+
+  arma::uword sample_discrete(const arma::vec &p);
+  arma::uvec range(arma::uword a, arma::uword b); //[a, b)
+  arma::uvec range(arma::uword n); // [0, n)
 }
 
 #endif

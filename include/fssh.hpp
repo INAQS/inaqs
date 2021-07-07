@@ -8,6 +8,7 @@
 #include "configreader.hpp"
 #include "electronic.hpp"
 
+
 class FSSH: public BOMD{
 public:
   explicit FSSH(arma::mat& qm_grd, arma::mat& mm_grd): BOMD{qm_grd, mm_grd} {}
@@ -24,7 +25,6 @@ protected:
   
   void electronic_evolution(void);
   double hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, const arma::vec &m);
-  arma::uword sample_discrete(const arma::vec &p);
 
   arma::mat U, T, V;
   arma::mat nac;

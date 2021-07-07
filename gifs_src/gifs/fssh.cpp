@@ -2,6 +2,7 @@
 #include "electronic.hpp"
 #include "constants.hpp"
 #include "decoherence_afssh.hpp"
+#include "util.hpp"
 #include <armadillo>
 #include <complex>
 #include <cmath>
@@ -107,23 +108,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     std::cerr << "Warning, minimum states other than 1 not supported in QChem!" << std::endl;
   }
 
-  /*
-    R.B. energy has excited_states + 1 (ground) states, while all
-    other objects have excited_states + 1 - min_state (shstates); this
-    can screw up indexing.
-
-      active_state \on [0, shstates]
-
-    can index U, T, V, c but cannot index energy which has shstates +
-    min_state elements.  Indexing properly by taking:
-
-      c(i) -> energy(i+min_state).
-
-    Recall also that all requests for state properties to Q-Chem (or
-    any other QM_Interface) require i+min_state as well.
-  */
-
-  energy.set_size(excited_states + 1);
+  energy.set_size(shstates);
 
   U.set_size(shstates, shstates);
   T.set_size(shstates, shstates);
@@ -135,41 +120,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   */
   c.reset(shstates, 1, active_state);
 };
-
-
-/*
-  For a discrete probability distribution Pi = p(i), returns the index
-  of an element randomly selected by sampling the distribution.
-
-  Examples:
-  * sample_discrete({0.5, 0.5}) returns 0 or 1 with probability 0.5
-  * sample_discrete({0.0, 0.0, 1.0}) returns 2 with probability 1.0
-
-  Note:
-  While there does exist std::discrete_distribution, I think that the
-  below implementation is superior in that it does not require
-  instantiating a new distribution for every round.
-*/
-arma::uword FSSH::sample_discrete(const arma::vec &p){
-  /*
-    Sanity checks; require:
-    * Pi >= 0 forall i
-    * Sum(Pi) == 1
-  */
-  std::string die = "";
-  const double eps = 1e-12;
-  if (p.has_nan()){die = "P is malformed; it contains NaN!";}
-  if (arma::any(p < -1 * eps)){die = "P cannot have negative elements!";}
-  if (std::abs(arma::sum(p) - 1) > eps){ die = "P is not normed!";}
-
-  if (die != ""){
-    p.t().print("P");
-    throw std::logic_error(die);
-  }
-  
-  const double zeta = arma::randu();
-  return as_scalar(arma::find(arma::cumsum(p) > zeta, 1));
-}
 
 
 // For use in the update_gradient() call; Jain step 4
@@ -186,7 +136,7 @@ void FSSH::electronic_evolution(void){
   T = arma::real(arma::logmat(U)) / dtc;
 
   // R.B.: energy was updated in update_gradient()
-  V = diagmat(energy.subvec(min_state, min_state + shstates - 1));
+  V = diagmat(energy);
 
   /*
     Since the off-diagonal elements of V are always 0 in this
@@ -244,7 +194,7 @@ void FSSH::electronic_evolution(void){
       g(a) += 1.0 - arma::sum(g);
 
       // randomly select an element from the discrete distribution represented by g
-      arma::uword j = sample_discrete(g);
+      arma::uword j = util::sample_discrete(g);
       if (a != j){
       	// will update these in the velocity_rescale call
       	hopping = true;
@@ -306,7 +256,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   }
   
   // Unlike all other state-properties, must use min_state as floor for indexing into energy
-  double deltaE = energy(min_state + target_state) - energy(min_state + active_state);
+  double deltaE = energy(target_state) - energy(active_state);
 
   /*
     The hopping energy-conservation equations are documented in
@@ -403,9 +353,7 @@ double FSSH::update_gradient(void){
     PropMap props{};
     props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
     props.emplace(QMProperty::mmgradient, {min_state + active_state}, &mm_grd);
-    // R.B.: with any idx, energies will get all (excited_states + 1) states
-    // FIXME: should make energies behavior consistent with gradients
-    props.emplace(QMProperty::energies,   {excited_states}, &energy);
+    props.emplace(QMProperty::energies, util::range(min_state, min_state + shstates), &energy);
     qm->get_properties(props);
   }
   
@@ -419,7 +367,7 @@ double FSSH::update_gradient(void){
 
   electronic_evolution();
 
-  return energy(min_state + active_state);
+  return energy(active_state);
 }
 
 

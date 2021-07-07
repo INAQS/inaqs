@@ -24,9 +24,11 @@ public:
   
   void get_properties(PropMap &props) override;
 
-private:  
+private:
+  void state_tracker(PropMap &props);
+
   void get_nac_vector(arma::mat *nac, size_t A, size_t B);
-  void get_wf_overlap(arma::mat *U, size_t NSurf);
+  void get_wf_overlap(arma::mat *U);
   void get_diabatic_rot_mat(arma::mat *U);
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
@@ -52,6 +54,12 @@ private:
   
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
+  template<typename T>
+  void readQFMan(int filenum, T & a, size_t offset=0){
+    if (a.n_elem != readQFMan(filenum, a.memptr(), a.n_elem, offset)){
+      throw std::logic_error("Failure to parse file " + std::to_string(filenum));
+    }
+  }
 
   ConfigBlockReader qchem_reader();
   
@@ -74,6 +82,9 @@ private:
   bool singlets = true;  // Defaults for CIS calculation
   bool triplets = false;
   bool spin_flip = false;
+  bool track_states = false;
+
+  size_t shstates = 0;
   
   bool state_analysis = false;
   bool save_nacvector = false;
@@ -98,14 +109,15 @@ private:
 
 /* Some useful FMan Files */
 
-#define FILE_SET_ENERGY       72    // CIS state *excitation* energies 
-#define FILE_ENERGY           99    // 
-#define FILE_NUCLEAR_GRADIENT 131   //
-#define FILE_EFIELD           329   // 
-#define FILE_DERCOUP          967   // Derrivative coupling 
-#define FILE_WF_OVERLAP       398   // wavefunction overlap
-#define FILE_DIAB_ROT_MAT     941   // for diabatization rotations
-#define FILE_TRANS_DIP_MOM    942   // Transition dipole moments: states along cols, rows: strength, x, y, z
+#define FILE_SET_ENERGY        72    // CIS state *excitation* energies
+#define FILE_ENERGY            99    //
+#define FILE_NUCLEAR_GRADIENT 131    //
+#define FILE_EFIELD           329    //
+#define FILE_DERCOUP          967    // Derrivative coupling
+#define FILE_WF_OVERLAP       398    // wavefunction overlap
+#define FILE_DIAB_ROT_MAT     941    // for diabatization rotations
+#define FILE_TRANS_DIP_MOM    942    // Transition dipole moments: states along cols, rows: strength, x, y, z
+#define FILE_CIS_S2          1200
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11

@@ -1,4 +1,5 @@
 #include "decoherence_afssh.hpp"
+#include "util.hpp"
 
 double hypot(std::complex<double> a, std::complex<double> b);
 
@@ -108,23 +109,15 @@ void AFSSH::evolve_moments(const Electronic &c, const arma::mat U, const size_t 
       scfman/setman so it'll be fast.
     */
     
-    arma::uvec states(nstates);
-    arma::vec energy(nstates + min_state);
-  
-    for (arma::uword i = 0; i < nstates; i++){
-      states(i) = min_state + i;
-    }
+    const arma::uvec states = util::range(min_state, min_state + nstates);
   
     PropMap props{};
   
     props.emplace(QMProperty::qmgradient_multi, states, &gqm);
     props.emplace(QMProperty::mmgradient_multi, states, &gmm);
-    // R.B.: with any idx, energies will get all (excited_states + 1) states
-    props.emplace(QMProperty::energies, {nstates}, &energy);
+    props.emplace(QMProperty::energies, states, &V);
     (*qm)->get_properties(props);
 
-    // trim the energies that are not needed
-    V = energy.tail(nstates);
     // V used in build_rates()
   }
 

@@ -30,6 +30,8 @@ QM_QChem::qchem_reader() {
   reader.add_entry("spin_flip", 0);
   reader.add_entry("save_nacvector", 0);
   reader.add_entry("record_spectrum", 0);
+  reader.add_entry("shstates", 0);
+  reader.add_entry("track_states", 0);
   return reader;
 }
 
@@ -83,6 +85,26 @@ QM_QChem::QM_QChem(FileHandle& fh,
     save_nacvector = in;
     reader.get_data("record_spectrum", in);
     record_spectrum = in;
+    reader.get_data("track_states", in);
+    track_states = in;
+  }
+
+  // FIXME: validation here and in fssh.cpp is madness
+  {
+    int shstates_in;
+    reader.get_data("shstates", shstates_in);
+
+    if (shstates_in > 0){
+      shstates = shstates_in;
+    }
+    else{
+      shstates = excited_states + 1 - min_state; // take default
+    }
+
+    if ((int) shstates > excited_states - (min_state - 1)){
+      throw std::logic_error("Cannot run FSSH on more surfaces than are computed! Try increasing excited_states.");
+    }
+
   }
 
   reader.get_data("boys_states", boys_states);
@@ -96,9 +118,18 @@ QM_QChem::QM_QChem(FileHandle& fh,
       }
     }
   }
-  
-  if (singlets && triplets){
-    std::cerr << "WARNING: selecting singlets and triplets together not supported!" << std::endl;
+
+  if(spin_flip && !track_states){
+        throw std::runtime_error("Selecting spin flip without state tracking nearly guaranteed to produce incorrect results!");
+  }
+
+  if (singlets && triplets && !track_states){
+    throw std::runtime_error("Selecting singlets and triplets without state tracking nearly guaranteed to produce incorrect results!");
+  }
+
+  // FIXME: implement triplet tracking
+  if (track_states && !singlets){
+    throw std::runtime_error("State tracking for triplets not (yet) implemented!");
   }
   
   std::string conf_scratch;
@@ -123,16 +154,16 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 
 void QM_QChem::get_properties(PropMap &props){
+  // FIXME: can use a similar scheme once dynamics no longer knows about excited_states
+  if(track_states){
+    state_tracker(props);
+  }
+
   for (QMProperty p: props.keys()){
     switch(p){
       
     case QMProperty::wfoverlap:{
-      // FIXME: possible to call with different numbers of sufaces! Will silently yield incorrect results!!
-      size_t NSurf = excited_states;
-        if (props.has_idx(QMProperty::wfoverlap)){
-          NSurf = (*props.get_idx(QMProperty::wfoverlap))[0];
-        }
-      get_wf_overlap(props.get(QMProperty::wfoverlap), NSurf);
+      get_wf_overlap(props.get(p));
       break;
     }
 
@@ -203,15 +234,19 @@ void QM_QChem::get_properties(PropMap &props){
     }
       
     case QMProperty::energies:{
-      arma::vec * energies = props.get(QMProperty::energies); 
-      if (props.has_idx(QMProperty::energies)){
-	if (energies->n_elem != excited_states + 1){
-	  throw std::range_error("Insufficient space for all energies!");
-	}
-      	get_all_energies(energies);
+      arma::vec & energies = props.get(p);
+      if (props.has_idx(p)){
+        const arma::uvec &idx = *props.get_idx(p);
+        if (energies.n_elem != idx.n_elem){
+          throw std::logic_error("wrong energy size");
+        }
+
+        arma::vec e_temp(excited_states + 1, arma::fill::zeros);
+        get_all_energies(&e_temp);
+        energies = e_temp(idx);
       }
       else{
-      	get_ground_energy(energies); // FIXME: combine ground/excited calls
+        get_ground_energy(&energies); // FIXME: combine ground/excited calls
       }
       break;
     }
@@ -238,6 +273,51 @@ void QM_QChem::get_properties(PropMap &props){
   }
 }
 
+
+// modifies all properties requesting state k to request k' where k' is the (k+1)th *singlet*
+void QM_QChem::state_tracker(PropMap &props){
+  arma::vec S2(excited_states + 1);
+  {
+    get_all_energies(&S2); // a dummy call to generate FILE_CIS_S2; incidentally will also cache results for us
+    S2.set_size(excited_states);
+    readQFMan(FILE_CIS_S2, S2);
+  }
+
+  /* FIXME: 1.2 is the default for REM_CIS_S2_THRESH; if we want to
+     change or if that changes, we should specify our threshold via
+     the rem section.
+  */
+
+  const double thresh = 1.2; // if S^2 is larger than this, we consider the state a triplet
+
+  arma::uvec statei(excited_states + 1, arma::fill::zeros);
+
+  // FIXME: once BOMD doens't know anything about excited states (and
+  // idx{0} means the first comptued singlet, then we can ditch
+  // these hacks. rather could be: n_singlets = 0; statei(n_singlets++) = i;
+  // And we will need to test the ground state too.
+  arma::uword n_singlets = 1;
+  for (arma::uword i = 0; i < excited_states; i++){
+    if (S2(i) < thresh){
+      statei(n_singlets++) = i+1; // the ground state is state 0
+    }
+  }
+  statei.resize(n_singlets);
+
+  for (QMProperty p: props.keys()){
+    if (props.has_idx(p)){
+      arma::uvec & idxs = props.get_writable_idx(p);
+      for (arma::uword & i: idxs){
+        if (i > n_singlets){
+          throw std::runtime_error("The requested state is not within those states computed!");
+        }
+        else{
+          i = statei(i);
+        }
+      }
+    }
+  }
+}
 
 void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
@@ -363,16 +443,20 @@ void QM_QChem::do_state_analysis(void){
 
 /*
   FIXME: Use another REM variable to save PREV_GEO
-  FIXME: Make sure this works with spin_flip methods
 */
-void QM_QChem::get_wf_overlap(arma::mat *U, size_t NSurf){
+void QM_QChem::get_wf_overlap(arma::mat *U){
   static bool first_call = true;
+
+  if (U->n_elem != shstates * shstates){
+    throw std::logic_error("WF overlap is of wrong size!");
+  }
   
   if (! called(S::wfoverlap)){
     REMKeys k = excited_rem();
     k.insert({{"jobtype","sp"},
-    	      {"namd_lowestsurface", std::to_string(min_state)},
-              //{"wf_overlap_nsurf", std::to_string(NSurf)},
+              //{"namd_lowestsurface", std::to_string(min_state)},
+              {"wf_overlap_minsurf", std::to_string(min_state)},
+              {"wf_overlap_nsurf", std::to_string(shstates)},
     	      {"dump_wf_overlap", std::to_string(first_call ? 1 : 2)}});
     
     std::ofstream input = get_input_handle();
@@ -389,8 +473,8 @@ void QM_QChem::get_wf_overlap(arma::mat *U, size_t NSurf){
     U->eye();
   }
   else{
-    size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), NSurf*NSurf, FILE_POS_BEGIN);
-    if (count != NSurf * NSurf){
+    size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), shstates*shstates, FILE_POS_BEGIN);
+    if (count != shstates * shstates){
       throw std::runtime_error("Unable to parse wavefunction overlap");
     }
   }
@@ -750,6 +834,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"method",         exchange_method},
      {"basis",          basis_set},
      {"scf_algorithm",  scf_algorithm},
+     {"thresh_diis_switch", "5"},
      {"sym_ignore",     "true"},
      {"qm_mm",          "true"},
      {"max_scf_cycles", "500"},
