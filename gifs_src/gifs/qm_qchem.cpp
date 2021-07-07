@@ -168,7 +168,7 @@ void QM_QChem::get_properties(PropMap &props){
     }
 
     case QMProperty::diabatic_rot_mat:
-      get_diabatic_rot_mat(props.get(QMProperty::diabatic_rot_mat));
+      get_diabatic_rot_mat(props.get(p));
       break;
 
     case QMProperty::nacvector_imag:
@@ -176,9 +176,9 @@ void QM_QChem::get_properties(PropMap &props){
       break;
 
     case QMProperty::nacvector:{
-      const arma::uvec &idx = *props.get_idx(QMProperty::nacvector);
+      const arma::uvec &idx = *props.get_idx(p);
       size_t A = idx[0]; size_t B = idx[1];
-      get_nac_vector(props.get(QMProperty::nacvector), A, B);
+      get_nac_vector(props.get(p), A, B);
       called(S::energy); called(S::ex_energy);
       break;
     }
@@ -242,11 +242,11 @@ void QM_QChem::get_properties(PropMap &props){
         }
 
         arma::vec e_temp(excited_states + 1, arma::fill::zeros);
-        get_all_energies(&e_temp);
+        get_all_energies(e_temp);
         energies = e_temp(idx);
       }
       else{
-        get_ground_energy(&energies); // FIXME: combine ground/excited calls
+        get_ground_energy(energies); // FIXME: combine ground/excited calls
       }
       break;
     }
@@ -278,7 +278,7 @@ void QM_QChem::get_properties(PropMap &props){
 void QM_QChem::state_tracker(PropMap &props){
   arma::vec S2(excited_states + 1);
   {
-    get_all_energies(&S2); // a dummy call to generate FILE_CIS_S2; incidentally will also cache results for us
+    get_all_energies(S2); // a dummy call to generate FILE_CIS_S2; incidentally will also cache results for us
     S2.set_size(excited_states);
     readQFMan(FILE_CIS_S2, S2);
   }
@@ -362,10 +362,11 @@ void QM_QChem::do_boys_diabatization(void){
 }
 
 void QM_QChem::do_record_spectrum(void){
-  arma::vec e(1);
+  arma::vec e;
   if (!called(S::ex_energy)){
     // dummy call to make sure the transition dipoles and energies are written
-    get_all_energies(&e); 
+    e.set_size(excited_states + 1);
+    get_all_energies(e);
   }
 
   e.set_size(excited_states);
@@ -509,7 +510,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
 }
 
 
-void QM_QChem::get_ground_energy(arma::vec *e){
+void QM_QChem::get_ground_energy(rma::vec & e){
   // Build job if we need to
   if (! called(S::energy)){
     std::ofstream input = get_input_handle();
@@ -519,11 +520,11 @@ void QM_QChem::get_ground_energy(arma::vec *e){
     exec_qchem();
   }
 
-  parse_energies(*e);
+  parse_energies(e);
 }
 
 // Gets all energies: ground + excited states
-void QM_QChem::get_all_energies(arma::vec *e){
+void QM_QChem::get_all_energies(arma::vec & e){
   
   if (! called(S::ex_energy)){
     REMKeys k = excited_rem();
@@ -536,7 +537,7 @@ void QM_QChem::get_all_energies(arma::vec *e){
     exec_qchem();
   }
 
-  parse_energies(*e);
+  parse_energies(e);
 }
 
 

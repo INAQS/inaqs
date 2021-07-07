@@ -34,8 +34,8 @@ private:
   void get_gradient(arma::mat &g_qm, arma::uword surface);
   void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
 
-  void get_ground_energy(arma::vec *e);
-  void get_all_energies(arma::vec *e);
+  void get_ground_energy(arma::vec &e);
+  void get_all_energies(arma::vec &e);
 
   void do_state_analysis(void);
   void do_record_spectrum(void);
