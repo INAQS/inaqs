@@ -27,9 +27,9 @@ public:
 private:
   void state_tracker(PropMap &props);
 
-  void get_nac_vector(arma::mat *nac, size_t A, size_t B);
-  void get_wf_overlap(arma::mat *U);
-  void get_diabatic_rot_mat(arma::mat *U);
+  void get_nac_vector(arma::mat &nac, size_t A, size_t B);
+  void get_wf_overlap(arma::mat &U);
+  void get_diabatic_rot_mat(arma::mat &U);
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
   void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
@@ -47,17 +47,14 @@ private:
   REMKeys excited_rem(void);
   void exec_qchem(void);
 
-  void parse_qm_gradient(arma::mat &g_qm);
   void parse_mm_gradient(arma::mat &g_mm);
   void parse_energies(arma::vec &e);
-
-  
   
   size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
-  template<typename T>
+  template<typename T> // template for arma tensors
   void readQFMan(int filenum, T & a, size_t offset=0){
     if (a.n_elem != readQFMan(filenum, a.memptr(), a.n_elem, offset)){
-      throw std::logic_error("Failure to parse file " + std::to_string(filenum));
+      throw std::logic_error("Failure to parse file: " + std::to_string(filenum));
     }
   }
 
@@ -117,7 +114,7 @@ private:
 #define FILE_WF_OVERLAP       398    // wavefunction overlap
 #define FILE_DIAB_ROT_MAT     941    // for diabatization rotations
 #define FILE_TRANS_DIP_MOM    942    // Transition dipole moments: states along cols, rows: strength, x, y, z
-#define FILE_CIS_S2          1200
+#define FILE_CIS_S2          1200    // S^2 matrix elements for CIS states
 
 /* And some offsets */
 #define FILE_POS_CRNT_TOTAL_ENERGY  11

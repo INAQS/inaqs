@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "qm_qchem.hpp"
 #include "properties.hpp"
+#include "util.hpp"
 #include <armadillo>
 #include <unordered_map>
 
@@ -207,28 +208,26 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::mmgradient_multi:
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient_multi:{
-      arma::cube *g_qm = props.get(QMProperty::qmgradient_multi);
-      arma::uvec surfaces = arma::regspace<arma::uvec>(0,excited_states); //assume all
+      arma::cube &g_qm = props.get(QMProperty::qmgradient_multi);
+      arma::uvec surfaces = util::range(excited_states + 1); //assume all
       if (props.has_idx(QMProperty::qmgradient_multi)){ // specific states
 	surfaces = *props.get_idx(QMProperty::qmgradient_multi);
       }
 
-      if (g_qm->n_slices != surfaces.n_elem){
+      if (g_qm.n_slices != surfaces.n_elem){
 	throw std::range_error("Insufficient space for requested gradients!");
       }
       
-      arma::uword i=0;
-      for (arma::uword surface: surfaces){
+      for(arma::uword i = 0; i < surfaces.n_elem; i++){
 	if (props.has(QMProperty::mmgradient_multi)){
-	  arma::cube *g_mm = props.get(QMProperty::mmgradient_multi);
-	  get_gradient(g_qm->slice(i), g_mm->slice(i), surface);
+	  arma::cube &g_mm = props.get(QMProperty::mmgradient_multi);
+	  get_gradient(g_qm.slice(i), g_mm.slice(i), surfaces(i));
 	}
 	else{
-	  get_gradient(g_qm->slice(i), surface);
+	  get_gradient(g_qm.slice(i), surfaces(i));
 	}
-
-	i++;
       }
+
       called(S::energy); called(S::ex_energy);
       break;
     }
@@ -236,7 +235,7 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::energies:{
       arma::vec & energies = props.get(p);
       if (props.has_idx(p)){
-        const arma::uvec &idx = *props.get_idx(p);
+        arma::uvec idx = *props.get_idx(p);
         if (energies.n_elem != idx.n_elem){
           throw std::logic_error("wrong energy size");
         }
@@ -335,13 +334,14 @@ void QM_QChem::do_boys_diabatization(void){
   write_rem_section(input, keys);  
   write_molecule_section(input);
 
-  input << "$localized_diabatization" << std::endl;
-  input << "Comment: states we mix" << std::endl;
-  for (const auto& s: boys_states){
-    input << s << " ";
+  { // write boys section
+    input << "$localized_diabatization" << std::endl;
+    input << "Comment: states we mix" << std::endl;
+    for (const auto& s: boys_states){
+      input << s << " ";
+    }
+    input << std::endl << "$end" << std::endl;
   }
-  input << std::endl << "$end" << std::endl;
-  
   input.close();
 
   exec_qchem();
@@ -361,6 +361,7 @@ void QM_QChem::do_boys_diabatization(void){
   }
 }
 
+
 void QM_QChem::do_record_spectrum(void){
   arma::vec e;
   if (!called(S::ex_energy)){
@@ -370,17 +371,12 @@ void QM_QChem::do_record_spectrum(void){
   }
 
   e.set_size(excited_states);
-  arma::mat mu(4, excited_states);
+  readQFMan(FILE_SET_ENERGY, e);
+  
   // for mu, the first row is the oscillator strength
-  
-  if (excited_states != readQFMan(FILE_SET_ENERGY, e.memptr(), excited_states, FILE_POS_BEGIN)){
-    throw std::runtime_error("Unable to parse excited energies");
-  }
+  arma::mat mu(4, excited_states);
+  readQFMan(FILE_TRANS_DIP_MOM, mu);
 
-  if( excited_states * 4 != readQFMan(FILE_TRANS_DIP_MOM, mu.memptr(), excited_states * 4, FILE_POS_BEGIN)){
-    throw std::runtime_error("Unable to parse transition dipole moments");
-  }
-  
   //write spectrum to file as [excitation energy] [strength]
   {
 
@@ -445,10 +441,10 @@ void QM_QChem::do_state_analysis(void){
 /*
   FIXME: Use another REM variable to save PREV_GEO
 */
-void QM_QChem::get_wf_overlap(arma::mat *U){
+void QM_QChem::get_wf_overlap(arma::mat &U){
   static bool first_call = true;
 
-  if (U->n_elem != shstates * shstates){
+  if (U.n_elem != shstates * shstates){
     throw std::logic_error("WF overlap is of wrong size!");
   }
   
@@ -471,13 +467,10 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   }
 
   if (first_call){ // if this is the first call, don't actually read from $QC; there will be no overlap to read
-    U->eye();
+    U.eye();
   }
   else{
-    size_t count = readQFMan(FILE_WF_OVERLAP, U->memptr(), shstates*shstates, FILE_POS_BEGIN);
-    if (count != shstates * shstates){
-      throw std::runtime_error("Unable to parse wavefunction overlap");
-    }
+    readQFMan(FILE_WF_OVERLAP, U);
   }
 
   first_call = false;
@@ -491,7 +484,7 @@ void QM_QChem::get_wf_overlap(arma::mat *U){
   FIXME: May want to increase REM_CIS_CONVERGENCE to 7 (from default 6)
   FIXME: Do we need to include $localised_diabatization section?
 */
-void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
+void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
 	    {"boys_cis_numstate", std::to_string(excited_states)}
@@ -502,11 +495,8 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
   write_molecule_section(input);
   input.close();
   exec_qchem();
-  
-  size_t count = readQFMan(FILE_DIAB_ROT_MAT, U->memptr(), excited_states*excited_states, FILE_POS_BEGIN);
-  if (count != excited_states * excited_states){
-    throw std::runtime_error("Unable to parse diabatic rotation matrix");
-  }
+
+  readQFMan(FILE_DIAB_ROT_MAT, U);
 }
 
 
@@ -576,12 +566,12 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 
   exec_qchem();
 
-  parse_qm_gradient(g_qm);
+  readQFMan(FILE_NUCLEAR_GRADIENT, g_qm);
 }
 
 
 // Should we split mm/qm nac?
-void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
+void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   REMKeys keys = excited_rem();
   keys.insert({{"jobtype","sp"},
 	    {"calc_nac", "true"},
@@ -626,15 +616,12 @@ void QM_QChem::get_nac_vector(arma::mat *nac, size_t A, size_t B){
 
   exec_qchem();
 
-  size_t count = readQFMan(FILE_DERCOUP, nac->memptr(), 3 * (NMM + NQM), FILE_POS_BEGIN);
-  if (count != 3 * (NMM + NQM)){
-    throw std::runtime_error("Unable to parse NAC vector!");
-  }
+  readQFMan(FILE_DERCOUP, nac);
 
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
       "nacvector." + std::to_string(call_idx()) + ".arma";
-    nac->save(nacf);
+    nac.save(nacf);
   }
 }
 
@@ -663,22 +650,9 @@ void QM_QChem::parse_energies(arma::vec &e){
 }
 
 
-void QM_QChem::parse_qm_gradient(arma::mat &g_qm){
-  size_t count = readQFMan(FILE_NUCLEAR_GRADIENT, g_qm.memptr(), 3*NQM, FILE_POS_BEGIN);
-  if (count != 3 * NQM){
-    throw std::runtime_error("Unable to parse QM gradient!");
-  }
-}
-
-
 void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
-  /* Set a ceiling on the number of doubles we read-in because the
-     number of MM atoms can fluctuate during a simulation. */
-  size_t count = readQFMan(FILE_EFIELD, g_mm.memptr(), 3*NMM, FILE_POS_BEGIN);
-
-  if (count != 3 * NMM){
-    throw std::runtime_error("Unable to parse MM gradient!");
-  }
+  /* Size of g_mm updated above in GifsImpl::update_gradient() */
+  readQFMan(FILE_EFIELD, g_mm);
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
