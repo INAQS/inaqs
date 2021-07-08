@@ -510,7 +510,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat *U){
 }
 
 
-void QM_QChem::get_ground_energy(rma::vec & e){
+void QM_QChem::get_ground_energy(arma::vec & e){
   // Build job if we need to
   if (! called(S::energy)){
     std::ofstream input = get_input_handle();
