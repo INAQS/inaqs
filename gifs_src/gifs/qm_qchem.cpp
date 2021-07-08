@@ -147,7 +147,6 @@ QM_QChem::QM_QChem(FileHandle& fh,
   if (conf_threads > 1){
     setenv("QCTHREADS", std::to_string(conf_threads).c_str(), 0);
   }
-
   // FIXME: should include MPI support
 
   qc_executable = get_qcprog();
@@ -291,10 +290,11 @@ void QM_QChem::state_tracker(PropMap &props){
 
   arma::uvec statei(excited_states + 1, arma::fill::zeros);
 
-  // FIXME: once BOMD doens't know anything about excited states (and
-  // idx{0} means the first comptued singlet, then we can ditch
-  // these hacks. rather could be: n_singlets = 0; statei(n_singlets++) = i;
-  // And we will need to test the ground state too.
+  // FIXME: once BOMD doens't know anything about excited states or
+  // min_state (and idx{0} means the first comptued singlet, then we
+  // can ditch these hacks. rather could be: n_singlets = 0;
+  // statei(n_singlets++) = i; And we will need to test the ground
+  // state too.
   arma::uword n_singlets = 1;
   for (arma::uword i = 0; i < excited_states; i++){
     if (S2(i) < thresh){
@@ -317,6 +317,7 @@ void QM_QChem::state_tracker(PropMap &props){
     }
   }
 }
+
 
 void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
@@ -438,9 +439,7 @@ void QM_QChem::do_state_analysis(void){
 }
 
 
-/*
-  FIXME: Use another REM variable to save PREV_GEO
-*/
+//FIXME: Use another REM variable to save PREV_GEO
 void QM_QChem::get_wf_overlap(arma::mat &U){
   static bool first_call = true;
 
@@ -513,7 +512,8 @@ void QM_QChem::get_ground_energy(arma::vec & e){
   parse_energies(e);
 }
 
-// Gets all energies: ground + excited states
+
+// ground + excited states
 void QM_QChem::get_all_energies(arma::vec & e){
   
   if (! called(S::ex_energy)){
@@ -570,7 +570,6 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 }
 
 
-// Should we split mm/qm nac?
 void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   REMKeys keys = excited_rem();
   keys.insert({{"jobtype","sp"},
@@ -624,7 +623,6 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
     nac.save(nacf);
   }
 }
-
 
 
 void QM_QChem::parse_energies(arma::vec &e){  
@@ -710,6 +708,7 @@ const std::string QM_QChem::get_qcwdir(void){
   return qcwdir;
 }
 
+
 /*
   In order of preference:
   1)               If $QCSCRATCH is set and an absolute path use it
@@ -718,7 +717,6 @@ const std::string QM_QChem::get_qcwdir(void){
 
   The above are set in reverse.
 */
-
 const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   char * pwd = std::getenv("PWD");
   std::string scratch_path = std::string(pwd) + "/GQSH.sav";
@@ -757,7 +755,6 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   setenv("QCSCRATCH", scratch_path.c_str(), true);
   std::cout << "taking scratch path to be: " << scratch_path << std::endl;
 
-  
   return scratch_path;
 }
 
@@ -784,6 +781,7 @@ std::ofstream QM_QChem::get_input_handle(){
   return os;
 }
 
+
 REMKeys QM_QChem::excited_rem(void){
   // if (! (excited_states > 0)){
   //   throw std::logic_error("Cannot request multi-state property without excited states.");
@@ -800,6 +798,7 @@ REMKeys QM_QChem::excited_rem(void){
 
   return excited;
 }
+
 
 void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   // Default options 
@@ -888,9 +887,6 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   Sentinel system to track whether the requested property has been
   computed since the last call to update(). See/update the protected
   nested enum class S (as in sentinel) for the list of properties
-
-  FIXME: think about how to use QMProperty instead; might require a
-  different keyword for energy.
 */
 bool QM_QChem::called(S s){
   static std::unordered_map<S, int> calls;
@@ -902,6 +898,7 @@ bool QM_QChem::called(S s){
     return false;
   }
 }
+
 
 /*
   Given a q-qchem file number (see qm_qchem.hpp for examples), read N
