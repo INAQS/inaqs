@@ -8,8 +8,7 @@
 #include <cmath>
 #include <iostream>
 
-ConfigBlockReader
-FSSH::setup_reader()
+ConfigBlockReader FSSH::setup_reader()
 {
     using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"fssh"};
@@ -18,18 +17,15 @@ FSSH::setup_reader()
 
     reader.add_entry("amplitude_file", "cs.dat");
     reader.add_entry("decoherence", "");
-    reader.add_entry("shstates", -1);
-
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
-    
+
     std::random_device rd; // generate default random seed
     reader.add_entry("random_seed", (size_t) rd());
     return reader;
 }
 
 
-void
-FSSH::get_reader_data(ConfigBlockReader& reader) {
+void FSSH::get_reader_data(ConfigBlockReader& reader) {
   {
     double in_dtc;
     reader.get_data("dtc", in_dtc);
@@ -39,12 +35,10 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   reader.get_data("delta_e_tol", delta_e_tol);
-  
+  reader.get_data("amplitude_file", amplitude_file);
+
   /* added in BOMD::add_qm_keys() */
   reader.get_data("min_state", min_state);
-  reader.get_data("excited_states", excited_states);
-
-  reader.get_data("amplitude_file", amplitude_file);
 
 
   /* 
@@ -60,26 +54,18 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     std::cerr << "[FSSH] random_seed = " << seed << std::endl;
   }
-
-  {  
-    int shstates_in=-1;
-    reader.get_data("shstates", shstates_in);
-    if (shstates_in < 0){      
-      shstates = excited_states + 1 - min_state; // take default
-    }
-    else{
-      shstates = shstates_in;
-    }
-  }
   
+  {
+    size_t excited_states;
+    /* added in BOMD::add_qm_keys() */
+    reader.get_data("excited_states", excited_states);
+
+    shstates = excited_states + 1 - min_state;
+  }
+
   if (shstates < 2){
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }
-
-  if ((size_t) shstates > excited_states - (min_state - 1)){
-    throw std::logic_error("Cannot run FSSH on more surfaces than are computed! Try increasing excited_states.");
-  }
-  
 
   if (!(min_state <= active_state && active_state <= min_state + shstates)){
     throw std::range_error("Active state not in the range of hopping states!");
@@ -100,7 +86,6 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     }
   }
 
-  
   active_state -= min_state;
 
   if (min_state != 1){
@@ -119,7 +104,7 @@ FSSH::get_reader_data(ConfigBlockReader& reader) {
     state(s). Can use DVEC?
   */
   c.reset(shstates, 1, active_state);
-};
+}
 
 
 // For use in the update_gradient() call; Jain step 4

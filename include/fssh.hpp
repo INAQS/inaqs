@@ -33,7 +33,7 @@ protected:
   double delta_e_tol;
   double dtq;
   
-  size_t min_state, excited_states;
+  size_t min_state;
   int shstates;
 
   std::string amplitude_file;

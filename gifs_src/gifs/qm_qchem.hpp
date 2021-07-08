@@ -19,7 +19,7 @@ public:
 	   arma::vec& in_mm_chg, 
 	   const int charge, 
 	   const int mult,
-	   const int excited_states,
+	   const int excited_states_in,
            const int min_state);
   
   void get_properties(PropMap &props) override;

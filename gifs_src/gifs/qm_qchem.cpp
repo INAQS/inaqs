@@ -31,7 +31,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("spin_flip", 0);
   reader.add_entry("save_nacvector", 0);
   reader.add_entry("record_spectrum", 0);
-  reader.add_entry("shstates", 0);
+  reader.add_entry("buffer_states", 0);
   reader.add_entry("track_states", 0);
   return reader;
 }
@@ -56,9 +56,9 @@ QM_QChem::QM_QChem(FileHandle& fh,
 		   arma::vec& in_mm_chg, 
 		   const int charge, 
 		   const int mult,
-		   const int excited_states,
+		   const int excited_states_in,
                    const int min_state):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states, min_state)
+  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state)
 {
   /*
     The environmental variables $QCSCRATCH, $QCTHREADS shall take
@@ -90,22 +90,18 @@ QM_QChem::QM_QChem(FileHandle& fh,
     track_states = in;
   }
 
-  // FIXME: validation here and in fssh.cpp is madness
-  {
-    int shstates_in;
-    reader.get_data("shstates", shstates_in);
+  shstates = excited_states + 1 - min_state;
 
-    if (shstates_in > 0){
-      shstates = shstates_in;
+  {
+    int buffer_states;
+    reader.get_data("buffer_states", buffer_states);
+
+    if (buffer_states < 0){
+      throw std::runtime_error("Cannot compute fewer states than required for dynamics; buffer_states must be non-negative");
     }
     else{
-      shstates = excited_states + 1 - min_state; // take default
+      excited_states += buffer_states;
     }
-
-    if ((int) shstates > excited_states - (min_state - 1)){
-      throw std::logic_error("Cannot run FSSH on more surfaces than are computed! Try increasing excited_states.");
-    }
-
   }
 
   reader.get_data("boys_states", boys_states);
@@ -114,7 +110,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
     boys_diabatization = true;
 
     for (auto s: boys_states){
-      if ((s < 0 ) || (s > excited_states)){
+      if ((s < 0 ) || ((size_t) s > excited_states)){
         throw std::runtime_error("Boys states must be within the excited states!");
       }
     }
