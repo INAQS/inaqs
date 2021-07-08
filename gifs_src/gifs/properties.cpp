@@ -22,6 +22,15 @@ const arma::uvec* PropMap::get_idx(QMProperty key) const {
   return &itr->second;
 }
 
+arma::uvec & PropMap::get_writable_idx(QMProperty key) {
+  auto itr = prop_vec.find(key);
+  if (itr == prop_vec.end()) {
+    throw std::logic_error("get_writable_idx() is dangerous and must be used with has_idx()!");
+  }
+  return itr->second;
+}
+
+
 bool PropMap::has(QMProperty key) const{
   return prop.end() != prop.find(key); 
 }

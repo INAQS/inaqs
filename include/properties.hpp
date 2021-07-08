@@ -79,6 +79,7 @@ public:
   PropMap() : prop{} {};
   ArmaWrap get(QMProperty key);
   const arma::uvec* get_idx(QMProperty key) const;
+  arma::uvec & get_writable_idx(QMProperty key);
   
   void emplace(QMProperty p, ArmaWrap vec);
   void emplace(QMProperty p, arma::uvec iv, ArmaWrap vec);

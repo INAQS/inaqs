@@ -1,6 +1,7 @@
 #include "properties.hpp"
 #include "constants.hpp"
 #include "bomd.hpp"
+#include "util.hpp"
 #include "qm_qchem.hpp"
 #include "qm_model.hpp"
 //
@@ -40,6 +41,7 @@ BOMD::add_common_keys(ConfigBlockReader& reader)
     reader.add_entry("qmcode", "qchem");
     reader.add_entry("charge", 0);
     reader.add_entry("multiplicity", 1);
+    // FIXME: Should(?) remove min_states & excited states?
     reader.add_entry("min_state", (size_t) 1); // for (A)FSSH only
     reader.add_entry("active_state", (size_t) 0);
     reader.add_entry("excited_states", (size_t) 0);
@@ -105,7 +107,7 @@ BOMD::update_gradient()
     props.emplace(QMProperty::energies, {active_state}, &energy);
     qm->get_properties(props);
     //
-    return energy[active_state];
+    return energy(0);
 };
 
 
