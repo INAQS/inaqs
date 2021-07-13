@@ -3,9 +3,49 @@
 #include <armadillo>
 
 /*
-  List of all possible properties that could be produced by or
-  requested of a QMInterface.
+  Using lambda function to avoid cluttering namespace
+  Using switch to get complaints from compiler when we miss one
 */
+std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p)
+{
+  auto to_string = [](const QMProperty p) -> std::string{
+    std::string name;
+    switch (p){
+    case QMProperty::nacvector:
+      name = "nacvector";
+      break;
+    case QMProperty::nacvector_imag:
+      name = "nacvector_imag";
+      break;
+    case QMProperty::wfoverlap:
+      name = "wfoverlap";
+      break;
+    case QMProperty::diabatic_rot_mat:
+      name = "diabatic_rot_mat";
+      break;
+    case QMProperty::qmgradient:
+      name = "qmgradient";
+      break;
+    case QMProperty::mmgradient:
+      name = "mmgradient";
+      break;
+    case QMProperty::qmgradient_multi:
+      name = "qmgradient_multi";
+      break;
+    case QMProperty::mmgradient_multi:
+      name = "mmgradient_multi";
+      break;
+    case QMProperty::energies:
+      name = "energies";
+      break;      
+    }
+    return name;
+  };
+  
+  oStrStream << to_string(p);
+  return oStrStream;
+}
+
 ArmaWrap PropMap::get(QMProperty key) {
   auto itr = prop.find(key);
   if(itr == prop.end()){

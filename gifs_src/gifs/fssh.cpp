@@ -54,7 +54,7 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     std::cerr << "[FSSH] random_seed = " << seed << std::endl;
   }
-  
+
   {
     size_t excited_states;
     /* added in BOMD::add_qm_keys() */

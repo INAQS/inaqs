@@ -20,6 +20,8 @@ enum class QMProperty{
    energies,         // vec
 };
 
+std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p);
+
 /*
   A wrapper around pointers to various armadillo base types so that
   PropMap can store tensors of different rank. Implicitly converts
