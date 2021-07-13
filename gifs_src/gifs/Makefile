@@ -1,5 +1,6 @@
 CPP = g++
-CPPFLAGS += -std=c++11 -O0 -Werror -Wall -Wextra -g -DARMA_DONT_USE_WRAPPER
+CPPFLAGS += -std=c++11 -O0 -Werror -Wall -Wextra -g
+CPPFLAGS += -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5
 #CPPFLAGS += -fanalyzer # only with gcc v. 10+
 #CPPFLAGS += -fsanitize=address
 
@@ -27,7 +28,7 @@ COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 $(LIBRARY): $(OBJS) | $(LIBDIR)
-	$(CPP) $(CPPFLAGS) -shared -o $@ $(OBJS)
+	$(CPP) $(CPPFLAGS) -shared -o $@ $(OBJS) -Wl,--whole-archive $(shell $(CPP) --print-file-name=libhdf5.a) -Wl,--no-whole-archive
 
 %.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<

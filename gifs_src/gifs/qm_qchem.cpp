@@ -182,7 +182,7 @@ void QM_QChem::get_properties(PropMap &props){
     case QMProperty::mmgradient:
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:{
-      arma::mat *g_qm = props.get(QMProperty::qmgradient);
+      arma::mat &g_qm = props.get(QMProperty::qmgradient);
       arma::uword surface = 0; //assume ground state
       called(S::energy);
       if (props.has_idx(QMProperty::qmgradient)){
@@ -191,11 +191,11 @@ void QM_QChem::get_properties(PropMap &props){
       }
       
       if (props.has(QMProperty::mmgradient)){
-	arma::mat *g_mm = props.get(QMProperty::mmgradient);
-	get_gradient(*g_qm, *g_mm, surface);
+	arma::mat &g_mm = props.get(QMProperty::mmgradient);
+	get_gradient(g_qm, g_mm, surface);
       }
       else{
-	get_gradient(*g_qm, surface);
+	get_gradient(g_qm, surface);
       }
       break;
     }
@@ -617,7 +617,11 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
       "nacvector." + std::to_string(call_idx()) + ".arma";
-    nac.save(nacf);
+
+    // FIXME: should save better than this
+    nac.save(arma::hdf5_name("gifs.hdf5",
+                             "/nac/" + std::to_string(call_idx()),
+                             arma::hdf5_opts::replace));
   }
 }
 
