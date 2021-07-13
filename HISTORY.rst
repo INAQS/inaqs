@@ -2,7 +2,7 @@
 History
 =======
 
-0.1.0 (2019-10-09)
+0.1.0 (2021-03-12)
 ------------------
 
-* First release on PyPI.
+* First public release via https://github.com/MFSJMenger/gifs_release/
