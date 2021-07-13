@@ -25,6 +25,19 @@ public:
   void get_properties(PropMap &props) override;
 
 private:
+  enum class QCFILE{
+    FILE_SET_ENERGY       =   72,    // CIS state *excitation* energies
+    FILE_ENERGY           =   99,    //
+    FILE_NUCLEAR_GRADIENT =  131,    //
+    FILE_EFIELD           =  329,    //
+    FILE_DERCOUP          =  967,    // Derrivative coupling
+    FILE_WF_OVERLAP       =  398,    // wavefunction overlap
+    FILE_DIAB_ROT_MAT     =  941,    // for diabatization rotations
+    FILE_TRANS_DIP_MOM    =  942,    // Transition dipole moments: states along cols, rows: strength, x, y, z
+    FILE_CIS_S2           = 1200,    // S^2 matrix elements for CIS states
+  };
+  std::string to_string(const QCFILE f);
+
   void state_tracker(PropMap &props);
 
   void get_nac_vector(arma::mat &nac, size_t A, size_t B);
@@ -50,11 +63,11 @@ private:
   void parse_mm_gradient(arma::mat &g_mm);
   void parse_energies(arma::vec &e);
   
-  size_t readQFMan(int filenum, double * memptr, size_t N, size_t offset);
+  size_t readQFMan(QCFILE filenum, double * memptr, size_t N, size_t offset);
   template<typename T> // template for arma tensors
-  void readQFMan(int filenum, T & a, size_t offset=0){
+  void readQFMan(QCFILE filenum, T & a, size_t offset=0){
     if (a.n_elem != readQFMan(filenum, a.memptr(), a.n_elem, offset)){
-      throw std::logic_error("Failure to parse file: " + std::to_string(filenum));
+      throw std::logic_error("Failure to parse file: " + to_string(filenum));
     }
   }
 
@@ -102,22 +115,10 @@ private:
   // get_properites(), call_idx() will always return a value > 0. This
   // is required behavior.
   bool called(S s);
+
+  // Some offsets for files
+  const size_t POS_BEGIN              = 0;
+  const size_t POS_CRNT_TOTAL_ENERGY  = 11;
 };
-
-/* Some useful FMan Files */
-
-#define FILE_SET_ENERGY        72    // CIS state *excitation* energies
-#define FILE_ENERGY            99    //
-#define FILE_NUCLEAR_GRADIENT 131    //
-#define FILE_EFIELD           329    //
-#define FILE_DERCOUP          967    // Derrivative coupling
-#define FILE_WF_OVERLAP       398    // wavefunction overlap
-#define FILE_DIAB_ROT_MAT     941    // for diabatization rotations
-#define FILE_TRANS_DIP_MOM    942    // Transition dipole moments: states along cols, rows: strength, x, y, z
-#define FILE_CIS_S2          1200    // S^2 matrix elements for CIS states
-
-/* And some offsets */
-#define FILE_POS_CRNT_TOTAL_ENERGY  11
-#define FILE_POS_BEGIN              0
 
 #endif

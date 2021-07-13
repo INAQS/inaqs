@@ -246,6 +246,7 @@ void QM_QChem::get_properties(PropMap &props){
     }
 
     default: // Compile with the default case commented out and the compiler will detect neglected properties
+      std::cerr << "You requested QMProperty " << p << std::endl;
       throw std::invalid_argument("Unknown QMProperty!");
       break;
     }
@@ -274,7 +275,7 @@ void QM_QChem::state_tracker(PropMap &props){
   {
     get_all_energies(S2); // a dummy call to generate FILE_CIS_S2; incidentally will also cache results for us
     S2.set_size(excited_states);
-    readQFMan(FILE_CIS_S2, S2);
+    readQFMan(QCFILE::FILE_CIS_S2, S2);
   }
 
   /* FIXME: 1.2 is the default for REM_CIS_S2_THRESH; if we want to
@@ -368,11 +369,11 @@ void QM_QChem::do_record_spectrum(void){
   }
 
   e.set_size(excited_states);
-  readQFMan(FILE_SET_ENERGY, e);
+  readQFMan(QCFILE::FILE_SET_ENERGY, e);
   
   // for mu, the first row is the oscillator strength
   arma::mat mu(4, excited_states);
-  readQFMan(FILE_TRANS_DIP_MOM, mu);
+  readQFMan(QCFILE::FILE_TRANS_DIP_MOM, mu);
 
   //write spectrum to file as [excitation energy] [strength]
   {
@@ -465,7 +466,7 @@ void QM_QChem::get_wf_overlap(arma::mat &U){
     U.eye();
   }
   else{
-    readQFMan(FILE_WF_OVERLAP, U);
+    readQFMan(QCFILE::FILE_WF_OVERLAP, U);
   }
 
   first_call = false;
@@ -491,7 +492,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
   input.close();
   exec_qchem();
 
-  readQFMan(FILE_DIAB_ROT_MAT, U);
+  readQFMan(QCFILE::FILE_DIAB_ROT_MAT, U);
 }
 
 
@@ -562,7 +563,7 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 
   exec_qchem();
 
-  readQFMan(FILE_NUCLEAR_GRADIENT, g_qm);
+  readQFMan(QCFILE::FILE_NUCLEAR_GRADIENT, g_qm);
 }
 
 
@@ -611,7 +612,7 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
 
   exec_qchem();
 
-  readQFMan(FILE_DERCOUP, nac);
+  readQFMan(QCFILE::FILE_DERCOUP, nac);
 
   if (save_nacvector){
     std::string nacf = get_qcwdir() + "/" +
@@ -621,8 +622,8 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
 }
 
 
-void QM_QChem::parse_energies(arma::vec &e){  
-  readQFMan(FILE_ENERGY, e.memptr(), 1, FILE_POS_CRNT_TOTAL_ENERGY);
+void QM_QChem::parse_energies(arma::vec &e){
+  readQFMan(QCFILE::FILE_ENERGY, e.memptr(), 1, POS_CRNT_TOTAL_ENERGY);
 
   if (excited_states > 0 && e.n_elem > 1){
     double e_ground = e[0];
@@ -631,7 +632,7 @@ void QM_QChem::parse_energies(arma::vec &e){
       throw std::range_error("Insufficient space for all excited states in vec e!");
     }
     
-    size_t count = readQFMan(FILE_SET_ENERGY, e.memptr() + 1, excited_states, FILE_POS_BEGIN);
+    size_t count = readQFMan(QCFILE::FILE_SET_ENERGY, e.memptr() + 1, excited_states, POS_BEGIN);
     if (count != excited_states){
       throw std::runtime_error("Unable to parse energies!");
     }
@@ -646,7 +647,7 @@ void QM_QChem::parse_energies(arma::vec &e){
 
 void QM_QChem::parse_mm_gradient(arma::mat &g_mm){
   /* Size of g_mm updated above in GifsImpl::update_gradient() */
-  readQFMan(FILE_EFIELD, g_mm);
+  readQFMan(QCFILE::FILE_EFIELD, g_mm);
 
   for (size_t i = 0; i < NMM; i++){
     const double q = chg_mm[i];
@@ -902,8 +903,8 @@ bool QM_QChem::called(S s){
   offset into memptr, which must point to a block of memory with space
   for at least N doubles.
 */
-size_t QM_QChem::readQFMan(int filenum, double * memptr, size_t N, size_t offset){  
-  std::string path = qc_scratch_directory + "/" + std::to_string(filenum) + ".0";
+size_t QM_QChem::readQFMan(QCFILE filenum, double * memptr, size_t N, size_t offset){
+  std::string path = qc_scratch_directory + "/" + std::to_string((int) filenum) + ".0";
   std::ifstream ifile;
   ifile.open(path, std::ios::in | std::ios::binary);
 
@@ -924,4 +925,38 @@ size_t QM_QChem::readQFMan(int filenum, double * memptr, size_t N, size_t offset
   ifile.close();
 
   return count;
+}
+
+std::string QM_QChem::to_string(const QCFILE f){
+  std::string name;
+  switch (f){
+  case QCFILE::FILE_SET_ENERGY:
+    name = "FILE_SET_ENERGY, 72.0";
+    break;
+  case QCFILE::FILE_ENERGY:
+    name = "FILE_ENERGY, 99.0";
+    break;
+  case QCFILE::FILE_NUCLEAR_GRADIENT:
+    name = "FILE_NUCLEAR_GRADIENT, 131.0";
+    break;
+  case QCFILE::FILE_EFIELD:
+    name = "FILE_EFIELD, 329.0";
+    break;
+  case QCFILE::FILE_DERCOUP:
+    name = "FILE_DERCOUP, 967.0";
+    break;
+  case QCFILE::FILE_WF_OVERLAP:
+    name = "FILE_WF_OVERLAP, 398.0";
+    break;
+  case QCFILE::FILE_DIAB_ROT_MAT:
+    name = "FILE_DIAB_ROT_MAT, 941.0";
+    break;
+  case QCFILE::FILE_TRANS_DIP_MOM:
+    name = "FILE_TRANS_DIP_MOM, 942.0";
+    break;
+  case QCFILE::FILE_CIS_S2:
+    name = "FILE_CIS_S2, 1200.0";
+    break;
+  }
+  return name;
 }
