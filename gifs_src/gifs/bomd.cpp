@@ -91,8 +91,6 @@ BOMD::get_reader_data(ConfigBlockReader& reader) {
   if (active_state > 1e3){
     std::cerr << "active_state=" << active_state << "! This is probably a mistake." << std::endl;
   }
-
-  energy.set_size(excited_states + 1);
 };
 
 
