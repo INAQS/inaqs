@@ -30,7 +30,7 @@ protected:
   //Properties
   const size_t NQM;             // const, actually NQM+NLink
   const int qm_charge;
-  const int qm_multiplicity;
+  int qm_multiplicity;          // non-const since a child might want to override
   size_t excited_states;        // non-const since a child might want to override
   const size_t min_state;
   

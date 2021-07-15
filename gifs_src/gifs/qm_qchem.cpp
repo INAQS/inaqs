@@ -60,11 +60,6 @@ QM_QChem::QM_QChem(FileHandle& fh,
                    const int min_state):
   QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state)
 {
-  /*
-    The environmental variables $QCSCRATCH, $QCTHREADS shall take
-    precedence over anything set in the config.
-  */
-  
   ConfigBlockReader reader = qchem_reader();
   reader.parse(fh);
 
@@ -90,14 +85,22 @@ QM_QChem::QM_QChem(FileHandle& fh,
     track_states = in;
   }
 
+  // shstates must be set before buffer states are added
   shstates = excited_states + 1 - min_state;
+
+  if(spin_flip){
+    qm_multiplicity = 3;
+  }
+
+  bool valid_options = true;
 
   {
     int buffer_states;
     reader.get_data("buffer_states", buffer_states);
 
     if (buffer_states < 0){
-      throw std::runtime_error("Cannot compute fewer states than required for dynamics; buffer_states must be non-negative");
+      valid_options = false;
+      std::cerr << "Buffer_states must be non-negative" << std::endl;
     }
     else{
       excited_states += buffer_states;
@@ -111,24 +114,42 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
     for (auto s: boys_states){
       if ((s < 0 ) || ((size_t) s > excited_states)){
-        throw std::runtime_error("Boys states must be within the excited states!");
+        valid_options = false;
+        std::cerr << "Boys states must be within the excited states!" << std::endl;
       }
     }
   }
 
+  if(spin_flip && excited_states < 1){
+    valid_options = false;
+    std::cerr << "Must compute excited states with spin-flip; try increasing buffer_states." << std::endl;
+  }
+
   if(spin_flip && !track_states){
-        throw std::runtime_error("Selecting spin flip without state tracking nearly guaranteed to produce incorrect results!");
+    valid_options = false;
+    std::cerr << "Selecting spin-flip without state tracking nearly guaranteed to produce incorrect results" << std::endl;
   }
 
   if (singlets && triplets && !track_states){
-    throw std::runtime_error("Selecting singlets and triplets without state tracking nearly guaranteed to produce incorrect results!");
+    valid_options = false;
+    std::cerr << "Selecting singlets and triplets without state tracking nearly guaranteed to produce incorrect results!" << std::endl;
   }
 
   // FIXME: implement triplet tracking
   if (track_states && !singlets){
-    throw std::runtime_error("State tracking for triplets not (yet) implemented!");
+    valid_options = false;
+    std::cerr << "State tracking for triplets not (yet << std::endl implemented!" << std::endl;
+  }
+
+  if (!valid_options){
+    throw std::runtime_error("Invalid options; see above!");
   }
   
+  /*
+    The environmental variables $QCSCRATCH, $QCTHREADS shall take
+    precedence over anything set in the config.
+  */
+
   std::string conf_scratch;
   reader.get_data("qc_scratch", conf_scratch);
   qc_scratch_directory = get_qcscratch(conf_scratch);
@@ -292,7 +313,8 @@ void QM_QChem::state_tracker(PropMap &props){
   // can ditch these hacks. rather could be: n_singlets = 0;
   // statei(n_singlets++) = i; And we will need to test the ground
   // state too.
-  arma::uword n_singlets = 1;
+  arma::uword n_singlets = qm_multiplicity == 1 ? 1 : 0;
+
   for (arma::uword i = 0; i < excited_states; i++){
     if (S2(i) < thresh){
       statei(n_singlets++) = i+1; // the ground state is state 0
@@ -304,7 +326,7 @@ void QM_QChem::state_tracker(PropMap &props){
     if (props.has_idx(p)){
       arma::uvec & idxs = props.get_writable_idx(p);
       for (arma::uword & i: idxs){
-        if (i > n_singlets){
+        if (i >= n_singlets){
           throw std::runtime_error("The requested state is not within those states computed!");
         }
         else{

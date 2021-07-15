@@ -88,9 +88,9 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 
   active_state -= min_state;
 
-  if (min_state != 1){
+  if (min_state < 1){
     std::cerr << "min_state=" << min_state << std::endl;
-    std::cerr << "Warning, minimum states other than 1 not supported in QChem!" << std::endl;
+    std::cerr << "Warning, minimum states smaller than 1 not supported in QChem!" << std::endl;
   }
 
   energy.set_size(shstates);
@@ -114,7 +114,7 @@ void FSSH::electronic_evolution(void){
   }
 
   PropMap props{};
-  props.emplace(QMProperty::wfoverlap, {(arma::uword) shstates}, &U);
+  props.emplace(QMProperty::wfoverlap, &U);
   qm->get_properties(props);
 
   Electronic::phase_match(U);
