@@ -3,46 +3,42 @@
 #include <armadillo>
 
 /*
-  Using lambda function to avoid cluttering namespace
   Using switch to get complaints from compiler when we miss one
 */
 std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p)
 {
-  auto to_string = [](const QMProperty p) -> std::string{
-    std::string name;
-    switch (p){
-    case QMProperty::nacvector:
-      name = "nacvector";
-      break;
-    case QMProperty::nacvector_imag:
-      name = "nacvector_imag";
-      break;
-    case QMProperty::wfoverlap:
-      name = "wfoverlap";
-      break;
-    case QMProperty::diabatic_rot_mat:
-      name = "diabatic_rot_mat";
-      break;
-    case QMProperty::qmgradient:
-      name = "qmgradient";
-      break;
-    case QMProperty::mmgradient:
-      name = "mmgradient";
-      break;
-    case QMProperty::qmgradient_multi:
-      name = "qmgradient_multi";
-      break;
-    case QMProperty::mmgradient_multi:
-      name = "mmgradient_multi";
-      break;
-    case QMProperty::energies:
-      name = "energies";
-      break;      
-    }
-    return name;
-  };
+  std::string name;
+  switch (p){
+  case QMProperty::nacvector:
+    name = "nacvector";
+    break;
+  case QMProperty::nacvector_imag:
+    name = "nacvector_imag";
+    break;
+  case QMProperty::wfoverlap:
+    name = "wfoverlap";
+    break;
+  case QMProperty::diabatic_rot_mat:
+    name = "diabatic_rot_mat";
+    break;
+  case QMProperty::qmgradient:
+    name = "qmgradient";
+    break;
+  case QMProperty::mmgradient:
+    name = "mmgradient";
+    break;
+  case QMProperty::qmgradient_multi:
+    name = "qmgradient_multi";
+    break;
+  case QMProperty::mmgradient_multi:
+    name = "mmgradient_multi";
+    break;
+  case QMProperty::energies:
+    name = "energies";
+    break;
+  }
   
-  oStrStream << to_string(p);
+  oStrStream << name;
   return oStrStream;
 }
 
