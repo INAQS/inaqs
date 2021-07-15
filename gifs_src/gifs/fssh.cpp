@@ -88,11 +88,6 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 
   active_state -= min_state;
 
-  if (min_state < 1){
-    std::cerr << "min_state=" << min_state << std::endl;
-    std::cerr << "Warning, minimum states smaller than 1 not supported in QChem!" << std::endl;
-  }
-
   energy.set_size(shstates);
 
   U.set_size(shstates, shstates);
@@ -239,8 +234,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   if (NMM() > 0){
     gradv.tail(3*NMM()) = arma::vectorise(mmg_new);
   }
-  
-  // Unlike all other state-properties, must use min_state as floor for indexing into energy
+
   double deltaE = energy(target_state) - energy(active_state);
 
   /*
@@ -257,7 +251,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     std::cerr << "[FSSH] Hop, " << active_state + min_state << "->"
               << target_state + min_state << " succeeds; energy difference = "
               << deltaE << std::endl;
-    
+
     // test the sign of dmv to pick the root yielding the smallest value of alpha
     double alpha = (vd > 0 ? 1.0 : -1.0) * std::sqrt(discriminant) - (vd/dmd);
     vel = vel + alpha * (nacv / m); // recall the nacv has dimension of momentum
@@ -382,7 +376,7 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     m(i) =  masses(i/3);
   }
     
-  bool update = hopping;
+  bool update = hopping; // copy so hopping can be reset
   double deltaE = 0;
   if (hopping){
     std::cerr <<  "[FSSH] Attempting hop: " << active_state + min_state

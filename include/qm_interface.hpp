@@ -32,7 +32,7 @@ protected:
   const int qm_charge;
   int qm_multiplicity;          // non-const since a child might want to override
   size_t excited_states;        // non-const since a child might want to override
-  const size_t min_state;
+  size_t min_state;             // non-const since a child might want to override
   
   //  fixed size
   const arma::uvec& atomids;    // NQM

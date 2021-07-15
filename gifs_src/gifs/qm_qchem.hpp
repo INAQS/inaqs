@@ -20,7 +20,7 @@ public:
 	   const int charge, 
 	   const int mult,
 	   const int excited_states_in,
-           const int min_state);
+           const int min_state_in);
   
   void get_properties(PropMap &props) override;
 

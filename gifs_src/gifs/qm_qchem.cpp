@@ -57,8 +57,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
 		   const int charge, 
 		   const int mult,
 		   const int excited_states_in,
-                   const int min_state):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state)
+                   const int min_state_in):
+  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state_in)
 {
   ConfigBlockReader reader = qchem_reader();
   reader.parse(fh);
@@ -85,14 +85,21 @@ QM_QChem::QM_QChem(FileHandle& fh,
     track_states = in;
   }
 
-  // shstates must be set before buffer states are added
+  // shstates must be set before buffer states or are added or min_state is changed for spin_flip
   shstates = excited_states + 1 - min_state;
 
   if(spin_flip){
     qm_multiplicity = 3;
+    min_state += 1; // since the ground state is the first excited state
   }
 
   bool valid_options = true;
+
+  if (min_state < 1){
+    std::cerr << "min_state=" << min_state << std::endl;
+    std::cerr << "Minimum states smaller than 1 not supported in QChem!" << std::endl;
+    valid_options = false;
+  }
 
   {
     int buffer_states;
