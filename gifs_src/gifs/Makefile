@@ -1,5 +1,5 @@
 CPP = g++
-CPPFLAGS += -std=c++11 -O0 -Werror -Wall -Wextra -g
+CPPFLAGS += -std=c++11 -O0 -Werror -Wall -Wextra -g -Wshadow=compatible-local
 CPPFLAGS += -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5
 #CPPFLAGS += -fanalyzer # only with gcc v. 10+
 #CPPFLAGS += -fsanitize=address
