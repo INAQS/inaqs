@@ -28,7 +28,8 @@ COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 $(LIBRARY): $(OBJS) | $(LIBDIR)
-	$(CPP) $(CPPFLAGS) -shared -o $@ $(OBJS) -Wl,--whole-archive $(shell $(CPP) --print-file-name=libhdf5.a) -Wl,--no-whole-archive
+	$(CPP) -shared $(OBJS) -lhdf5 -o $@
+
 
 %.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
