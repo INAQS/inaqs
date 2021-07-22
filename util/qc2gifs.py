@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 import fileinput
@@ -149,6 +150,7 @@ def writeTOP(atoms, name="GIFS", system="GIFS", residue="QM", forcefield=None, n
 
     top.append("\n[ atoms ]")
     top.append(";  nr type         resnr residue atom      cgnr   charge       mass")
+
     for (i, a) in enumerate(atoms, start=1):
         top.append(fmtTopAtoms(i, a, residue))
 
@@ -174,11 +176,17 @@ def fmtTopAtoms(nr, atom, residue, resnr=1):
     # ...
 
     # Notes: Charge and mass are optional. We do not perturb mass, but
-    # set the charge to 0. Charge groups, cgnr, are constructed such
-    # that there are no more than 6 atoms in a single charge group (Gromacs' max is 32).
-    # The name in the atom field must match that defined in type
+    # set the charge to 0. The name in the atom field must match that
+    # defined in type. Charge groups, cgnr, *were previously*
+    # constructed such that there are no more than 6 atoms in a single
+    # charge group (Gromacs' max is 32). However, this produced errors
+    # (blowing-up) with some solvents. Following qforce [1], we simply
+    # place each atom in its own charge group.
+
+    # [1]: https://github.com/selimsami/qforce/blob/master/forcefield.py#L168
+
     sym = ffDict[s2z[atom.S]]
-    cgnr = int(nr/(6+1))
+    cgnr = nr
     chg = 0.0
     return f"{nr:5} {sym:12} {resnr:5} {residue:7} {atom.S:5} {cgnr:5} {chg:8.3}"
 
