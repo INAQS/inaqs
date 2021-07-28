@@ -15,7 +15,13 @@ CPPFLAGS += -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5
 SRCS := $(wildcard *.cpp)
 OBJS := $(SRCS:%.cpp=%.o)
 
-INCLUDE := -I../../include -I../../armadillo/include
+
+TDIR := tests
+TSRCS := $(wildcard $(TDIR)/*.cpp)
+TOBJS := $(TSRCS:%.cpp=%.o)
+
+
+INCLUDE := -I../../include -I../../armadillo/include -I../
 LIBDIR := ../../lib
 LIB := libgifs.so
 LIBRARY := $(LIBDIR)/$(LIB)
@@ -26,12 +32,15 @@ DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
 COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
+LINKLIBS = -lhdf5
 
 $(LIBRARY): $(OBJS) | $(LIBDIR)
-	$(CPP) -shared $(OBJS) -lhdf5 -o $@
+	$(CPP) -shared $(OBJS) $(LINKLIBS) -o $@
 
+$(TDIR)/%.o : $(TDIR)/%.cpp
+	$(CPP) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -c $(OUTPUT_OPTION) $<
 
-%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR)
+%.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR) $(TDEPDIR)
 	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
 	$(POSTCOMPILE)
 
@@ -40,6 +49,11 @@ clean:
 	rm -rf $(DEPDIR) || true
 	rm $(LIBRARY) || true
 
+tests: $(TDIR)/test
+
+$(TDIR)/test: $(TOBJS) $(OBJS)
+	$(CPP) $(TOBJS) $(OBJS) $(LINKLIBS) -lopenblas -o $@
+	./$@
 
 $(LIBDIR): ; mkdir -p $@
 $(DEPDIR): ; mkdir -p $@
