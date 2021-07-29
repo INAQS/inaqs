@@ -21,7 +21,7 @@ TSRCS := $(wildcard $(TDIR)/*.cpp)
 TOBJS := $(TSRCS:%.cpp=%.o)
 
 
-INCLUDE := -I../../include -I../../armadillo/include -I../
+INCLUDE := -I../../include -I../../armadillo/include -I../ -I./
 LIBDIR := ../../lib
 LIB := libgifs.so
 LIBRARY := $(LIBDIR)/$(LIB)
@@ -53,8 +53,8 @@ clean:
 tests: $(TDIR)/test
 
 $(TDIR)/test: $(TOBJS) $(LIBRARY)
-	$(CPP) $^ -lopenblas $(LINKLIBS) -o $@
-	./$@
+	$(CPP) $(TOBJS) -lgifs -L$(LIBDIR) -lopenblas $(LINKLIBS) -o $@
+	LD_LIBRARY_PATH=$(LIBDIR):$(LD_LIBRARY_PATH) ./$@ --success
 
 $(LIBDIR): ; mkdir -p $@
 $(DEPDIR): ; mkdir -p $@
