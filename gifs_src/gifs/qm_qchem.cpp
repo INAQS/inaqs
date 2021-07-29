@@ -875,6 +875,10 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
 }
 
 
+/*
+   FIXME: should do better formatting with std::right << std::fixed <<
+   std::setprecision(precision) << std::setw(precision+5) and friends
+*/
 void QM_QChem::write_molecule_section(std::ostream &os){
   /*
     format of $molecule & $externall_charges sections:
