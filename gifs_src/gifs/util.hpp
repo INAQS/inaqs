@@ -12,6 +12,11 @@ namespace util{
   arma::uword sample_discrete(const arma::vec &p);
   arma::uvec range(arma::uword a, arma::uword b); //[a, b)
   arma::uvec range(arma::uword n); // [0, n)
+
+  template <typename T>
+  inline bool approx_equal(T a, T b, T tol=arma::datum::eps){
+    return std::abs(a-b) < tol;
+  };
 }
 
 #endif
