@@ -330,7 +330,7 @@ std::vector<std::string> ConfigBlockReader::enumerate_keys(void){
   std::vector<std::string> keys;
   keys.reserve(data.size());
   
-  for (const auto p: data){
+  for (const auto &p: data){
     keys.push_back(p.first);
   }
 

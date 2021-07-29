@@ -10,7 +10,7 @@ export CC=gcc CXX=g++
 mkdir -p build
 (
     cd build
-    cmake --warn-uninitialized .. \
+    cmake .. \
           -DCMAKE_INSTALL_PREFIX="$GIFSROOT" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
     [ $? ] && make -j $N

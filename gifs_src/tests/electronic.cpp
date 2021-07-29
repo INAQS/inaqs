@@ -20,7 +20,7 @@ TEST_CASE( "Jacobi sweeps locate minimum for A", "[Electronic]"){
 
 
   Electronic::unitarize(A8);
-  REQUIRE((A8*A8.t() - arma::eye(arma::size(A8))).is_zero(1e-15));
+  REQUIRE((A8*A8.t() - arma::eye(arma::size(A8))).is_zero(1e-14));
 }
 
 TEST_CASE( "Jacobi sweeps locate minimum for B", "[Electronic]"){
@@ -34,6 +34,6 @@ TEST_CASE( "Jacobi sweeps locate minimum for B", "[Electronic]"){
 
 
   Electronic::unitarize(B8);
-  REQUIRE((B8*B8.t() - arma::eye(arma::size(B8))).is_zero(1e-15));
+  REQUIRE((B8*B8.t() - arma::eye(arma::size(B8))).is_zero(1e-14));
 }
 

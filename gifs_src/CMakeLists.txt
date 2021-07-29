@@ -1,11 +1,10 @@
-#find_package(Armadillo 9 REQUIRED NO_DEFAULT_PATH)
-#include_directories(${ARMADILLO_INCLUDE_DIRS})
-#link_libraries(${ARMADILLO_LIBRARIES})
-
-# FIXME: should be able to use system armadillo, but find_package
-# doesn't seem to find module-loaded versions...
-
-include_directories(../armadillo/include)
+find_package(Armadillo 10)
+if(${ARMADILLO_FOUND})
+    include_directories(${ARMADILLO_INCLUDE_DIRS})
+    link_libraries(${ARMADILLO_LIBRARIES})
+else()
+    include_directories(../armadillo/include)
+endif()
 
 find_package(HDF5 REQUIRED)
 include_directories(${HDF5_INCLUDE_DIRS})
@@ -30,7 +29,7 @@ add_library(gifs SHARED
 )
 
 target_compile_options(gifs PRIVATE -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5)
-target_compile_options(gifs PRIVATE -Werror -Wall -Wextra -Wshadow=compatible-local)
+target_compile_options(gifs PRIVATE -Werror -Wall -Wextra)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set_target_properties(gifs PROPERTIES VERSION ${PROJECT_VERSION})
