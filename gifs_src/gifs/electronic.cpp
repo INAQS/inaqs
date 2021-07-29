@@ -66,19 +66,24 @@ void Electronic::unitarize(arma::mat &U){
 
   Results agree with the matricies in the paper's Appendix D
 */
-void Electronic::phase_match(arma::mat &U){
+void Electronic::phase_match(arma::mat &U, bool do_unitarize){
   // Step 1: det(U) == 1
-  unitarize(U);
+  if (do_unitarize){
+    unitarize(U);
+  }
   if (arma::det(U) < 0){
     U.col(0) *= -1.0;
   }
 
   // Step 2: Jacobi sweeps
-  bool converged = false;
+  //bool converged = false;
   double deljk, Ujj, Ukk;
 
   const arma::uword N = U.n_rows;
-  while (! converged){
+  //while (! converged){
+  bool change;
+  do{
+    change = false;
     for (arma::uword j = 0; j < N; j++){
       for (arma::uword k = j + 1; k < N; k++){
 	Ujj = U(j,j);
@@ -92,16 +97,18 @@ void Electronic::phase_match(arma::mat &U){
 	if (deljk < 0){
 	  U.col(j) *= -1.0;
 	  U.col(k) *= -1.0;
+          change = true;
 	}
 	else{
-	  converged = true;
+	  //converged = true;
 	}
       }
     }
-  }
+  }while(change);
 }
 
-void Electronic::phase_match(arma::cx_mat &U){
+void Electronic::phase_match(arma::cx_mat &U, bool do_unitarize){
   (void) U;
+  (void) do_unitarize;
   throw std::runtime_error("complex phase matching not implemented");
 }
