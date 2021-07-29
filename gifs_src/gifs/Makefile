@@ -47,6 +47,7 @@ $(TDIR)/%.o : $(TDIR)/%.cpp
 
 clean:
 	rm *.o || true
+	rm $(TDIR)/*.o || true
 	rm -rf $(DEPDIR) || true
 	rm $(LIBRARY) || true
 
