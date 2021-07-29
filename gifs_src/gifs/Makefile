@@ -30,18 +30,19 @@ LIBRARY := $(LIBDIR)/$(LIB)
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 DEPDIR := .deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = $(CPP) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
+COMPILE.cpp = $(CPP) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -fPIC -c
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 LINKLIBS = -lhdf5
 
 $(LIBRARY): $(OBJS) | $(LIBDIR)
 	$(CPP) -shared $(OBJS) $(LINKLIBS) -o $@
 
+# no dependency generation for tests
 $(TDIR)/%.o : $(TDIR)/%.cpp
-	$(CPP) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) -c $(OUTPUT_OPTION) $<
+	$(COMPILE.cpp) -c $(OUTPUT_OPTION) $<
 
 %.o : %.cpp $(DEPDIR)/%.d | $(DEPDIR) $(TDEPDIR)
-	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
+	$(COMPILE.cpp) $(DEPFLAGS) $(OUTPUT_OPTION) $<
 	$(POSTCOMPILE)
 
 clean:
@@ -51,8 +52,8 @@ clean:
 
 tests: $(TDIR)/test
 
-$(TDIR)/test: $(TOBJS) $(OBJS)
-	$(CPP) $(TOBJS) $(OBJS) $(LINKLIBS) -lopenblas -o $@
+$(TDIR)/test: $(TOBJS) $(LIBRARY)
+	$(CPP) $^ -lopenblas $(LINKLIBS) -o $@
 	./$@
 
 $(LIBDIR): ; mkdir -p $@
