@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 import fileinput
@@ -183,7 +182,7 @@ def fmtTopAtoms(nr, atom, residue, resnr=1):
     # (blowing-up) with some solvents. Following qforce [1], we simply
     # place each atom in its own charge group.
 
-    # [1]: https://github.com/selimsami/qforce/blob/master/forcefield.py#L168
+    # [1]: https://github.com/selimsami/qforce/blob/master/qforce/forcefield.py#L168
 
     sym = ffDict[s2z[atom.S]]
     cgnr = nr
