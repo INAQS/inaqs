@@ -4,48 +4,7 @@
 Installation
 ============
 
-
-Stable release
---------------
-
-To install Generalized Interface for Surface Hopping, run this command in your terminal:
-
-.. code-block:: console
-
-    $ pip install gifs
-
-This is the preferred method to install Generalized Interface for Surface Hopping, as it will always install the most recent stable release.
-
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
-
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
-
-
-From sources
-------------
-
-The sources for Generalized Interface for Surface Hopping can be downloaded from the `Github repo`_.
-
-You can either clone the public repository:
-
-.. code-block:: console
-
-    $ git clone git://github.com/mfsjmenger/gifs
-
-Or download the `tarball`_:
-
-.. code-block:: console
-
-    $ curl -OJL https://github.com/mfsjmenger/gifs/tarball/master
-
-Once you have a copy of the source, you can install it with:
-
-.. code-block:: console
-
-    $ python setup.py install
-
-
-.. _Github repo: https://github.com/mfsjmenger/gifs
-.. _tarball: https://github.com/mfsjmenger/gifs/tarball/master
+* Compile the shared library via make in gifs_src/gifs
+* Build the bundled gromacs-4.6.5 being sure to define GMX_GIFS with the root of this repository; see the build.sh or setup.sh in the gromacs folder for details
+* Make sure you're using Q-Chem 5.4.1 or later with you $QC variable set correctly
+* Try some of the examples in the examples folder; run.sh will get each example going.
