@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
-
 #include <exception>
 
 std::vector<std::string> split_string(const std::string& str, const std::string& delims=", ");
@@ -116,14 +115,14 @@ class FileHandle
 };
 
 enum class DATA_TYPE {
-    INT,
-    ULINT,
-    DOUBLE,
-    STRING, 
-    IVEC,
-    DVEC,
-    SVEC,
-    NONE
+  INT,
+  ULINT,
+  DOUBLE,
+  STRING,
+  IVEC,
+  DVEC,
+  SVEC,
+  NONE
 };
 
 
@@ -131,7 +130,7 @@ class Data
 {
 public:
     using types = DATA_TYPE;
-    //
+
     explicit Data(int input, bool in_isset=true)                      : isset{in_isset}, data{new int(input)}, type{DATA_TYPE::INT} {}
     explicit Data(size_t input, bool in_isset=true)                   : isset{in_isset}, data{new size_t(input)}, type{DATA_TYPE::ULINT} {}
     explicit Data(double input, bool in_isset=true)                   : isset{in_isset}, data{new double(input)},     type{DATA_TYPE::DOUBLE} {}
@@ -139,13 +138,14 @@ public:
     explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, data{new std::vector<std::string>{input}},    type{DATA_TYPE::SVEC} {}
     explicit Data(std::vector<int> input, bool in_isset=true)         : isset{in_isset}, data{new std::vector<int>{input}},    type{DATA_TYPE::IVEC} {}
     explicit Data(std::vector<double> input, bool in_isset=true)      : isset{in_isset}, data{new std::vector<double>{input}},    type{DATA_TYPE::DVEC} {}
+
     Data(): type{DATA_TYPE::NONE} { }
     ~Data(); 
     Data(const Data& rhs);
     // copy operation
-    bool get_data(double& out); 
     bool get_data(int& out);
-    bool get_data(size_t& out); 
+    bool get_data(size_t& out);
+    bool get_data(double& out);
     bool get_data(std::string& out); 
     bool get_data(std::vector<int>&);
     bool get_data(std::vector<double>&);
@@ -154,7 +154,7 @@ public:
     void set_from_string(const std::string& validation);
     //
     //
-    std::string get_type();
+    std::string get_type() const;
     //
 private:
     bool isset{true};
@@ -174,31 +174,31 @@ public:
     template<typename T>
     void add_entry(const std::string name, const T def) { data.emplace(name, Data{def}); }
 
-    void add_entry(const std::string name, const Data::types type) { 
+    void add_entry(const std::string name, const Data::types type) {
     switch (type) {
         case types::INT:
-	  data.emplace(name, Data{(int) 0, false}); 
+            data.emplace(name, Data{(int) 0, false});
             break;
 	case types::ULINT:
-	  data.emplace(name, Data{(size_t) 0, false}); 
+            data.emplace(name, Data{(size_t) 0, false});
             break;
         case types::DOUBLE:
-	  data.emplace(name, Data{(double) 0.0, false}); 
+            data.emplace(name, Data{(double) 0.0, false});
             break;
         case types::STRING:
-            data.emplace(name, Data{std::string(""), false}); 
+            data.emplace(name, Data{std::string(""), false});
             break;
         case types::SVEC:
-            data.emplace(name, Data{std::vector<std::string>{}, false}); 
+            data.emplace(name, Data{std::vector<std::string>{}, false});
             break;
         case types::IVEC:
-            data.emplace(name, Data{std::vector<int>{}, false}); 
+            data.emplace(name, Data{std::vector<int>{}, false});
             break;
         case types::DVEC:
-            data.emplace(name, Data{std::vector<double>{}, false}); 
+            data.emplace(name, Data{std::vector<double>{}, false});
             break;
         default:
-            data.emplace(name, Data{}); 
+            data.emplace(name, Data{});
             break;
     }
     }

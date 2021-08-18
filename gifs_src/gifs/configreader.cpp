@@ -131,7 +131,7 @@ Data::~Data() {
         case types::INT:
             delete_void_as(int, data);
             break;
-	case types::ULINT:
+        case types::ULINT:
             delete_void_as(size_t, data);
             break;
         case types::DOUBLE:
@@ -154,6 +154,35 @@ Data::~Data() {
     }
 }
 
+/*
+  "0"     -> false
+  "false" -> false
+  "1"     -> true
+  "true"  -> true
+  "True"  -> true
+  "tRuE"  -> true
+  else    -> throw()
+*/
+bool strtobool(std::string input){
+  // downcase input
+  std::transform(input.begin(), input.end(), input.begin(),
+                 [](unsigned char c){ return std::tolower(c); });
+
+  bool result;
+  std::istringstream is(input);
+  is >> result;
+
+  if (is.fail()){
+    is.clear();
+    is >> std::boolalpha >> result;
+  }
+
+  if (is.fail()){
+    throw std::invalid_argument("Cannot convert '" + input + "' to bool");
+  }
+
+  return result;
+}
 
 void
 Data::set_from_string(const std::string& value) 
@@ -192,11 +221,11 @@ Data::set_from_string(const std::string& value)
 
 
 std::string
-Data::get_type() {
+Data::get_type() const {
     switch (type) {
         case (types::INT):
             return "int";
-	case (types::ULINT):
+        case (types::ULINT):
             return "size_t";
         case (types::DOUBLE): 
             return "double";
@@ -212,16 +241,6 @@ Data::get_type() {
             return "unknown";
     }
 };
-
-bool
-Data::get_data(double& out) {
-    if (type != types::DOUBLE || !isset) {
-        return false;
-    } 
-    copy_output(out, data);
-    return true;
-};
-
 
 bool
 Data::get_data(int& out) {
@@ -240,6 +259,15 @@ Data::get_data(size_t& out) {
     copy_output(out, data);
     return true;
 }
+
+bool
+Data::get_data(double& out) {
+    if (type != types::DOUBLE || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+};
 
 bool
 Data::get_data(std::string& out)
