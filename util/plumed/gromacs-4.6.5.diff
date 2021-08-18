@@ -1,0 +1,400 @@
+patch -u -l -b -F 5 -N --suffix=.preplumed "./src/kernel/CMakeLists.txt" << \EOF_EOF
+--- ./src/kernel/CMakeLists.txt.preplumed
++++ ./src/kernel/CMakeLists.txt
+@@ -33,6 +33,8 @@
+ # the research papers on the package. Check out http://www.gromacs.org.
+ #
+ 
++include(${CMAKE_SOURCE_DIR}/Plumed.cmake)
++
+ set(GMXPREPROCESS_SOURCES 
+     add_par.c       
+     calc_verletbuf.c
+@@ -123,7 +125,7 @@ endforeach()
+ 
+ add_executable(mdrun ${MDRUN_SOURCES} main.c)
+ gmx_add_man_page(mdrun)
+-target_link_libraries(mdrun gmxpreprocess md gmx ${OpenMP_LINKER_FLAGS})
++target_link_libraries(mdrun gmxpreprocess md gmx ${OpenMP_LINKER_FLAGS} ${PLUMED_LOAD})
+ set_target_properties(mdrun PROPERTIES OUTPUT_NAME "mdrun${GMX_BINARY_SUFFIX}" COMPILE_FLAGS "${OpenMP_C_FLAGS}")
+ 
+ if(GMX_OPENMM)
+EOF_EOF
+patch -u -l -b -F 5 -N --suffix=.preplumed "./src/kernel/md.c" << \EOF_EOF
+--- ./src/kernel/md.c.preplumed
++++ ./src/kernel/md.c
+@@ -93,6 +93,12 @@
+ #include "types/iteratedconstraints.h"
+ #include "nbnxn_cuda_data_mgmt.h"
+ 
++/* PLUMED */
++#include "../../Plumed.h"
++extern int    plumedswitch;
++extern plumed plumedmain;
++/* END PLUMED */
++
+ #ifdef GMX_LIB_MPI
+ #include <mpi.h>
+ #endif
+@@ -246,6 +252,12 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
+     int chkpt_ret;
+ #endif
+ 
++    /* PLUMED */
++    int plumedNeedsEnergy=0;
++    int plumedWantsToStop=0;
++    matrix plumed_vir;
++    /* END PLUMED */
++
+     /* Check for special mdrun options */
+     bRerunMD = (Flags & MD_RERUN);
+     bIonize  = (Flags & MD_IONIZE);
+@@ -718,6 +730,56 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
+         fprintf(fplog, "\n");
+     }
+ 
++    /* PLUMED */
++    if(plumedswitch){
++      /* detect plumed API version */
++      int pversion=0;
++      plumed_cmd(plumedmain,"getApiVersion",&pversion);
++      /* setting kbT is only implemented with api>1) */
++      real kbT=ir->opts.ref_t[0]*BOLTZ;
++      if(pversion>1) plumed_cmd(plumedmain,"setKbT",&kbT);
++      if(pversion>2){
++        int res=1;
++        if( (Flags & MD_STARTFROMCPT) ) plumed_cmd(plumedmain,"setRestart",&res);
++      }
++      if(cr->ms && cr->ms->nsim>1) {
++        if(MASTER(cr)) plumed_cmd(plumedmain,"GREX setMPIIntercomm",&cr->ms->mpi_comm_masters);
++        if(PAR(cr)){
++          if(DOMAINDECOMP(cr)) {
++            plumed_cmd(plumedmain,"GREX setMPIIntracomm",&cr->dd->mpi_comm_all);
++          }else{
++            plumed_cmd(plumedmain,"GREX setMPIIntracomm",&cr->mpi_comm_mysim);
++          }
++        }
++        plumed_cmd(plumedmain,"GREX init",NULL);
++      }
++      if(PAR(cr)){
++        if(DOMAINDECOMP(cr)) {
++          plumed_cmd(plumedmain,"setMPIComm",&cr->dd->mpi_comm_all);
++        }else{
++          plumed_cmd(plumedmain,"setMPIComm",&cr->mpi_comm_mysim);
++        }
++      }
++      plumed_cmd(plumedmain,"setNatoms",&top_global->natoms);
++      plumed_cmd(plumedmain,"setMDEngine","gromacs");
++      plumed_cmd(plumedmain,"setLog",fplog);
++      real real_delta_t;
++      real_delta_t=ir->delta_t;
++      plumed_cmd(plumedmain,"setTimestep",&real_delta_t);
++      plumed_cmd(plumedmain,"init",NULL);
++
++      if(PAR(cr)){
++        if(DOMAINDECOMP(cr)) {
++          plumed_cmd(plumedmain,"setAtomsNlocal",&cr->dd->nat_home);
++          plumed_cmd(plumedmain,"setAtomsGatindex",cr->dd->gatindex);
++        }else{
++          plumed_cmd(plumedmain,"setAtomsNlocal",&mdatoms->homenr);
++          plumed_cmd(plumedmain,"setAtomsContiguous",&mdatoms->start);
++        }
++      }
++    }
++    /* END PLUMED */
++
+     /* Set and write start time */
+     runtime_start(runtime);
+     print_date_and_time(fplog, cr->nodeid, "Started mdrun", runtime);
+@@ -1035,6 +1097,13 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
+                                     do_verbose && !bPMETuneRunning);
+                 wallcycle_stop(wcycle, ewcDOMDEC);
+                 /* If using an iterative integrator, reallocate space to match the decomposition */
++
++                /* PLUMED */
++                if(plumedswitch){
++                  plumed_cmd(plumedmain,"setAtomsNlocal",&cr->dd->nat_home);
++                  plumed_cmd(plumedmain,"setAtomsGatindex",cr->dd->gatindex);
++                }
++                /* END PLUMED */
+             }
+         }
+ 
+@@ -1180,14 +1249,49 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
+              * This is parallellized as well, and does communication too.
+              * Check comments in sim_util.c
+              */
++          
++            /* PLUMED */
++            plumedNeedsEnergy=0;
++            if(plumedswitch){
++              long int lstep=step; plumed_cmd(plumedmain,"setStepLong",&lstep);
++              plumed_cmd(plumedmain,"setPositions",&state->x[mdatoms->start][0]);
++              plumed_cmd(plumedmain,"setMasses",&mdatoms->massT[mdatoms->start]);
++              plumed_cmd(plumedmain,"setCharges",&mdatoms->chargeA[mdatoms->start]);
++              plumed_cmd(plumedmain,"setBox",&state->box[0][0]);
++              plumed_cmd(plumedmain,"prepareCalc",NULL);
++              plumed_cmd(plumedmain,"setStopFlag",&plumedWantsToStop);
++              plumed_cmd(plumedmain,"setForces",&f[mdatoms->start][0]);
++              plumed_cmd(plumedmain,"isEnergyNeeded",&plumedNeedsEnergy);
++              clear_mat(plumed_vir);
++              plumed_cmd(plumedmain,"setVirial",&plumed_vir[0][0]);
++            }
++            /* END PLUMED */
++            
+             do_force(fplog, cr, ir, step, nrnb, wcycle, top, top_global, groups,
+                      state->box, state->x, &state->hist,
+                      f, force_vir, mdatoms, enerd, fcd,
+                      state->lambda, graph,
+                      fr, vsite, mu_tot, t, outf->fp_field, ed, bBornRadii,
+-                     (bNS ? GMX_FORCE_NS : 0) | force_flags);
+-        }
+-
++                     (plumedNeedsEnergy? GMX_FORCE_ENERGY : 0) |(bNS ? GMX_FORCE_NS : 0) | force_flags);
++        }
++            /* PLUMED */
++            if(plumedswitch){
++              if(plumedNeedsEnergy){
++                msmul(force_vir,2.0,plumed_vir);
++                plumed_cmd(plumedmain,"setEnergy",&enerd->term[F_EPOT]);
++                plumed_cmd(plumedmain,"performCalc",NULL);
++                msmul(plumed_vir,0.5,force_vir);
++              } else {
++                msmul(plumed_vir,0.5,plumed_vir);
++                plumed_cmd(plumedmain,"performCalc",NULL);
++                m_add(force_vir,plumed_vir,force_vir);
++              }
++              if ((repl_ex_nst > 0) && (step > 0) && !bLastStep &&
++                 do_per_step(step,repl_ex_nst)) plumed_cmd(plumedmain,"GREX savePositions",NULL);
++              if(plumedWantsToStop) ir->nsteps=step_rel+1;
++            }
++            /* END PLUMED */
++  
+         GMX_BARRIER(cr->mpi_comm_mygroup);
+ 
+         if (bTCR)
+EOF_EOF
+patch -u -l -b -F 5 -N --suffix=.preplumed "./src/kernel/mdrun.c" << \EOF_EOF
+--- ./src/kernel/mdrun.c.preplumed
++++ ./src/kernel/mdrun.c
+@@ -56,6 +56,12 @@
+ #endif
+ 
+ /* afm stuf */
++/* PLUMED */
++#include "../../Plumed.h"
++int    plumedswitch;
++plumed plumedmain;
++/* END PLUMED */
++
+ #include "pull.h"
+ 
+ int cmain(int argc, char *argv[])
+@@ -405,6 +411,7 @@ int cmain(int argc, char *argv[])
+         { efLOG, "-rt",     "rottorque", ffOPTWR },
+         { efMTX, "-mtx",    "nm",       ffOPTWR },
+         { efNDX, "-dn",     "dipole",   ffOPTWR },
++        { efDAT, "-plumed", "plumed",   ffOPTRD },   /* PLUMED */
+         { efRND, "-multidir", NULL,      ffOPTRDMULT},
+         { efDAT, "-membed", "membed",   ffOPTRD },
+         { efTOP, "-mp",     "membed",   ffOPTRD },
+@@ -744,6 +751,31 @@ int cmain(int argc, char *argv[])
+     ddxyz[YY] = (int)(realddxyz[YY] + 0.5);
+     ddxyz[ZZ] = (int)(realddxyz[ZZ] + 0.5);
+ 
++    /* PLUMED */
++    plumedswitch=0;
++    if (opt2bSet("-plumed",NFILE,fnm)) plumedswitch=1;
++    if(plumedswitch){
++      int plumed_is_there=0;
++      int real_precision=sizeof(real);
++      real energyUnits=1.0;
++      real lengthUnits=1.0;
++      real timeUnits=1.0;
++  
++  
++      if(!plumed_installed()){
++        gmx_fatal(FARGS,"Plumed is not available. Check your PLUMED_KERNEL variable.");
++      }
++      plumedmain=plumed_create();
++      plumed_cmd(plumedmain,"setRealPrecision",&real_precision);
++      // this is not necessary for gromacs units:
++      plumed_cmd(plumedmain,"setMDEnergyUnits",&energyUnits);
++      plumed_cmd(plumedmain,"setMDLengthUnits",&lengthUnits);
++      plumed_cmd(plumedmain,"setMDTimeUnits",&timeUnits);
++      plumed_cmd(plumedmain,"setPlumedDat",ftp2fn(efDAT,NFILE,fnm));
++      plumedswitch=1;
++    }
++    /* END PLUMED */
++    
+     rc = mdrunner(&hw_opt, fplog, cr, NFILE, fnm, oenv, bVerbose, bCompact,
+                   nstglobalcomm, ddxyz, dd_node_order, rdd, rconstr,
+                   dddlb_opt[0], dlb_scale, ddcsx, ddcsy, ddcsz,
+@@ -754,6 +786,13 @@ int cmain(int argc, char *argv[])
+ 
+     gmx_finalize_par();
+ 
++    /* PLUMED */
++    if(plumedswitch){
++      plumed_finalize(plumedmain);
++    }
++    /* END PLUMED */
++
++    
+     if (MULTIMASTER(cr))
+     {
+         thanx(stderr);
+EOF_EOF
+patch -u -l -b -F 5 -N --suffix=.preplumed "./src/kernel/repl_ex.c" << \EOF_EOF
+--- ./src/kernel/repl_ex.c.preplumed
++++ ./src/kernel/repl_ex.c
+@@ -53,6 +53,12 @@
+ #include "domdec.h"
+ #include "partdec.h"
+ 
++/* PLUMED */
++#include "../../Plumed.h"
++extern int    plumedswitch;
++extern plumed plumedmain;
++/* END PLUMED */
++
+ #define PROBABILITYCUTOFF 100
+ /* we don't bother evaluating if events are more rare than exp(-100) = 3.7x10^-44 */
+ 
+@@ -113,14 +119,9 @@ static gmx_bool repl_quantity(FILE *fplog, const gmx_multisim_t *ms,
+     qall[re->repl] = q;
+     gmx_sum_sim(ms->nsim, qall, ms);
+ 
+-    bDiff = FALSE;
+-    for (s = 1; s < ms->nsim; s++)
+-    {
+-        if (qall[s] != qall[0])
+-        {
+-            bDiff = TRUE;
+-        }
+-    }
++    /* PLUMED */
++    bDiff = TRUE;
++    /* END PLUMED */
+ 
+     if (bDiff)
+     {
+@@ -259,23 +260,27 @@ gmx_repl_ex_t init_replica_exchange(FILE *fplog,
+ 
+     if (re->type < ereENDSINGLE)
+     {
+-
+-        for (i = 0; i < re->nrepl; i++)
+-        {
+-            for (j = i+1; j < re->nrepl; j++)
+-            {
+-                if (re->q[re->type][re->ind[j]] < re->q[re->type][re->ind[i]])
+-                {
+-                    k          = re->ind[i];
+-                    re->ind[i] = re->ind[j];
+-                    re->ind[j] = k;
+-                }
+-                else if (re->q[re->type][re->ind[j]] == re->q[re->type][re->ind[i]])
+-                {
+-                    gmx_fatal(FARGS, "Two replicas have identical %ss", erename[re->type]);
+-                }
+-            }
+-        }
++        /* PLUMED */
++        // plumed2: check if we want alternative patterns (i.e. for bias-exchange metaD)
++        // in those cases replicas can share the same temperature.
++
++        //for (i = 0; i < re->nrepl; i++)
++        //{
++        //    for (j = i+1; j < re->nrepl; j++)
++        //    {
++        //        if (re->q[re->type][re->ind[j]] < re->q[re->type][re->ind[i]])
++        //        {
++        //            k          = re->ind[i];
++        //            re->ind[i] = re->ind[j];
++        //            re->ind[j] = k;
++        //        }
++        //        else if (re->q[re->type][re->ind[j]] == re->q[re->type][re->ind[i]])
++        //        {
++        //            gmx_fatal(FARGS, "Two replicas have identical %ss", erename[re->type]);
++        //        }
++        //    }
++        //}
++        /* END PLUMED */
+     }
+ 
+     /* keep track of all the swaps, starting with the initial placement. */
+@@ -636,7 +641,6 @@ static void copy_state_nonatomdata(t_state *state, t_state *state_local)
+ static void scale_velocities(t_state *state, real fac)
+ {
+     int i;
+-
+     if (state->v)
+     {
+         for (i = 0; i < state->natoms; i++)
+@@ -807,6 +811,19 @@ static real calc_delta(FILE *fplog, gmx_bool bPrint, struct gmx_repl_ex *re, int
+              */
+             ediff = Epot[b] - Epot[a];
+             delta = -(beta[bp] - beta[ap])*ediff;
++            /* PLUMED */
++            if(plumedswitch){
++              real adb,bdb,dplumed;
++              char buf[300];
++              sprintf(buf,"GREX getDeltaBias %d",a); plumed_cmd(plumedmain,buf,&adb);
++              sprintf(buf,"GREX getDeltaBias %d",b); plumed_cmd(plumedmain,buf,&bdb);
++              dplumed=adb*beta[ap]+bdb*beta[bp];
++              delta+=dplumed;
++              if (bPrint)
++                fprintf(fplog,"  dplumed = %10.3e  d = %10.3e",dplumed,delta);
++            }
++            /* END PLUMED */
++
+             break;
+         case ereLAMBDA:
+             /* two cases:  when we are permuted, and not.  */
+@@ -1047,6 +1064,33 @@ test_for_replica_exchange(FILE                 *fplog,
+     {
+         /* standard nearest neighbor replica exchange */
+         m = (step / re->nst) % 2;
++        /* PLUMED */
++        if(plumedswitch){
++          int partner=re->repl;
++          int test=0;
++          plumed_cmd(plumedmain,"getExchangesFlag",&test);
++          if(test>0){
++            int *list;
++            snew(list,re->nrepl);
++            plumed_cmd(plumedmain,"setNumberOfReplicas",&(re->nrepl));
++            plumed_cmd(plumedmain,"getExchangesList",list);
++            for(i=0; i<re->nrepl; i++) re->ind[i]=list[i];
++            sfree(list);
++          }
++
++          for(i=1; i<re->nrepl; i++) {
++            if (i % 2 != m) continue;
++            a = re->ind[i-1];
++            b = re->ind[i];
++            if(re->repl==a) partner=b;
++            if(re->repl==b) partner=a;
++          }
++          plumed_cmd(plumedmain,"GREX setPartner",&partner);
++          plumed_cmd(plumedmain,"GREX calculate",NULL);
++          plumed_cmd(plumedmain,"GREX shareAllDeltaBias",NULL);
++        }
++        /* END PLUMED */
++
+         for (i = 1; i < re->nrepl; i++)
+         {
+             a = re->ind[i-1];
+@@ -1308,6 +1352,10 @@ gmx_bool replica_exchange(FILE *fplog, const t_commrec *cr, struct gmx_repl_ex *
+     /* The order in which multiple exchanges will occur. */
+     gmx_bool bThisReplicaExchanged = FALSE;
+ 
++    /* PLUMED */
++    if(plumedswitch)plumed_cmd(plumedmain,"GREX prepare",NULL);
++    /* END PLUMED */
++    
+     if (MASTER(cr))
+     {
+         replica_id  = re->repl;
+EOF_EOF
