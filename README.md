@@ -6,7 +6,7 @@ For an overview of GIFS and its capabilites, see our [Q-Chem Webinar](https://ww
 # Building
 GIFS is relatively decoupled from Gromacs and is invoked via shared library.
 
-See the build instructions in (docs/installation.rst)
+See the build instructions in [docs/installation.rst](docs/installation.rst)
 
 # Development
 GIFS is developed as a collaboration between the University of Pennsylvania and the University of Groningen. Work in the Netherlands is led by Dr. Maximilian Menger (m.f.s.j.menger@rug.nl) and in the United States by [Dr. Vale Cofer-Shabica](https://vale.science) (valecs@sas.upenn.edu).
