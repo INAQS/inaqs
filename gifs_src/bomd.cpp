@@ -105,15 +105,15 @@ BOMD::update_gradient()
     qm->get_properties(props);
     //
     //FIXME:debug
-  {
-    auto tmp = qm_grd;
-    int precision = 8;
-    std::cout << "grd: "<< std::right << std::fixed << std::setprecision(precision);
-    for (arma::uword i = 0; i < tmp.n_cols; i++){
-      std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
-    }
-    std::cout << std::endl;
-  }
+  // {
+  //   auto tmp = qm_grd;
+  //   int precision = 8;
+  //   std::cout << "grd: "<< std::right << std::fixed << std::setprecision(precision);
+  //   for (arma::uword i = 0; i < tmp.n_cols; i++){
+  //     std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
+  //   }
+  //   std::cout << std::endl;
+  // }
 
     return energy(0);
 };
@@ -124,15 +124,15 @@ bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
 
 
   //FIXME:debug
-  {
-    auto tmp = velocities;
-    int precision = 8;
-    std::cout << "vel: " << std::right << std::fixed << std::setprecision(precision);
-    for (arma::uword i = 0; i < NQM(); i++){
-      std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
-    }
-    std::cout << std::endl;
-  }
+  // {
+  //   auto tmp = velocities;
+  //   int precision = 8;
+  //   std::cout << "vel: " << std::right << std::fixed << std::setprecision(precision);
+  //   for (arma::uword i = 0; i < NQM(); i++){
+  //     std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
+  //   }
+  //   std::cout << std::endl;
+  // }
   
   edrift = (total_energy - elast)/elast;
   elast = total_energy;
