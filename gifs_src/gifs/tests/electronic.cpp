@@ -37,3 +37,21 @@ TEST_CASE( "Jacobi sweeps locate minimum for B", "[Electronic]"){
   REQUIRE((B8*B8.t() - arma::eye(arma::size(B8))).is_zero(1e-15));
 }
 
+TEST_CASE("More Jacobi Sweeps from ZZ", "[Electronic]"){
+  arma::mat T1 = {{-1,  0,  0},
+                  { 0,  0, -1},
+                  { 0, -1,  0}};
+  T1.print("T1 before");
+
+  Electronic::phase_match(T1, false);
+  T1.print("T1 after");
+  CHECK(TrLg2(T1) == Approx(4.9348));
+
+
+  arma::mat T2 = {{ 0, -1,  0},
+                  {-1,  0,  0},
+                  { 0,  0, -1}};
+
+  Electronic::phase_match(T2, false);
+  CHECK(TrLg2(T2) == Approx(4.9348));
+}

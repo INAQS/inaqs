@@ -24,6 +24,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("boys_states", std::vector<int> {}); // sentinel value
   // FIXME: add scf_guess and default to read
   reader.add_entry("nthreads", 1);
+  reader.add_entry("buffer_states", 0);
   // FIXME: ConfigReader should support bool
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
@@ -31,8 +32,8 @@ QM_QChem::qchem_reader() {
   reader.add_entry("spin_flip", 0);
   reader.add_entry("save_nacvector", 0);
   reader.add_entry("record_spectrum", 0);
-  reader.add_entry("buffer_states", 0);
   reader.add_entry("track_states", 0);
+
   return reader;
 }
 

@@ -76,11 +76,9 @@ void Electronic::phase_match(arma::mat &U, bool do_unitarize){
   }
 
   // Step 2: Jacobi sweeps
-  //bool converged = false;
   double deljk, Ujj, Ukk;
 
   const arma::uword N = U.n_rows;
-  //while (! converged){
   bool change;
   do{
     change = false;
@@ -98,9 +96,6 @@ void Electronic::phase_match(arma::mat &U, bool do_unitarize){
 	  U.col(j) *= -1.0;
 	  U.col(k) *= -1.0;
           change = true;
-	}
-	else{
-	  //converged = true;
 	}
       }
     }
