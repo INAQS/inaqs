@@ -59,6 +59,7 @@ private:
   void write_rem_section(std::ostream &os, const REMKeys &options);
   REMKeys excited_rem(void);
   void exec_qchem(void);
+  std::string qc_log_file_idx(void);
 
   void parse_mm_gradient(arma::mat &g_mm);
   void parse_energies(arma::vec &e);
@@ -101,6 +102,7 @@ private:
   bool record_spectrum = false;
   std::vector<int> boys_states {};
   bool boys_diabatization = false;
+  bool dump_qc_output = false;
   
   
   enum class S{

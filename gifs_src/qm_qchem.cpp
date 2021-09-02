@@ -33,6 +33,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("save_nacvector", 0);
   reader.add_entry("record_spectrum", 0);
   reader.add_entry("track_states", 0);
+  reader.add_entry("dump_qc_output", 0);
 
   return reader;
 }
@@ -84,6 +85,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     record_spectrum = in;
     reader.get_data("track_states", in);
     track_states = in;
+    reader.get_data("dump_qc_output", in);
+    dump_qc_output = in;
   }
 
   // shstates must be set before buffer states or are added or min_state is changed for spin_flip
@@ -387,6 +390,22 @@ void QM_QChem::do_boys_diabatization(void){
       std::cerr << "Warning: unable to write " + dest << std::endl;
     }
   }
+}
+
+std::string QM_QChem::qc_log_file_idx(void){
+  const int idx = call_idx();
+  static int last_idx = idx;
+  static int call = 0; // will be incremented on first run
+
+  if (idx == last_idx){
+    call++;
+  }
+  else{
+    call = 1;
+  }
+
+  last_idx = idx;
+  return "QCHEM." + std::to_string(idx) + "." + std::to_string(call) + ".out";
 }
 
 
@@ -791,6 +810,10 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
 
 
 void QM_QChem::exec_qchem(void){
+  if (dump_qc_output){
+    qc_log_file = qc_log_file_idx();
+  }
+
   std::string cmd = "cd " + get_qcwdir() + "; " + // change to  target WD
     qc_executable + " " +
     qc_scratch_directory + "/" + qc_input_file + " " +
@@ -843,6 +866,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"qm_mm",          "true"},
      {"max_scf_cycles", "500"},
      {"skip_charge_self_interact", "1"},
+     {"print_input",    std::to_string(dump_qc_output)},
      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
 
