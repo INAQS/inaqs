@@ -25,6 +25,9 @@ QM_QChem::qchem_reader() {
   // FIXME: add scf_guess and default to read
   reader.add_entry("nthreads", 1);
   reader.add_entry("buffer_states", 0);
+
+  reader.add_entry("sing_thresh", 1.2); // for state tracking
+
   // FIXME: ConfigReader should support bool
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
@@ -34,6 +37,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("record_spectrum", 0);
   reader.add_entry("track_states", 0);
   reader.add_entry("dump_qc_output", 0);
+  reader.add_entry("dump_qc_input", 0);
 
   return reader;
 }
@@ -68,6 +72,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
   reader.get_data("basis", basis_set);
   reader.get_data("exchange", exchange_method);
   reader.get_data("scf_algorithm", scf_algorithm);
+  reader.get_data("sing_thresh", sing_thresh);
 
   {
     int in;
@@ -87,6 +92,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
     track_states = in;
     reader.get_data("dump_qc_output", in);
     dump_qc_output = in;
+    reader.get_data("dump_qc_input", in);
+    dump_qc_input = in;
   }
 
   // shstates must be set before buffer states or are added or min_state is changed for spin_flip
@@ -137,8 +144,8 @@ QM_QChem::QM_QChem(FileHandle& fh,
   }
 
   if(spin_flip && !track_states){
-    valid_options = false;
-    std::cerr << "Selecting spin-flip without state tracking nearly guaranteed to produce incorrect results" << std::endl;
+    //valid_options = false;
+    std::cerr << "WARNING: Selecting spin-flip without state tracking nearly guaranteed to produce incorrect results" << std::endl;
   }
 
   if (singlets && triplets && !track_states){
@@ -310,12 +317,12 @@ void QM_QChem::state_tracker(PropMap &props){
     readQFMan(QCFILE::FILE_CIS_S2, S2);
   }
 
-  /* FIXME: 1.2 is the default for REM_CIS_S2_THRESH; if we want to
-     change or if that changes, we should specify our threshold via
-     the rem section.
+  /* 1.2 is the default for REM_CIS_S2_THRESH; If we want to change,
+     we can specify our threshold via sing_thresh, which is synced
+     with the rem section.
   */
 
-  const double thresh = 1.2; // if S^2 is larger than this, we consider the state a triplet
+  // if S^2 is larger than sing_thresh, we consider the state a triplet
 
   arma::uvec statei(excited_states + 1, arma::fill::zeros);
 
@@ -327,7 +334,7 @@ void QM_QChem::state_tracker(PropMap &props){
   arma::uword n_singlets = qm_multiplicity == 1 ? 1 : 0;
 
   for (arma::uword i = 0; i < excited_states; i++){
-    if (S2(i) < thresh){
+    if (S2(i) < sing_thresh){
       statei(n_singlets++) = i+1; // the ground state is state 0
     }
   }
@@ -426,11 +433,6 @@ void QM_QChem::do_record_spectrum(void){
 
   //write spectrum to file as [excitation energy] [strength]
   {
-
-    // if (spin_flip && !triplets){
-    //   e = e - e[0]; // the true ground state is the first excited state
-    // }
-
     if (e[0] < 0){ // the true ground state is the first excited state
       e = e - e[0];
     }
@@ -866,7 +868,8 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
      {"qm_mm",          "true"},
      {"max_scf_cycles", "500"},
      {"skip_charge_self_interact", "1"},
-     {"print_input",    std::to_string(dump_qc_output)},
+     {"cis_s2_thresh",  std::to_string(int(sing_thresh * 100))},
+     {"print_input",    std::to_string(dump_qc_input)},
      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
 

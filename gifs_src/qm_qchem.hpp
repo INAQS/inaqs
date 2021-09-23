@@ -103,7 +103,9 @@ private:
   std::vector<int> boys_states {};
   bool boys_diabatization = false;
   bool dump_qc_output = false;
-  
+  bool dump_qc_input = false;
+
+  double sing_thresh = 0;
   
   enum class S{
     energy,
