@@ -5,7 +5,7 @@
 /*
   Using switch to get complaints from compiler when we miss one
 */
-std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p)
+std::ostream& operator<<( std::ostream& oss, const QMProperty p)
 {
   std::string name;
   switch (p){
@@ -38,9 +38,10 @@ std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p)
     break;
   }
   
-  oStrStream << name;
-  return oStrStream;
+  oss << name;
+  return oss;
 }
+
 
 ArmaWrap PropMap::get(QMProperty key) {
   auto itr = prop.find(key);

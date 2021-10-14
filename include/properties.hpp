@@ -20,7 +20,7 @@ enum class QMProperty{
    energies,         // vec
 };
 
-std::ostream& operator<<( std::ostream& oStrStream, const QMProperty p);
+std::ostream& operator<<( std::ostream& oss, const QMProperty p);
 
 /*
   A wrapper around pointers to various armadillo base types so that
@@ -90,10 +90,29 @@ public:
   bool has_idx(QMProperty key) const;
 
   const std::vector<QMProperty> keys(void) const;
+
+  friend std::ostream& operator<<(std::ostream& oss, const PropMap &pm){
+    oss << "{ ";
+    for (const auto& e: pm.prop){
+      oss << "{" << e.first;
+      if (pm.has_idx(e.first)){
+        auto idx = pm.get_idx(e.first);
+        oss << ": ";
+        for (const auto& v: *idx){
+          oss << v << " ";
+        }
+      }
+      oss << "}, ";
+    }
+    oss << "}";
+    return oss;
+  }
+
   
 private:
   std::unordered_map<QMProperty, ArmaWrap> prop{};
   std::unordered_map<QMProperty, arma::uvec> prop_vec{};
 };
+
 
 #endif
