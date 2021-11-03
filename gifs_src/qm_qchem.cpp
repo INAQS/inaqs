@@ -190,12 +190,11 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 
 void QM_QChem::get_properties(PropMap &props){
-  std::cout << "DVCS: " << props << std::endl;
-
   if(track_states){
+    std::stderr << props << std::endl;
     state_tracker(props);
+    std::stderr << props << std::endl;
   }
-  std::cout << "DVCS: " << props << std::endl;
 
   for (QMProperty p: props.keys()){
     switch(p){
