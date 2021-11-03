@@ -169,6 +169,10 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     else if (runtype == "rescale bomd") {
         bomd = new RescaleBomd(qm_grd, mm_grd);
     }
+    else if (runtype == "print-bomd") {
+        bomd = new PrintBomd(qm_grd, mm_grd);
+    }
+
     else {
         throw "unknown runtype";
     }
