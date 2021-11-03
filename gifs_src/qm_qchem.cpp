@@ -191,9 +191,9 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 void QM_QChem::get_properties(PropMap &props){
   if(track_states){
-    std::stderr << props << std::endl;
+    std::cerr << props << std::endl;
     state_tracker(props);
-    std::stderr << props << std::endl;
+    std::cerr << props << std::endl;
   }
 
   for (QMProperty p: props.keys()){
