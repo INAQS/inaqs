@@ -522,8 +522,9 @@ void QM_QChem::get_wf_overlap(arma::mat &U){
 */
 void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
   REMKeys k = excited_rem();
-  k.insert({{"jobtype","sp"},
-	    {"boys_cis_numstate", std::to_string(excited_states)}
+  k.insert({
+      {"jobtype","sp"},
+      {"boys_cis_numstate", std::to_string(excited_states)}
     });
 
   std::ofstream input = get_input_handle();
@@ -618,8 +619,8 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   /*
     Section format:
     $derivative_coupling
-    comment line
-    A B ...
+      comment line
+      A B ...
     $end
     where A, B, ... are the states between which to compute the
     derivative coupling. The $rem section must include
