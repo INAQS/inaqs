@@ -556,7 +556,10 @@ void QM_QChem::get_all_energies(arma::vec & e){
   
   if (! called(Q::setman)){
     REMKeys k = excited_rem(false);
-    k.insert({{"jobtype","sp"}});
+    k.insert({
+        {"jobtype","sp"},
+        {"cis_rlx_dns", "1"}}
+      );
     
     std::ofstream input = get_input_handle();
     write_rem_section(input, k);
