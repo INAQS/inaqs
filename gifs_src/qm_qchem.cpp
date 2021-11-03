@@ -102,6 +102,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
   if(spin_flip){
     qm_multiplicity = 3;
     min_state += 1; // since the ground state is the first excited state
+    excited_states += 1;
   }
 
   bool valid_options = true;
@@ -345,6 +346,7 @@ void QM_QChem::state_tracker(PropMap &props){
       arma::uvec & idxs = props.get_writable_idx(p);
       for (arma::uword & i: idxs){
         if (i >= n_singlets){
+          std::cerr << "Requested " << p << "(" << i << "); have " << n_singlets-1 << "." << std::endl;
           throw std::runtime_error("The requested state is not within those states computed!");
         }
         else{
