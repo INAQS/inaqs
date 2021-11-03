@@ -52,31 +52,26 @@ class PrintBomd:
     public BOMD 
 {
 public:
+  virtual ~PrintBomd() {};
   explicit PrintBomd(arma::mat& qm_grd,
-		             arma::mat& mm_grd) : BOMD(qm_grd, mm_grd) {}
+                     arma::mat& mm_grd) : BOMD(qm_grd, mm_grd) {}
   
   double update_gradient(void) {
-      qm->crd_qm.print("qm_crd: ");
-      qm->crd_mm.print("mm_crd: ");
-      qm_grd.fill(0.0);
-      mm_grd.fill(0.0);
-      return 0.0;
+    double e = BOMD::update_gradient();
+    qm->crd_qm.t().print("qm_crd: ");
+    qm->crd_mm.t().print("mm_crd: ");
+    qm_grd.t().print("qm_grd");
+    mm_grd.t().print("mm_grd");
+    return e;
   }
-    //
-  bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) {
-    (void) e_drift;
-      velocities.print("Velocities:");
-      masses.print("Masses:");
-      total_gradient.print("Total Gradient");
-      return true;
-  };
-    
-private:
-  virtual ConfigBlockReader setup_reader() {
-    return ConfigBlockReader{"printbomd"};    
-  };
-  //virtual void get_reader_data(ConfigBlockReader& reader) {}
 
+  bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
+    BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
+    velocities.t().print("Velocities:");
+    masses.t().print("Masses:");
+    total_gradient.t().print("Total Gradient");
+    return true;
+  }
 };
 
 
