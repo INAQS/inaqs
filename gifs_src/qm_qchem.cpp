@@ -190,10 +190,12 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 
 void QM_QChem::get_properties(PropMap &props){
-  // FIXME: can use a similar scheme once dynamics no longer knows about excited_states
+  std::cout << "DVCS: " << props << std::endl;
+
   if(track_states){
     state_tracker(props);
   }
+  std::cout << "DVCS: " << props << std::endl;
 
   for (QMProperty p: props.keys()){
     switch(p){
@@ -215,7 +217,6 @@ void QM_QChem::get_properties(PropMap &props){
       const arma::uvec &idx = *props.get_idx(p);
       size_t A = idx[0]; size_t B = idx[1];
       get_nac_vector(props.get(p), A, B);
-      called(S::energy); called(S::ex_energy);
       break;
     }
 
@@ -223,13 +224,12 @@ void QM_QChem::get_properties(PropMap &props){
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient:{
       arma::mat &g_qm = props.get(QMProperty::qmgradient);
+
       arma::uword surface = 0; //assume ground state
-      called(S::energy);
       if (props.has_idx(QMProperty::qmgradient)){
 	surface = (*props.get_idx(QMProperty::qmgradient))[0];
-	if (surface){called(S::ex_energy);}
       }
-      
+
       if (props.has(QMProperty::mmgradient)){
 	arma::mat &g_mm = props.get(QMProperty::mmgradient);
 	get_gradient(g_qm, g_mm, surface);
@@ -244,10 +244,11 @@ void QM_QChem::get_properties(PropMap &props){
       break; // if we need mm, then we will do qm, which catches both
     case QMProperty::qmgradient_multi:{
       arma::cube &g_qm = props.get(QMProperty::qmgradient_multi);
-      arma::uvec surfaces = util::range(excited_states + 1); //assume all
-      if (props.has_idx(QMProperty::qmgradient_multi)){ // specific states
-	surfaces = *props.get_idx(QMProperty::qmgradient_multi);
+
+      if (!props.has_idx(QMProperty::qmgradient_multi)){
+        throw std::logic_error("Cannot request gradient_multi without specifying states!");
       }
+      arma::uvec surfaces = *props.get_idx(QMProperty::qmgradient_multi);
 
       if (g_qm.n_slices != surfaces.n_elem){
 	throw std::range_error("Insufficient space for requested gradients!");
@@ -262,8 +263,6 @@ void QM_QChem::get_properties(PropMap &props){
 	  get_gradient(g_qm.slice(i), surfaces(i));
 	}
       }
-
-      called(S::energy); called(S::ex_energy);
       break;
     }
       
@@ -272,7 +271,7 @@ void QM_QChem::get_properties(PropMap &props){
       if (props.has_idx(p)){
         arma::uvec idx = *props.get_idx(p);
         if (energies.n_elem != idx.n_elem){
-          throw std::logic_error("wrong energy size");
+          throw std::logic_error("energy array of incorrect size");
         }
 
         arma::vec e_temp(excited_states + 1, arma::fill::zeros);
@@ -293,7 +292,7 @@ void QM_QChem::get_properties(PropMap &props){
   }
 
   // everything here will be called exactly once per call to update()
-  if (!called(S::once)){
+  if (!called(Q::once)){
     if (state_analysis){
       do_state_analysis();
     }
@@ -362,10 +361,6 @@ void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
                   {"boys_cis_numstate", std::to_string(boys_states.size())},
                   {"sts_mom", "1"}};
-  if (called(S::ex_energy)){
-    keys.insert({{"skip_setman", "1"},
-                 {"skip_scfman", "1"}});
-  }
 
   REMKeys ex = excited_rem();
   keys.insert(ex.begin(), ex.end());
@@ -420,11 +415,9 @@ std::string QM_QChem::qc_log_file_idx(void){
 
 void QM_QChem::do_record_spectrum(void){
   arma::vec e;
-  if (!called(S::ex_energy)){
-    // dummy call to make sure the transition dipoles and energies are written
-    e.set_size(excited_states + 1);
-    get_all_energies(e);
-  }
+  // dummy call to make sure the transition dipoles and energies are written
+  e.set_size(excited_states + 1);
+  get_all_energies(e);
 
   e.set_size(excited_states);
   readQFMan(QCFILE::FILE_SET_ENERGY, e);
@@ -466,13 +459,6 @@ void QM_QChem::do_state_analysis(void){
 
   REMKeys ex = excited_rem();
   keys.insert(ex.begin(), ex.end());
-  if (called(S::ex_energy)){
-    keys.insert({{"skip_setman", "1"},
-                 {"skip_scfman", "1"}});
-  }
-  else{
-    keys.insert({{"cis_rlx_dns", "1"}});
-  }
 
   std::ofstream input = get_input_handle();
   write_rem_section(input, keys);  
@@ -491,38 +477,39 @@ void QM_QChem::do_state_analysis(void){
 
 //FIXME: Use another REM variable to save PREV_GEO
 void QM_QChem::get_wf_overlap(arma::mat &U){
-  static bool first_call = true;
+  static bool first_wfoverlap = true;
 
   if (U.n_elem != shstates * shstates){
     throw std::logic_error("WF overlap is of wrong size!");
   }
   
-  if (! called(S::wfoverlap)){
-    REMKeys k = excited_rem();
-    k.insert({{"jobtype","sp"},
-              //{"namd_lowestsurface", std::to_string(min_state)},
-              {"wf_overlap_minsurf", std::to_string(min_state)},
-              {"wf_overlap_nsurf", std::to_string(shstates)},
-    	      {"dump_wf_overlap", std::to_string(first_call ? 1 : 2)}});
+  REMKeys keys = excited_rem();
+  keys.insert({{"jobtype","sp"},
+      //{"namd_lowestsurface", std::to_string(min_state)},
+               {"wf_overlap_minsurf", std::to_string(min_state)},
+               {"wf_overlap_nsurf", std::to_string(shstates)},
+               {"dump_wf_overlap", std::to_string(first_wfoverlap ? 1 : 2)}});
     
-    std::ofstream input = get_input_handle();
-    write_rem_section(input, k);
-    write_molecule_section(input);
-    input.close();
-    exec_qchem();
-  }
-  else{
-    //don't recompute 
-  }
+  std::ofstream input = get_input_handle();
+  write_rem_section(input, keys);
+  write_molecule_section(input);
+  input.close();
+  exec_qchem();
 
-  if (first_call){ // if this is the first call, don't actually read from $QC; there will be no overlap to read
+  /*
+    If this is the first call, don't actually read from $QC; there
+    will be no overlap to read. It is *required*, however, that the
+    above call be made as it saves the relevant overlap quantities for
+    the next call.
+  */
+  if (first_wfoverlap){
     U.eye();
   }
   else{
     readQFMan(QCFILE::FILE_WF_OVERLAP, U);
   }
 
-  first_call = false;
+  first_wfoverlap = false;
 }
 
 
@@ -537,7 +524,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
   REMKeys k = excited_rem();
   k.insert({{"jobtype","sp"},
 	    {"boys_cis_numstate", std::to_string(excited_states)}
-	    });
+    });
 
   std::ofstream input = get_input_handle();
   write_rem_section(input, k);
@@ -551,7 +538,7 @@ void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
 
 void QM_QChem::get_ground_energy(arma::vec & e){
   // Build job if we need to
-  if (! called(S::energy)){
+  if (! called(Q::scfman)){
     std::ofstream input = get_input_handle();
     write_rem_section(input, {{"jobtype","sp"}});
     write_molecule_section(input);
@@ -566,14 +553,15 @@ void QM_QChem::get_ground_energy(arma::vec & e){
 // ground + excited states
 void QM_QChem::get_all_energies(arma::vec & e){
   
-  if (! called(S::ex_energy)){
-    REMKeys k = excited_rem();
+  if (! called(Q::setman)){
+    REMKeys k = excited_rem(false);
     k.insert({{"jobtype","sp"}});
     
     std::ofstream input = get_input_handle();
     write_rem_section(input, k);
     write_molecule_section(input);
     input.close();
+    called(Q::scfman); // because it will be after this execution
     exec_qchem();
   }
 
@@ -601,13 +589,6 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
     REMKeys ex = excited_rem();
     keys.insert(ex.begin(), ex.end());
     keys.insert({{"cis_state_deriv", std::to_string(surface)}});
-    if (called(S::ex_grad)){
-      keys.insert({{"skip_setman", "1"},
-	           {"skip_scfman", "1"}});
-    }
-    else{
-      keys.insert({{"cis_rlx_dns", "1"}});
-    }
   }
   
   write_rem_section(input, keys);  
@@ -623,22 +604,13 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   REMKeys keys = excited_rem();
   keys.insert({{"jobtype","sp"},
-	    {"calc_nac", "true"},
-	    {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
+               {"calc_nac", "true"},
+               {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
 
   if (NMM > 0){
     keys.insert({{"nac_pointcharge", "1"},
-              {"qm_mm", "true"}});
+                 {"qm_mm", "true"}});
   }
-
-  // FIXME: figure out why skip_setman broke
-  // if (called(S::ex_grad)){
-  //   keys.insert({{"skip_setman", "1"},
-  //                {"skip_scfman", "1"}});
-  // }
-  // else{
-  //   keys.insert({{"cis_rlx_dns", "1"}});
-  // }
   
   std::ofstream input = get_input_handle();
   write_rem_section(input, keys);
@@ -646,8 +618,8 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   /*
     Section format:
     $derivative_coupling
-      comment line
-      A B ...
+    comment line
+    A B ...
     $end
     where A, B, ... are the states between which to compute the
     derivative coupling. The $rem section must include
@@ -688,12 +660,12 @@ void QM_QChem::parse_energies(arma::vec &e){
     if (!(e.n_elem >= excited_states + 1)){
       throw std::range_error("Insufficient space for all excited states in vec e!");
     }
-    
+
     size_t count = readQFMan(QCFILE::FILE_SET_ENERGY, e.memptr() + 1, excited_states, POS_BEGIN);
     if (count != excited_states){
       throw std::runtime_error("Unable to parse energies!");
     }
-        
+
     // Energies for higher states given in terms of exitations so we
     // must add in the ground.
     e += e_ground;
@@ -803,8 +775,8 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
 
   /*
     Set $QCSCRATCH to whatever we're using. Incidentally, this fixes a
-     corner case where Q-Chem will crash if QCSCRATCH=""; set, but to
-     the empty string.
+    corner case where Q-Chem will crash if QCSCRATCH=""; set, but to
+    the empty string.
   */
   setenv("QCSCRATCH", scratch_path.c_str(), true);
   std::cout << "taking scratch path to be: " << scratch_path << std::endl;
@@ -839,13 +811,14 @@ std::ofstream QM_QChem::get_input_handle(){
   return os;
 }
 
-
-REMKeys QM_QChem::excited_rem(void){
-  // if (! (excited_states > 0)){
-  //   throw std::logic_error("Cannot request multi-state property without excited states.");
-  // }
-
-  REMKeys excited
+/*
+  detectQinks must be false if in constructing your job and before
+  calling exec_qchem() you:
+  - call called() at all
+  - call excited_rem() more than once
+*/
+REMKeys QM_QChem::excited_rem(bool detectQinks){
+  REMKeys keys
     {
       {"cis_n_roots", std::to_string(excited_states)},
       {"set_roots_orig", std::to_string(excited_states)}, // make sure we always use the same number of states
@@ -854,7 +827,19 @@ REMKeys QM_QChem::excited_rem(void){
       {"cis_triplets", std::to_string(triplets)} 
     };
 
-  return excited;
+  if (detectQinks){
+    if (called(Q::scfman)){
+      keys.insert({{"skip_scfman", "1"}});
+      if (called(Q::setman)){
+        keys.insert({{"skip_setman", "1"}});
+      }
+    }
+    else{
+      keys.insert({{"cis_rlx_dns", "1"}});
+    }
+  }
+
+  return keys;
 }
 
 
@@ -862,21 +847,20 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   // Default options 
   REMKeys rem_keys
     {
-     {"method",         exchange_method},
-     {"basis",          basis_set},
-     {"scf_algorithm",  scf_algorithm},
-     {"thresh_diis_switch", "5"},
-     {"sym_ignore",     "true"},
-     {"qm_mm",          "true"},
-     {"max_scf_cycles", "500"},
-     {"skip_charge_self_interact", "1"},
-     {"cis_s2_thresh",  std::to_string(int(sing_thresh * 100))},
-     {"print_input",    std::to_string(dump_qc_input)},
-     {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
+      {"method",         exchange_method},
+      {"basis",          basis_set},
+      {"scf_algorithm",  scf_algorithm},
+      {"thresh_diis_switch", "5"},
+      {"sym_ignore",     "true"},
+      {"qm_mm",          "true"},
+      {"max_scf_cycles", "500"},
+      {"skip_charge_self_interact", "1"}, // since the MD driver will compute MM-MM interaction
+      {"cis_s2_thresh",  std::to_string(int(sing_thresh * 100))},
+      {"print_input",    std::to_string(dump_qc_input)},
+      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
     };
 
   if (spin_flip){
-    // FIXME: include multiplicity check for spin_flip
     rem_keys.emplace("spin_flip", "1");
     rem_keys.emplace("sts_mom", "1");
   }
@@ -906,8 +890,8 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
 
 
 /*
-   FIXME: should do better formatting with std::right << std::fixed <<
-   std::setprecision(precision) << std::setw(precision+5) and friends
+  FIXME: should do better formatting with std::right << std::fixed <<
+  std::setprecision(precision) << std::setw(precision+5) and friends
 */
 void QM_QChem::write_molecule_section(std::ostream &os){
   /*
@@ -948,17 +932,17 @@ void QM_QChem::write_molecule_section(std::ostream &os){
 
 
 /*
-  Sentinel system to track whether the requested property has been
-  computed since the last call to update(). See/update the protected
-  nested enum class S (as in sentinel) for the list of properties
+  Sentinel system to track whether the respective q-chem qink has been
+  called since the last call to update(). See/update the protected
+  nested enum class Q (as in sentinel) for the list of relevant qinks
 */
-bool QM_QChem::called(S s){
-  static std::unordered_map<S, int> calls;
-  if(call_idx() == calls[s]){
+bool QM_QChem::called(Q q){
+  static std::unordered_map<Q, int> calls;
+  if(call_idx() == calls[q]){
     return true;
   }
   else{
-    calls[s] = call_idx();
+    calls[q] = call_idx();
     return false;
   }
 }

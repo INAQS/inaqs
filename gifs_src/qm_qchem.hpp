@@ -57,7 +57,14 @@ private:
   std::ofstream get_input_handle(void);
   void write_molecule_section(std::ostream &ifile);
   void write_rem_section(std::ostream &os, const REMKeys &options);
-  REMKeys excited_rem(void);
+
+  /*
+    detectQinks must be false if in constructing your job and before
+    calling exec_qchem() you:
+     - call called() at all
+     - call excited_rem() more than once
+  */
+  REMKeys excited_rem(bool detectQinks = true);
   void exec_qchem(void);
   std::string qc_log_file_idx(void);
 
@@ -106,19 +113,17 @@ private:
   bool dump_qc_input = false;
 
   double sing_thresh = 0;
-  
-  enum class S{
-    energy,
-    ex_energy,
-    ex_grad,
-    wfoverlap,
-    once,
+
+  enum class Q{
+    scfman,
+    setman,
+    once
   };
 
   // As long as QM_Interface.update() is called before
   // get_properites(), call_idx() will always return a value > 0. This
   // is required behavior.
-  bool called(S s);
+  bool called(Q q);
 
   // Some offsets for files
   const size_t POS_BEGIN              = 0;
