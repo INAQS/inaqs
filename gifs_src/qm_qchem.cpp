@@ -191,7 +191,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 void QM_QChem::get_properties(PropMap &props){
   if(track_states){
-    std::cerr << props << std::endl;
+    std::cerr << "State Tracker: " << props << " -> ";
     state_tracker(props);
     std::cerr << props << std::endl;
   }
@@ -605,10 +605,23 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 
 
 void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
-  REMKeys keys = excited_rem();
-  keys.insert({{"jobtype","sp"},
-               {"calc_nac", "true"},
-               {"cis_der_numstate", "2"}});//Always, in our case, between 2 states
+  /*
+    cannot skip setman for nac; no need to skip scfman because it will
+    be so quick
+  */
+  REMKeys keys = excited_rem(false);
+
+  /*
+    relaxed density should be computed automatically, but we set it
+    explictily here since we're setting scf- and setman as called()
+  */
+  called(Q::scfman); called(Q::setman);
+  keys.insert({
+      {"jobtype","sp"},
+      {"calc_nac", "true"},
+      {"cis_der_numstate", "2"}, // Always, in our case, between 2 states
+      {"cis_rlx_dns", "1"}
+    });
 
   if (NMM > 0){
     keys.insert({{"nac_pointcharge", "1"},
