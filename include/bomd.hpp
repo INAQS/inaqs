@@ -26,6 +26,7 @@ public:
 protected:
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
+  inline int call_idx() const noexcept { return md_call_idx; };
 
   /* Config for keys common to all dynamics classes */
   void add_common_keys(ConfigBlockReader& reader);
@@ -46,6 +47,9 @@ protected:
 
   // To track energy drift from GMX
   double elast = 0, edrift = 0;
+  
+private:
+  int md_call_idx = 0; // tracks each call to rescale_velocities();
 };
 
 class PrintBomd:

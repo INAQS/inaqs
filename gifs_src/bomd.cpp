@@ -103,17 +103,6 @@ BOMD::update_gradient()
     props.emplace(QMProperty::mmgradient, {active_state}, &mm_grd);
     props.emplace(QMProperty::energies, {active_state}, &energy);
     qm->get_properties(props);
-    //
-    //FIXME:debug
-  // {
-  //   auto tmp = qm_grd;
-  //   int precision = 8;
-  //   std::cout << "grd: "<< std::right << std::fixed << std::setprecision(precision);
-  //   for (arma::uword i = 0; i < tmp.n_cols; i++){
-  //     std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
-  //   }
-  //   std::cout << std::endl;
-  // }
 
     return energy(0);
 };
@@ -122,17 +111,7 @@ BOMD::update_gradient()
 bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
   (void) total_gradient; (void) masses; (void) velocities;
 
-
-  //FIXME:debug
-  // {
-  //   auto tmp = velocities;
-  //   int precision = 8;
-  //   std::cout << "vel: " << std::right << std::fixed << std::setprecision(precision);
-  //   for (arma::uword i = 0; i < NQM(); i++){
-  //     std::cout << std::setw(precision+5) << arma::norm(tmp.col(i));
-  //   }
-  //   std::cout << std::endl;
-  // }
+  md_call_idx++;
   
   edrift = (total_energy - elast)/elast;
   elast = total_energy;

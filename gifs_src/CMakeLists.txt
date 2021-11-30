@@ -13,6 +13,7 @@ link_libraries(${HDF5_LIBRARIES})
 add_library(gifs SHARED
     bomd.cpp
     bomd_rescale.cpp
+    bomd_electronic.cpp
     configreader.cpp
     conversion.cpp
     decoherence_afssh.cpp
