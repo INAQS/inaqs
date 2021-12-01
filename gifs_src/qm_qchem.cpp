@@ -191,9 +191,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 
 void QM_QChem::get_properties(PropMap &props){
   if(track_states){
-    std::cerr << "State Tracker: " << props << " -> ";
     state_tracker(props);
-    std::cerr << props << std::endl;
   }
 
   for (QMProperty p: props.keys()){
@@ -795,7 +793,7 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
     the empty string.
   */
   setenv("QCSCRATCH", scratch_path.c_str(), true);
-  std::cout << "taking scratch path to be: " << scratch_path << std::endl;
+  std::cerr << "taking scratch path to be: " << scratch_path << std::endl;
 
   return scratch_path;
 }
