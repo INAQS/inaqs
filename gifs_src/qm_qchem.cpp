@@ -844,9 +844,9 @@ REMKeys QM_QChem::excited_rem(bool detectQinks){
   if (detectQinks){
     bool skip_scfman = called(Q::scfman);  // called() updates internal state so we
     bool skip_setman = called(Q::setman);  // need to make sure both are touched.
-    if (scfman){
+    if (skip_scfman){
       keys.insert({{"skip_scfman", "1"}});
-      if (setman){
+      if (skip_setman){
         keys.insert({{"skip_setman", "1"}});
       }
     }
