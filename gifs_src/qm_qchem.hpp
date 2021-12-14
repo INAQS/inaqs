@@ -117,6 +117,7 @@ private:
   enum class Q{
     scfman,
     setman,
+    geometry, // for READ on molecule and external_charges
     once
   };
 

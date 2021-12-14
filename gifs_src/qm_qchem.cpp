@@ -196,7 +196,6 @@ void QM_QChem::get_properties(PropMap &props){
 
   for (QMProperty p: props.keys()){
     switch(p){
-      
     case QMProperty::wfoverlap:{
       get_wf_overlap(props.get(p));
       break;
@@ -550,7 +549,6 @@ void QM_QChem::get_ground_energy(arma::vec & e){
 
 // ground + excited states
 void QM_QChem::get_all_energies(arma::vec & e){
-  
   if (! called(Q::setman)){
     REMKeys k = excited_rem(false);
     k.insert({
@@ -685,6 +683,9 @@ void QM_QChem::parse_energies(arma::vec &e){
     e += e_ground;
     e[0] = e_ground;
   }
+  e.save(arma::hdf5_name("gifs.hdf5",
+                         "/energies/" + std::to_string(call_idx()),
+                         arma::hdf5_opts::replace));
 }
 
 
@@ -798,7 +799,6 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   return scratch_path;
 }
 
-
 void QM_QChem::exec_qchem(void){
   if (dump_qc_output){
     qc_log_file = qc_log_file_idx();
@@ -842,9 +842,11 @@ REMKeys QM_QChem::excited_rem(bool detectQinks){
     };
 
   if (detectQinks){
-    if (called(Q::scfman)){
+    bool skip_scfman = called(Q::scfman);  // called() updates internal state so we
+    bool skip_setman = called(Q::setman);  // need to make sure both are touched.
+    if (scfman){
       keys.insert({{"skip_scfman", "1"}});
-      if (called(Q::setman)){
+      if (setman){
         keys.insert({{"skip_setman", "1"}});
       }
     }
@@ -864,7 +866,8 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
       {"method",         exchange_method},
       {"basis",          basis_set},
       {"scf_algorithm",  scf_algorithm},
-      {"thresh_diis_switch", "5"},
+      {"thresh_diis_switch", "7"},  // control change-over to GDM if
+      {"max_diis_cycles", "50"},    // scf_alg is DIIS_GDM
       {"sym_ignore",     "true"},
       {"qm_mm",          "true"},
       {"max_scf_cycles", "500"},
