@@ -8,23 +8,24 @@ from collections import defaultdict
 import argparse
 import sys
 import qc2gifs as qc2g
-
+from pathlib import Path
 
 # convert solvent box pdb to gro with residue types indicated and
 # update topology (using __NSOL as a key for solvent molecules)
 # may clobber [defaults] section of passed top
 # $GIFS/utils/vc2gifs.py -f <(zcat $solvent_pdb) -o $solvent_name -r $RSOL --ff $solvent_itp -p ${NAME}.top
 
+
 def getArgs():
     parser = argparse.ArgumentParser(description='Convert a virtualchemistry.org solvent box for use with GIFS')
     parser.add_argument("-f", metavar="PDB", required=True,
-                        help="input solvent box")
+                        type=Path, help="input solvent box")
     parser.add_argument("--ff", metavar="ITP", required=True,
-                        help="include forcefield")
+                        type=Path, help="include forcefield")
     parser.add_argument("-o", metavar="output", required=True,
                         help="name of output .gro/.top files")
     parser.add_argument("-p", metavar="TOP", required=False,
-                        help="optionally pass a topology file to update")
+                        type=Path, help="optionally pass a topology file to update")
     parser.add_argument("-r", metavar="residue", default="SOL",
                         help="name for residue; defaults to SOL")
     parser.add_argument("-n", metavar="name", default="VC-SOL",
@@ -49,54 +50,51 @@ def getArgs():
 def main():
     args = getArgs()
 
-    pdb = readlines(args.f)
     itp = readlines(args.ff)
-
     atypes = getAtoms(itp)
-    gro = pdb2gro(pdb, atypes, getBox(pdb), args.n, args.r)
-    
+
     if args.p is None:
         top = itp
         tfile = args.o + ".out"
     else:
-        top = mergeTop(readlines(args.p), itp, args.r)
+        top = mergeTop(readlines(args.p), itp, args.n, args.r)
         tfile = args.p
 
+    if args.f.suffix != '.gro':
+        pdb = readlines(args.f)
+        gro = pdb2gro(pdb, atypes, getBox(pdb), args.n, args.r)
+    else:
+        gro = readlines(args.f)
 
     gfile = args.o + ".gro"
     with open(gfile, 'w') as out:
         print("\n".join(gro), file=out)
     print(f"wrote {gfile}")
-        
+
     with open(tfile, "w") as out:
         print("\n".join(top), file=out)
     print(f"wrote {tfile}")
-    
+
 # update topology (using __NSOL as a key for solvent molecules)
 # may clobber [defaults] section of passed top
 
-def mergeTop(old_top, itp, residue):
+
+def mergeTop(old_top, itp, solname, residue):
     # take defaults from itp
     # merge atomtypes from itp
     # add moleculetype atoms, bonds, pairs, angles, dihedrals (moleculetype : end)
 
-    solname = None
-    namere = re.compile("[\w-]+\s+\d")
-    for l in getBlock('moleculetype', itp):
-        if namere.match(l):
-            solname = l.split()[0]
-    
     top = []
     top += getBlock('defaults', itp)
 
     top += mergeATypes(itp, old_top)
 
     # what about the [ nonbond_params ] block?
-    
+
     top += getBlock('moleculetype', old_top)
     top += getBlock('atoms', old_top)
-    
-    top += getBlock('moleculetype', itp)
+
+    top += rename(getBlock('moleculetype', itp), solname)
 
     # FIXME: need to rename residue
     iatoms = getBlock('atoms', itp)
@@ -106,7 +104,7 @@ def mergeTop(old_top, itp, residue):
             # insert residue
             fields[3] = residue
 
-            # strip trailing digits from symbol 
+            # strip trailing digits from symbol
             # sym = ""
             # for c in fields[4]:
             #     if c.isdigit():
@@ -115,18 +113,31 @@ def mergeTop(old_top, itp, residue):
             #         sym += c
             # fields[4] = sym
         iatoms[i] = "   ".join(fields)
-    
+
     top += iatoms
     top += getBlock('bonds', itp)
     top += getBlock('pairs', itp)
     top += getBlock('angles', itp)
     top += getBlock('dihedrals', itp)
-    
+
     top += getBlock('system', old_top)
     top += getBlock('molecules', old_top)
     top.append(f"{solname} __NSOL")
-    
+
     return top
+
+
+def rename(block, name):
+    new_block = []
+    namere = re.compile(r"[\w-]+\s+\d")
+    for line in block:
+        if namere.match(line):
+            mut = line.split()
+            mut[0] = name
+            new_block.append(' '.join(mut))
+        else:
+            new_block.append(line)
+    return new_block
 
 
 
@@ -135,7 +146,7 @@ def mergeATypes(itp, top):
 
     itpa = getBlock('atomtypes', itp)
     topa = getBlock('atomtypes', top)
-    ifloat = "[e\d\-\.\+]+"
+    ifloat = r"[e\d\-\.\+]+"
     key = re.compile(f"\w+\s+\w+\s+(\d+\s+)?{ifloat}\s+{ifloat}\s+[ASVD]\s+{ifloat}\s+{ifloat}")
 
     # FIXME: assumes no different isotopes!
@@ -144,7 +155,7 @@ def mergeATypes(itp, top):
         fields = line.split()
         if len(fields) > 1 and fields[0].isdecimal():
             masses[fields[1]] = float(fields[7])
-            
+
     for l in itpa + topa:
         if not key.match(l):
             continue
@@ -154,7 +165,7 @@ def mergeATypes(itp, top):
         atypesblock.append("    ".join(fields))
 
     atypesblock.append("\n")
-    
+
     return atypesblock
 
 
@@ -162,8 +173,8 @@ def mergeATypes(itp, top):
 def guessz(m):
     k, diff = None, 1e5
     for mz, z in m2z.items():
-        diff_new = abs(m-mz) 
-        if  diff_new < diff:
+        diff_new = abs(m-mz)
+        if diff_new < diff:
             diff = diff_new
             k = z
     return k
@@ -181,13 +192,13 @@ def pdb2gro(pdb, atypes, box, system, residue):
     # freq = defaultdict(lambda : 0)
     for line in pdb:
         if atom.match(line):
-            sym=line[13:17].strip()
+            sym = line[13:17].strip()
             # freq[sym] += 1
             # sym += str(freq[sym])
             x = np.array(list(map(float, line[31:55].split())))
-            x /= 10 # \AA -> nm
+            x /= 10  # \AA -> nm
             gro.append("%5d%-5s%5s%5d%8.3f%8.3f%8.3f" %
-                  (int(i/N), residue, sym, i, x[0], x[1], x[2]))
+                       (int(i/N), residue, sym, i, x[0], x[1], x[2]))
             i += 1
         else:
             continue
@@ -195,22 +206,23 @@ def pdb2gro(pdb, atypes, box, system, residue):
     gro.insert(1, str(i))
     gro.append(f"{box[0]} {box[1]} {box[2]}")
     return gro
-    
+
+
 def getBox(pdb):
-    box  = re.compile('^CRYST1')
+    box = re.compile('^CRYST1')
     for l in pdb:
         if box.match(l):
             return np.array(list(map(float, l[7:34].split())))/10
 
-        
+
 def getAtoms(itp):
     raw = getBlock('atoms', itp)
-    key  = re.compile('\s*\d+.*')
+    key = re.compile(r'\s*\d+.*')
 
-    atypes={}
+    atypes = {}
     for r in raw:
         if key.match(r):
-            n,s = r.split()[0:2]
+            n, s = r.split()[0:2]
             atypes[int(n)] = s
     return atypes
 
@@ -229,9 +241,9 @@ def getBlock(block_name, f):
 
         if copy:
             block.append(line.strip())
-    
+
     return block
-        
+
 
 def readlines(f):
     stripped = []
@@ -239,7 +251,7 @@ def readlines(f):
         for l in lines:
             stripped.append(l.strip())
     return stripped
-    
+
 
 m2z = { 1.00797: 1, 4.00260: 2, 6.941: 3, 9.01218: 4, 10.81: 5,
         12.011: 6, 14.0067: 7, 15.9994: 8, 18.998403: 9, 20.179: 10,
@@ -266,4 +278,3 @@ m2z = { 1.00797: 1, 4.00260: 2, 6.941: 3, 9.01218: 4, 10.81: 5,
 
 if __name__ == "__main__":
     main()
-
