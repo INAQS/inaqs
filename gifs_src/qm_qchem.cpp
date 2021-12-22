@@ -12,6 +12,8 @@
 #include "util.hpp"
 #include <armadillo>
 #include <unordered_map>
+#include <chrono>
+#include <functional>
 
 ConfigBlockReader
 QM_QChem::qchem_reader() {
@@ -38,6 +40,8 @@ QM_QChem::qchem_reader() {
   reader.add_entry("track_states", 0);
   reader.add_entry("dump_qc_output", 0);
   reader.add_entry("dump_qc_input", 0);
+  reader.add_entry("externalcharges_hack", 0);
+  reader.add_entry("time_properties", 0);
 
   return reader;
 }
@@ -94,6 +98,11 @@ QM_QChem::QM_QChem(FileHandle& fh,
     dump_qc_output = in;
     reader.get_data("dump_qc_input", in);
     dump_qc_input = in;
+    reader.get_data("externalcharges_hack", in);
+    externalcharges_hack = in;
+    reader.get_data("time_properties", in);
+    time_properties = in;
+
   }
 
   // shstates must be set before buffer states or are added or min_state is changed for spin_flip
@@ -195,6 +204,8 @@ void QM_QChem::get_properties(PropMap &props){
   }
 
   for (QMProperty p: props.keys()){
+    auto time_start = std::chrono::steady_clock::now();
+
     switch(p){
     case QMProperty::wfoverlap:{
       get_wf_overlap(props.get(p));
@@ -285,10 +296,16 @@ void QM_QChem::get_properties(PropMap &props){
       throw std::invalid_argument("Unknown QMProperty!");
       break;
     }
+    auto time_stop = std::chrono::steady_clock::now();
+    if (time_properties){
+      std::cout << p << " required " <<
+        std::chrono::duration_cast<std::chrono::milliseconds>(time_stop - time_start).count()/1e3 << "s" << std::endl;
+    }
   }
 
   // everything here will be called exactly once per call to update()
   if (!called(Q::once)){
+    auto time_start = std::chrono::steady_clock::now();
     if (state_analysis){
       do_state_analysis();
     }
@@ -299,6 +316,12 @@ void QM_QChem::get_properties(PropMap &props){
 
     if (boys_diabatization){
       do_boys_diabatization();
+    }
+
+    auto time_stop = std::chrono::steady_clock::now();
+    if (time_properties){
+      std::cout << "once calls required " <<
+        std::chrono::duration_cast<std::chrono::milliseconds>(time_stop - time_start).count() / 1e3 << "s" << std::endl;
     }
   }
 }
@@ -431,8 +454,13 @@ void QM_QChem::do_record_spectrum(void){
     arma::mat spec(excited_states,2);
     spec.col(0) = e;
     spec.col(1) = mu.row(0).t();
-    std::string specf = get_qcwdir() + "/" + "spectrum.dat";
+    arma::vec osc = spec.col(1);
 
+    osc.save(arma::hdf5_name("gifs.hdf5",
+                             "/oscillator/" + std::to_string(call_idx()),
+                             arma::hdf5_opts::replace));
+
+    std::string specf = get_qcwdir() + "/" + "spectrum.dat";
     std::ofstream stream;
     stream.open(specf, std::ios::out | std::ios::app | std::ios::binary);
     if (!stream){
@@ -588,6 +616,9 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
     REMKeys ex = excited_rem();
     keys.insert(ex.begin(), ex.end());
     keys.insert({{"cis_state_deriv", std::to_string(surface)}});
+  }
+  else{
+    called(Q::scfman);
   }
   
   write_rem_section(input, keys);  
@@ -936,17 +967,34 @@ void QM_QChem::write_molecule_section(std::ostream &os){
   os <<  "$end" << std::endl;
 
   if (NMM > 0){
-    os << std::endl << "$external_charges" << std::endl;    
-    for (size_t i = 0; i < NMM; i++){
-      os << crd_mm[i*3 + 0] << " ";        // x
-      os << crd_mm[i*3 + 1] << " ";        // y
-      os << crd_mm[i*3 + 2] << " ";        // z
-      os << chg_mm[i]       << std::endl;  // charge
+    if(externalcharges_hack){
+      std::string extfname = "external_charges.in";
+      os << std::endl << "$external_charges" << std::endl;
+      os << extfname << std::endl;
+      os << "$end" << std::endl;
+
+      std::ofstream osext(get_qcwdir() + "/" + extfname);
+      osext.setf(std::ios_base::fixed, std::ios_base::floatfield);
+      osext.precision(std::numeric_limits<double>::digits10);
+      write_external_charges_section(osext);
+      osext.close();
     }
-    os << "$end" << std::endl;
+    else{
+      write_external_charges_section(os);
+    }
   }
 }
 
+void QM_QChem::write_external_charges_section(std::ostream &os){
+  os << std::endl << "$external_charges" << std::endl;
+  for (size_t i = 0; i < NMM; i++){
+    os << crd_mm[i*3 + 0] << " ";        // x
+    os << crd_mm[i*3 + 1] << " ";        // y
+    os << crd_mm[i*3 + 2] << " ";        // z
+    os << chg_mm[i]       << std::endl;  // charge
+  }
+  os << "$end" << std::endl;
+}
 
 /*
   Sentinel system to track whether the respective q-chem qink has been

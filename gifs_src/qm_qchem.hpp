@@ -55,7 +55,8 @@ private:
   void do_boys_diabatization(void);
   
   std::ofstream get_input_handle(void);
-  void write_molecule_section(std::ostream &ifile);
+  void write_molecule_section(std::ostream &os);
+  void write_external_charges_section(std::ostream &os);
   void write_rem_section(std::ostream &os, const REMKeys &options);
 
   /*
@@ -94,7 +95,9 @@ private:
   std::string exchange_method;
   std::string scf_algorithm;
   std::string basis_set;
- 
+  bool externalcharges_hack = false;
+  bool time_properties = false;
+
   bool first_call = true;
 
   bool singlets = true;  // Defaults for CIS calculation
