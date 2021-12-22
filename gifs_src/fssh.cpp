@@ -369,7 +369,7 @@ double FSSH::update_gradient(void){
   {
     std::ofstream output(amplitude_file, std::ios_base::app);
     output << active_state + min_state << " ";
-    c().t().print(output);
+    c().st().print(output);
     output.close();
   }
 
