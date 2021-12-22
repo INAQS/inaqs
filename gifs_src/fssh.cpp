@@ -21,6 +21,10 @@ ConfigBlockReader FSSH::setup_reader()
 
     std::random_device rd; // generate default random seed
     reader.add_entry("random_seed", (size_t) rd());
+    {
+      std::vector<std::complex<double>> cs {};
+      reader.add_entry("amplitudes", cs);
+    }
     return reader;
 }
 
@@ -98,7 +102,32 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     FIXME: should be able to configure (multiple) initial electronic
     state(s). Can use DVEC?
   */
-  c.reset(shstates, 1, active_state);
+
+  {
+    std::vector<std::complex<double>> cs_vec {};
+    reader.get_data("amplitudes", cs_vec);
+    if (cs_vec.size() > 0){
+      if (cs_vec.size() != (arma::uword) shstates){
+        throw std::runtime_error("Number of Amplitudes do not match number of hopping surfaces!");
+      }
+      double norm = 0;
+      for (const auto& c: cs_vec){
+        norm += std::abs(c);
+      }
+      std::cerr << "[FSSH] amplitude norm = " << norm << std::endl;
+      if (std::abs(1.0 -norm) > 1e-6){
+        throw std::runtime_error("Amplitudes are not normed; check your input!");
+      }
+      arma::cx_vec cs_arma(shstates);
+      for (arma::uword i = 0; i < (arma::uword) shstates; i++){
+        cs_arma(i) = cs_vec[i];
+      }
+      c = Electronic(cs_arma);
+    }
+    else{
+      c.reset(shstates, 1, active_state);
+    }
+  }
 }
 
 

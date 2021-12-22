@@ -54,6 +54,26 @@ string_to_dvec(const std::string& str)
 };
 
 
+std::vector<std::complex<double>>
+string_to_cvec(const std::string& str)
+{
+  std::stringstream is (str);
+  std::vector<std::complex<double>> out;
+  {
+    int c;
+    // accept: < !"#$%&'()*+,-./0123456789>
+    // need [0-9]\s[(),.-]
+    while (c=is.peek(), c >= ' ' and c <= '9'){
+      std::complex<double> z;
+      is >> z;
+      out.push_back(z);
+    }
+  }
+
+  return out;
+};
+
+
 std::vector<int>
 string_to_ivec(const std::string& str)
 {
@@ -119,6 +139,9 @@ Data::Data(const Data& rhs) {
         case types::DVEC:
             data = from_void(std::vector<double>, rhs.data);
             break;
+        case types::CVEC:
+            data = from_void(std::vector<std::complex<double>>, rhs.data);
+            break;
         default:
             break;
     }
@@ -148,6 +171,9 @@ Data::~Data() {
             break;
         case types::DVEC:
             delete_void_as(std::vector<double>, data);
+            break;
+        case types::CVEC:
+          delete_void_as(std::vector<std::complex<double>>, data);
             break;
         default:
             break;
@@ -210,6 +236,9 @@ Data::set_from_string(const std::string& value)
         case types::SVEC:
             data = new std::vector<std::string>(split_string(value));
             break;
+        case types::CVEC:
+            data = new std::vector<std::complex<double>>(string_to_cvec(value));
+            break;
         default:
             do_set = false;
             break;
@@ -237,6 +266,8 @@ Data::get_type() const {
             return "dvec";
         case (types::SVEC): 
             return "svec";
+        case (types::CVEC):
+            return "cvec";
         default:
             return "unknown";
     }
@@ -300,6 +331,15 @@ Data::get_data(std::vector<int>& out) {
 bool
 Data::get_data(std::vector<double>& out) {
     if (type != types::DVEC || !isset) {
+        return false;
+    }
+    copy_output(out, data);
+    return true;
+}
+
+bool
+Data::get_data(std::vector<std::complex<double>>& out) {
+    if (type != types::CVEC || !isset) {
         return false;
     }
     copy_output(out, data);

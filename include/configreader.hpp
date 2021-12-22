@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <complex>
 #include <string>
 #include <exception>
 
@@ -122,6 +123,7 @@ enum class DATA_TYPE {
   IVEC,
   DVEC,
   SVEC,
+  CVEC,
   NONE
 };
 
@@ -138,6 +140,7 @@ public:
     explicit Data(std::vector<std::string> input, bool in_isset=true) : isset{in_isset}, data{new std::vector<std::string>{input}},    type{DATA_TYPE::SVEC} {}
     explicit Data(std::vector<int> input, bool in_isset=true)         : isset{in_isset}, data{new std::vector<int>{input}},    type{DATA_TYPE::IVEC} {}
     explicit Data(std::vector<double> input, bool in_isset=true)      : isset{in_isset}, data{new std::vector<double>{input}},    type{DATA_TYPE::DVEC} {}
+    explicit Data(std::vector<std::complex<double>> input, bool in_isset=true)      : isset{in_isset}, data{new std::vector<std::complex<double>>{input}},    type{DATA_TYPE::CVEC} {}
 
     Data(): type{DATA_TYPE::NONE} { }
     ~Data(); 
@@ -150,6 +153,7 @@ public:
     bool get_data(std::vector<int>&);
     bool get_data(std::vector<double>&);
     bool get_data(std::vector<std::string>&);
+    bool get_data(std::vector<std::complex<double>>&);
     //
     void set_from_string(const std::string& validation);
     //
@@ -196,6 +200,9 @@ public:
             break;
         case types::DVEC:
             data.emplace(name, Data{std::vector<double>{}, false});
+            break;
+        case types::CVEC:
+            data.emplace(name, Data{std::vector<std::complex<double>>{}, false});
             break;
         default:
             data.emplace(name, Data{});
