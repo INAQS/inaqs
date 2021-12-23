@@ -5,8 +5,12 @@ readonly GIFSROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 readonly GMXROOT=$GIFSROOT/gromacs-4.6.5
 readonly N=${NCPU:-16}
 
+# make sure cmake picks up the correct compilers
 export CC=gcc CXX=g++
 
+# make sure gromacs can find libgifs/libmemes during linking
+# shouldn't matter afterwards
+export LD_LIBRARY_PATH=$GIFSROOT/lib:$LD_LIBRARY_PATH 
 mkdir -p build
 (
     cd build
@@ -32,3 +36,5 @@ mkdir -p build
         [ $? ] && make install -j $N
     )
 )
+
+[ $? ] && echo "Done! Be sure to source $GMXROOT/install/bin/GMXRC in your startup file."
