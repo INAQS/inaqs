@@ -22,9 +22,9 @@ ConfigBlockReader
 RescaleBomd::setup_reader() {
     //using types = ConfigBlockReader::types;
     std::cout << "Setup Rescale BOMD\n";
-    ConfigBlockReader reader{"rescalebomd"};
+    ConfigBlockReader reader{"bomd-rescale"};
     //
-    reader.add_entry("active_state", 0);
+    //reader.add_entry("active_state", 0);
     /*
     reader.add_entry("additional_energy", 1.0);
     reader.add_entry("dE", 0.01);

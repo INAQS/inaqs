@@ -10,7 +10,7 @@
 ConfigBlockReader ElectronicBomd::setup_reader()
 {
     using types = ConfigBlockReader::types;
-    ConfigBlockReader reader{"electronic-bomd"};
+    ConfigBlockReader reader{"bomd-electronic"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("amplitude_file", "cs.hdf5");
 

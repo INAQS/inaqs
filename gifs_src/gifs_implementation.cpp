@@ -167,16 +167,15 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     else if (runtype == "fssh") {
         bomd = new FSSH(qm_grd, mm_grd);
     }
-    else if (runtype == "rescale bomd") {
+    else if (runtype == "bomd-rescale") {
         bomd = new RescaleBomd(qm_grd, mm_grd);
     }
-    else if (runtype == "print-bomd") {
+    else if (runtype == "bomd-print") {
         bomd = new PrintBomd(qm_grd, mm_grd);
     }
-    else if (runtype == "electronic-bomd") {
+    else if (runtype == "bomd-electronic") {
         bomd = new ElectronicBomd(qm_grd, mm_grd);
     }
-
     else {
         throw "unknown runtype";
     }
