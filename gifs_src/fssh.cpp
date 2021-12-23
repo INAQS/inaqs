@@ -112,7 +112,7 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
       }
       double norm = 0;
       for (const auto& c: cs_vec){
-        norm += std::abs(c);
+        norm += std::norm(c);
       }
       std::cerr << "[FSSH] amplitude norm = " << norm << std::endl;
       if (std::abs(1.0 -norm) > 1e-6){
