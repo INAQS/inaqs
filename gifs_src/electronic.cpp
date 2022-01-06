@@ -55,7 +55,7 @@ void Electronic::unitarize(arma::mat &U){
 
   arma::mat W,V; arma::vec s;
   arma::svd(W,s,V,U);
-  U = W*V;
+  U = W*V.t();
 }
 
 /*
@@ -66,11 +66,9 @@ void Electronic::unitarize(arma::mat &U){
 
   Results agree with the matricies in the paper's Appendix D
 */
-void Electronic::phase_match(arma::mat &U, bool do_unitarize){
+void Electronic::phase_match(arma::mat &U){
   // Step 1: det(U) == 1
-  if (do_unitarize){
-    unitarize(U);
-  }
+  unitarize(U);
   if (arma::det(U) < 0){
     U.col(0) *= -1.0;
   }
@@ -102,8 +100,7 @@ void Electronic::phase_match(arma::mat &U, bool do_unitarize){
   }while(change);
 }
 
-void Electronic::phase_match(arma::cx_mat &U, bool do_unitarize){
+void Electronic::phase_match(arma::cx_mat &U){
   (void) U;
-  (void) do_unitarize;
   throw std::runtime_error("complex phase matching not implemented");
 }
