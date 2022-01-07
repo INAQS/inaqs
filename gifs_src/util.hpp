@@ -4,8 +4,8 @@
 #include <armadillo>
 
 namespace util{
-  arma::vec center_of_mass(const arma::mat R, const arma::vec m);
-  arma::vec sum_cross(const arma::mat A, const arma::mat B);
+  arma::vec center_of_mass(const arma::mat &R, const arma::vec &m);
+  arma::vec sum_cross(const arma::mat &A, const arma::mat &B);
   //  arma::vec net(arma::vec (*op)(const arma::vec &a, const arma::vec &b), const arma::mat A, const arma::mat B);
 
   double hypot(std::complex<double> a, std::complex<double> b);
@@ -14,7 +14,7 @@ namespace util{
   arma::uvec range(arma::uword n); // [0, n)
 
   template <typename T>
-  inline bool approx_equal(T a, T b, T tol=arma::datum::eps){
+  bool approx_equal(T a, T b, T tol=arma::datum::eps){
     return std::abs(a-b) < tol;
   };
 }

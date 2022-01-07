@@ -38,7 +38,8 @@ namespace util{
   }
 
 
-  // return a uvec with filled with the indicies [a,b)
+  // return a uvec with filled with the indicies [a,b) like Python's
+  // range(); contrast arma::span(a,b) -> [a,b]
   arma::uvec range(arma::uword a, arma::uword b){
     if (a > b){
       throw std::logic_error("cannot compute range with a > b");
@@ -82,7 +83,7 @@ namespace util{
     For the (3xN) configuration space vectors A, B, compute the sum of
     the cross products of the vectors in each column: Sum(Ai X Bi)
   */
-  arma::vec sum_cross(const arma::mat A, const arma::mat B){
+  arma::vec sum_cross(const arma::mat &A, const arma::mat &B){
     if ((A.n_cols != B.n_cols) || (3 != A.n_rows) || (3 != B.n_rows)){
       throw std::logic_error("Invalid dimension!");
     }
