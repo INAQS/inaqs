@@ -97,6 +97,7 @@ namespace util{
     return sum;  
   }
 
+
   /*
     Implements Algorithm 3 from:
     Loring, T. A. Computing a logarithm of a unitary matrix with
@@ -105,26 +106,21 @@ namespace util{
     It is required that the input matrix be approximately unitary.
   */
   arma::mat logmat_unitary(const arma::mat &U){
-    throw std::logic_error("Schur matrix log not implemented!");
-
-    if (arma::norm(U.t() * U - arma::eye(arma::size(U))) > 0.75){
-      throw std::runtime_error("Matrix deviates too much from unitary!");
-    }
-
-    arma::mat Q,T;
-    arma::schur(Q, T, U);
-
-    arma::mat D(arma::size(U), arma::fill::zeros);
-    D.diag() = arma::log(T.diag());
-    arma::mat L = Q * D * Q.t();
-
-    return L;
+    return arma::real(logmat_unitary(
+      arma::cx_mat(U, arma::zeros(arma::size(U)))
+                                     ));
   }
 
+
   arma::cx_mat logmat_unitary(const arma::cx_mat &U){
-    throw std::logic_error("Schur matrix log not implemented!");
     arma::cx_mat Q,T;
-    arma::schur(Q, T, U);
+    if ((arma::norm(U.t() * U - arma::eye(arma::size(U))) > 0.75) ||
+        !arma::schur(Q, T, U)){
+      std::cerr << "Matrix deviates too much from unitary "
+        "or Schur Decomposition failed; "
+        "falling back to arma::logmat()" << std::endl;
+      return arma::logmat(U);
+    }
 
     arma::cx_mat D(arma::size(U), arma::fill::zeros);
     D.diag() = arma::log(T.diag() / arma::abs(T.diag()));
