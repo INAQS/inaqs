@@ -25,7 +25,7 @@ std::ostream& operator<<( std::ostream& oss, const QMProperty p);
 /*
   A wrapper around pointers to various armadillo base types so that
   PropMap can store tensors of different rank. Implicitly converts
-  back to the base type on assignement; will raise runtime exceptions
+  back to the base type on assignment; will raise runtime exceptions
   if invalid conversions are attempted.
 
   To add support for another type:
@@ -50,6 +50,10 @@ public:
   operator arma::vec  &() const {return *notnull(v);};
   operator arma::mat  &() const {return *notnull(m);};
   operator arma::cube &() const {return *notnull(c);};
+
+  ArmaWrap& operator= (const arma::vec&  other) {*notnull(v) = other; return *this;}
+  ArmaWrap& operator= (const arma::mat&  other) {*notnull(m) = other; return *this;}
+  ArmaWrap& operator= (const arma::cube& other) {*notnull(c) = other; return *this;}
 
 private:
   // Member types
