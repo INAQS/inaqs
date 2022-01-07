@@ -108,7 +108,6 @@ private:
   size_t shstates = 0;
   
   bool state_analysis = false;
-  bool save_nacvector = false;
   bool record_spectrum = false;
   std::vector<int> boys_states {};
   bool boys_diabatization = false;

@@ -35,7 +35,6 @@ QM_QChem::qchem_reader() {
   reader.add_entry("triplets", 0);
   reader.add_entry("state_analysis", 0);
   reader.add_entry("spin_flip", 0);
-  reader.add_entry("save_nacvector", 0);
   reader.add_entry("record_spectrum", 0);
   reader.add_entry("track_states", 0);
   reader.add_entry("dump_qc_output", 0);
@@ -88,8 +87,6 @@ QM_QChem::QM_QChem(FileHandle& fh,
     state_analysis = in;
     reader.get_data("spin_flip", in);
     spin_flip = in;
-    reader.get_data("save_nacvector", in);
-    save_nacvector = in;
     reader.get_data("record_spectrum", in);
     record_spectrum = in;
     reader.get_data("track_states", in);
@@ -454,20 +451,24 @@ void QM_QChem::do_record_spectrum(void){
     arma::mat spec(excited_states,2);
     spec.col(0) = e;
     spec.col(1) = mu.row(0).t();
-    arma::vec osc = spec.col(1);
 
-    osc.save(arma::hdf5_name("gifs.hdf5",
-                             "/oscillator/" + std::to_string(call_idx()),
-                             arma::hdf5_opts::replace));
-
-    std::string specf = get_qcwdir() + "/" + "spectrum.dat";
-    std::ofstream stream;
-    stream.open(specf, std::ios::out | std::ios::app | std::ios::binary);
-    if (!stream){
-      throw std::runtime_error("Cannot open spectrum file, " + specf);
+    {
+      arma::vec osc = spec.col(1);
+      osc.save(arma::hdf5_name("gifs.hdf5",
+                               "/oscillator/" + std::to_string(call_idx()),
+                               arma::hdf5_opts::replace));
     }
-    else{
-      spec.save(stream, arma::raw_ascii);
+
+    {
+      std::string specf = get_qcwdir() + "/" + "spectrum.dat";
+      std::ofstream stream;
+      stream.open(specf, std::ios::out | std::ios::app | std::ios::binary);
+      if (!stream){
+        throw std::runtime_error("Cannot open spectrum file, " + specf);
+      }
+      else{
+        spec.save(stream, arma::raw_ascii);
+      }
     }
   }
 
@@ -681,16 +682,6 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   exec_qchem();
 
   readQFMan(QCFILE::FILE_DERCOUP, nac);
-
-  if (save_nacvector){
-    std::string nacf = get_qcwdir() + "/" +
-      "nacvector." + std::to_string(call_idx()) + ".arma";
-
-    // FIXME: should save better than this
-    nac.save(arma::hdf5_name("gifs.hdf5",
-                             "/nac/" + std::to_string(call_idx()),
-                             arma::hdf5_opts::replace));
-  }
 }
 
 
