@@ -1,6 +1,6 @@
 #include <armadillo>
 #include "electronic.hpp"
-
+#include "util.hpp"
 
 /*
   From NR 17.1.3 and A&S 25.5.10. For systems of the form $i \hbar
@@ -35,30 +35,6 @@ void Electronic::reserve(void){
 
 
 /*
-  Replace U with the closest unitary matrix according to the
-  transformation U' = (UU^T)^(-1/2)U.
-
-  For a thorough discussion, see:
-  https://en.wikipedia.org/wiki/Kabsch_algorithm
-  https://en.wikipedia.org/wiki/Polar_decomposition
-*/
-void Electronic::unitarize(arma::mat &U){
-  // arma::cx_mat R; arma::cx_vec s;
-  // arma::eig_gen(s, R, U*U.t());
-  // U = arma::real(R * diagmat(arma::pow(s, -0.5)) * R.t()) * U;
-
-  /*
-    These algorithms are equivalent but the below has better numerical
-    stability properties; namely the above returns 2*I for the
-    identity (I) rather than I itself.
-  */
-
-  arma::mat W,V; arma::vec s;
-  arma::svd(W,s,V,U);
-  U = W*V.t();
-}
-
-/*
   Implements Zeyu Zhou et al. JCTC 2020, 16, 835--846
 
   Approximately minimizes Tr[log(U)^2] via jacobi sweeps while
@@ -68,7 +44,7 @@ void Electronic::unitarize(arma::mat &U){
 */
 void Electronic::phase_match(arma::mat &U){
   // Step 1: det(U) == 1
-  unitarize(U);
+  util::unitarize(U);
   if (arma::det(U) < 0){
     U.col(0) *= -1.0;
   }

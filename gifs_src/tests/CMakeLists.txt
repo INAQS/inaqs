@@ -3,6 +3,7 @@ find_package(LAPACK REQUIRED)
 
 add_executable(test-gifs
     main.cpp
+    util.cpp
     electronic.cpp)
 
 target_link_libraries(test-gifs gifs)

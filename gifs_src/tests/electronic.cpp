@@ -17,9 +17,6 @@ TEST_CASE( "Jacobi sweeps locate minimum for A", "[Electronic]"){
 
   Electronic::phase_match(A8);
   CHECK(TrLg2(A8) == Approx(6.8250));
-
-
-  Electronic::unitarize(A8);
   REQUIRE((A8*A8.t() - arma::eye(arma::size(A8))).is_zero(1e-14));
 }
 
@@ -31,9 +28,6 @@ TEST_CASE( "Jacobi sweeps locate minimum for B", "[Electronic]"){
 
   Electronic::phase_match(B8);
   CHECK(TrLg2(B8) == Approx(7.7673));
-
-
-  Electronic::unitarize(B8);
   REQUIRE((B8*B8.t() - arma::eye(arma::size(B8))).is_zero(1e-14));
 }
 
@@ -46,7 +40,6 @@ TEST_CASE("More Jacobi Sweeps from ZZ", "[Electronic]"){
   Electronic::phase_match(T1);
   T1.print("T1 after");
   CHECK(TrLg2(T1) == Approx(4.9348));
-
 
   arma::mat T2 = {{ 0, -1,  0},
                   {-1,  0,  0},

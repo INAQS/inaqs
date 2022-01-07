@@ -40,8 +40,6 @@ public:
 
   static void phase_match(arma::mat &U);
   static void phase_match(arma::cx_mat &U);
-
-  static void unitarize(arma::mat &U);
   
 private:
   void reserve(void);

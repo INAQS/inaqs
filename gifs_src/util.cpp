@@ -96,4 +96,65 @@ namespace util{
 
     return sum;  
   }
+
+  /*
+    Implements Algorithm 3 from:
+    Loring, T. A. Computing a logarithm of a unitary matrix with
+    general spectrum. Numer. Linear Algebr. Appl. 2014, 21, 744−760
+
+    It is required that the input matrix be approximately unitary.
+  */
+  arma::mat logmat_unitary(const arma::mat &U){
+    throw std::logic_error("Schur matrix log not implemented!");
+
+    if (arma::norm(U.t() * U - arma::eye(arma::size(U))) > 0.75){
+      throw std::runtime_error("Matrix deviates too much from unitary!");
+    }
+
+    arma::mat Q,T;
+    arma::schur(Q, T, U);
+
+    arma::mat D(arma::size(U), arma::fill::zeros);
+    D.diag() = arma::log(T.diag());
+    arma::mat L = Q * D * Q.t();
+
+    return L;
+  }
+
+  arma::cx_mat logmat_unitary(const arma::cx_mat &U){
+    throw std::logic_error("Schur matrix log not implemented!");
+    arma::cx_mat Q,T;
+    arma::schur(Q, T, U);
+
+    arma::cx_mat D(arma::size(U), arma::fill::zeros);
+    D.diag() = arma::log(T.diag() / arma::abs(T.diag()));
+    arma::cx_mat L = Q * D * Q.t();
+
+    return L;
+  }
+
+
+  /*
+    Replace U with the closest unitary matrix according to the
+    transformation U' = (UU^T)^(-1/2)U.
+
+    For a thorough discussion, see:
+    https://en.wikipedia.org/wiki/Kabsch_algorithm
+    https://en.wikipedia.org/wiki/Polar_decomposition
+  */
+  void unitarize(arma::mat &U){
+    // arma::cx_mat R; arma::cx_vec s;
+    // arma::eig_gen(s, R, U*U.t());
+    // U = arma::real(R * diagmat(arma::pow(s, -0.5)) * R.t()) * U;
+
+    /*
+      These algorithms are equivalent but the below has better numerical
+      stability properties; namely the above returns 2*I for the
+      identity (I) rather than I itself.
+    */
+
+    arma::mat W,V; arma::vec s;
+    arma::svd(W,s,V,U);
+    U = W*V.t();
+  }
 }

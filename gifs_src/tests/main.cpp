@@ -2,8 +2,8 @@
 #include <catch.hpp>
 
 /*
-  Just our main entry to Catch2 v2; all other cpp files in this
-  directory will be included.
+  Just our main entry to Catch2 v2; add your .cpp file to
+  CMakeLists.txt to ensure it gets picked up.
 
   For documentation see:
   https://github.com/catchorg/Catch2/blob/v2.x/docs/Readme.md
