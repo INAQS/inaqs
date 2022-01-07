@@ -78,8 +78,9 @@ double ElectronicBomd::update_gradient(void){
   c.get().save(arma::hdf5_name(amplitude_file,
                                "/amps/" + std::to_string(call_idx()),
                                arma::hdf5_opts::replace));
+  saveh5(U, "overlap");
+  saveh5(c.get(), "amps");
 
-  
   Electronic::phase_match(U);
   T = arma::real(arma::logmat(U)) / dtc;
   V = diagmat(energy);
