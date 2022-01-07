@@ -36,7 +36,7 @@ protected:
 
 
 /*
-  Implments system A, eq. 1, from Subotnik and Shenvi (2011)
+  Implements system A, eq. 1, from Subotnik and Shenvi (2011)
 */
 class AvoidedCrossing: public HamiltonianDynamics{
 public:
@@ -51,7 +51,7 @@ private:
 
 
 /*
-  Implments system B, eq. 3, from Subotnik and Shenvi (2011)
+  Implements system B, eq. 3, from Subotnik and Shenvi (2011)
 */
 class ReflectiveAvoidedCrossing: public HamiltonianDynamics{
 public:

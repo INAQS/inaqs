@@ -6,7 +6,7 @@ AFSSH::AFSSH(QMInterface ** const qm, const double dtc,
              const size_t shstates,
              const size_t nqm, const size_t nmm):
   Decoherence{qm, dtc, min_state, shstates, nqm, nmm} {
-  // Set sizes for momments and potentials
+  // Set sizes for moments and potentials
   dR.set_size(shstates); dP.set_size(shstates); dF.set_size(shstates);
   for (auto &v: dR) {v.set_size(3*(nqm + nmm));}
   for (auto &v: dP) {v.set_size(3*(nqm + nmm));}
@@ -68,7 +68,7 @@ void AFSSH::build_rates(arma::vec &invtau_d, arma::vec &invtau_r, const arma::ma
   const arma::mat T = arma::real(arma::logmat(U)) / dtc;
   /* 
      Below, see an equivalent expression for tau that uses Ndim x
-     Nstates matricies for moments. I don't think its as transparent
+     Nstates matrices for moments. I don't think its as transparent
      as the for loop; for small numbers of states; I can't imagine the
      difference will matter.
   */
@@ -100,7 +100,7 @@ void AFSSH::evolve_moments(const Electronic &c, const arma::mat U, const size_t 
   // This block fills gqm, gmm, and V with nstates objects
   {
     /*
-      Two notes on this secion: 1) For all calls to
+      Two notes on this section: 1) For all calls to
       (*qm)->get_properties(), we need to add min_state as in
       fssh.cpp. 2) There's no need to attempt to get the active state
       gradient first; qm_qchem will recalculate it, but will skip over

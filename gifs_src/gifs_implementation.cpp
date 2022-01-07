@@ -19,13 +19,13 @@ GifsImpl* GifsImpl::get_instance(const char* file, size_t nqm, const int * qmid,
     //
     impl = new GifsImpl(file, nqm, qmid, mass, length, time);
     //
-    atexit(destory_instance);
+    atexit(destroy_instance);
     return impl;
 };
 //
 GifsImpl* GifsImpl::get_instance() {
     if (!instance_exists()) {
-        //   throw std::Exception("GIFS object was not initilized, yet!");
+        //   throw std::Exception("GIFS object was not initialized, yet!");
     }
     return impl;
 };
@@ -231,7 +231,7 @@ GifsImpl::GifsImpl(const char* file, size_t in_nqm, const int * ian, const doubl
     las = LinkAtoms::with_const_factors(global_idx, factors);
 };
 //
-void GifsImpl::destory_instance() {
+void GifsImpl::destroy_instance() {
     if (instance_exists()) {
         delete impl->bomd;
         delete impl->las;

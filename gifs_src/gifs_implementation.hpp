@@ -45,7 +45,7 @@ private:
     GifsImpl(const char* file, size_t nqm, const int * qmids,
              const double mass, const double length, const double time);
     // private destructor
-    static void destory_instance(void);
+    static void destroy_instance(void);
     // Singleton Pointer
     static GifsImpl* impl; 
     //

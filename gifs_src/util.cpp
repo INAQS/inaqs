@@ -38,7 +38,7 @@ namespace util{
   }
 
 
-  // return a uvec with filled with the indicies [a,b) like Python's
+  // return a uvec with filled with the indices [a,b) like Python's
   // range(); contrast arma::span(a,b) -> [a,b]
   arma::uvec range(arma::uword a, arma::uword b){
     if (a > b){
@@ -66,7 +66,7 @@ namespace util{
     I'm not sure what is the "best" sequence for the real() operations.
     The present choice---to call real() twice, once after each
     multiplication---was made because that's the first time the
-    opperands mathematically lie on the real line. Waiting longer seemed
+    operands mathematically lie on the real line. Waiting longer seemed
     to invite the accumulation of small numerical deviations.
   */
   double hypot(std::complex<double> a, std::complex<double> b){

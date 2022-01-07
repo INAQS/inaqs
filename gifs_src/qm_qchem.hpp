@@ -30,7 +30,7 @@ private:
     FILE_ENERGY           =   99,    //
     FILE_NUCLEAR_GRADIENT =  131,    //
     FILE_EFIELD           =  329,    //
-    FILE_DERCOUP          =  967,    // Derrivative coupling
+    FILE_DERCOUP          =  967,    // Derivative coupling
     FILE_WF_OVERLAP       =  398,    // wavefunction overlap
     FILE_DIAB_ROT_MAT     =  941,    // for diabatization rotations
     FILE_TRANS_DIP_MOM    =  942,    // Transition dipole moments: states along cols, rows: strength, x, y, z
@@ -124,7 +124,7 @@ private:
   };
 
   // As long as QM_Interface.update() is called before
-  // get_properites(), call_idx() will always return a value > 0. This
+  // get_properties(), call_idx() will always return a value > 0. This
   // is required behavior.
   bool called(Q q);
 

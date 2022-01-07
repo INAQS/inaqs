@@ -31,7 +31,7 @@ QM_Model::QM_Model(FileHandle& fh,
 {
 
   if (NQM > 1){
-    throw std::logic_error("Model systems only work on the x component of a singele atom!");
+    throw std::logic_error("Model systems only work on the x component of a single atom!");
   }
 
   if (NMM != 0){

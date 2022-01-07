@@ -55,7 +55,7 @@ QM_QChem::qchem_reader() {
   On subsequent invocation (as during AIMD), setman_init.F will reset
   the number requested to the original number.
 
-  This is fixed by setting set_roots_orig and makeing sure we have
+  This is fixed by setting set_roots_orig and making sure we have
   headroom on our hopping states.
 */
 QM_QChem::QM_QChem(FileHandle& fh, 
@@ -342,7 +342,7 @@ void QM_QChem::state_tracker(PropMap &props){
 
   arma::uvec statei(excited_states + 1, arma::fill::zeros);
 
-  // FIXME: once BOMD doens't know anything about excited states or
+  // FIXME: once BOMD doesn't know anything about excited states or
   // min_state (and idx{0} means the first comptued singlet, then we
   // can ditch these hacks. rather could be: n_singlets = 0;
   // statei(n_singlets++) = i; And we will need to test the ground
@@ -539,7 +539,7 @@ void QM_QChem::get_wf_overlap(arma::mat &U){
 
 
 /*
-  FIXME: Need to recitfy min_state or choose which states to mix
+  FIXME: Need to rectify min_state or choose which states to mix
   FIXME: Want to choose between ER and Boys and ...
   FIXME: Want to pick separate spin states (rem_boys_cis_spin_separate)
   FIXME: May want to increase REM_CIS_CONVERGENCE to 7 (from default 6)
@@ -641,7 +641,7 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
 
   /*
     relaxed density should be computed automatically, but we set it
-    explictily here since we're setting scf- and setman as called()
+    explicitly here since we're setting scf- and setman as called()
   */
   called(Q::scfman); called(Q::setman);
   keys.insert({
@@ -700,7 +700,7 @@ void QM_QChem::parse_energies(arma::vec &e){
       throw std::runtime_error("Unable to parse energies!");
     }
 
-    // Energies for higher states given in terms of exitations so we
+    // Energies for higher states given in terms of excitations so we
     // must add in the ground.
     e += e_ground;
     e[0] = e_ground;

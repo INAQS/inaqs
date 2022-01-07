@@ -6,7 +6,7 @@
 
 /*
   N.B.: Random numbers are to be generated via the armadillo
-  interface, which is guranteed to be appropriately seeded before
+  interface, which is guaranteed to be appropriately seeded before
   control passes to Decoherence via decohere() or hopped().
 */
 class Decoherence {

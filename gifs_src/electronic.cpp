@@ -37,10 +37,10 @@ void Electronic::reserve(void){
 /*
   Implements Zeyu Zhou et al. JCTC 2020, 16, 835--846
 
-  Approximately minimizes Tr[log(U)^2] via jacobi sweeps while
+  Approximately minimizes Tr[log(U)^2] via Jacobi sweeps while
   enforcing det(U) == 1
 
-  Results agree with the matricies in the paper's Appendix D
+  Results agree with the matrices in the paper's Appendix D
 */
 void Electronic::phase_match(arma::mat &U){
   // Step 1: det(U) == 1
