@@ -25,6 +25,7 @@ protected:
   
   void electronic_evolution(void);
   double hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, const arma::vec &m);
+  void check_overlap(const arma::mat& U);
 
   arma::mat U, T, V;
   arma::mat nac;

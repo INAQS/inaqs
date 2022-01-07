@@ -130,6 +130,26 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 }
 
+//Perform some basic checks on the overlap to make sure propagation is reasonable
+void FSSH::check_overlap(const arma::mat& U){
+  double magnitude = arma::norm(U,"fro")/sqrt(shstates);
+  if (magnitude < 0.8){
+    std::cerr << "[FSSH] " << call_idx() <<
+      ": Warning, raw overlap matrix has small norm: " << magnitude << std::endl;
+  }
+
+  const double norm_thresh = 0.9;
+  arma::vec norms(shstates, arma::fill::zeros);
+  for (int i = 0; i < shstates; i++){
+    norms(i) = arma::norm(U.col(i));
+    if (norms(i) < norm_thresh && i == (int) active_state){
+      std::cerr << "[FSSH] " << call_idx() <<
+        ": Warning, very little overlap with the active surface, " <<
+        min_state + active_state << ", which has overlap " << norms(i) << std::endl;
+    }
+  }
+}
+
 
 // For use in the update_gradient() call; Jain step 4
 void FSSH::electronic_evolution(void){
@@ -141,7 +161,10 @@ void FSSH::electronic_evolution(void){
   props.emplace(QMProperty::wfoverlap, &U);
   qm->get_properties(props);
 
+  saveh5(U, "overlapraw");
+  check_overlap(U);
   Electronic::phase_match(U);
+  saveh5(U, "overlap");
   T = arma::real(arma::logmat(U)) / dtc;
 
   // R.B.: energy was updated in update_gradient()
@@ -249,6 +272,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
 
     qm->get_properties(props);
   }
+  saveh5(nac, "nac");
   
   // Make 3N vector versions of the NAC, velocity, and new
   // gradient. (m comes in as 3N.)
@@ -277,7 +301,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   double discriminant = (vd/dmd)*(vd/dmd) - 2*deltaE/dmd;
   if (discriminant > 0){
     hop_succeeds = true;
-    std::cerr << "[FSSH] Hop, " << active_state + min_state << "->"
+    std::cerr << "[FSSH] " << call_idx() << ": Hop, " << active_state + min_state << "->"
               << target_state + min_state << " succeeds; energy difference = "
               << deltaE << std::endl;
 
@@ -299,7 +323,8 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   }
   else{
     hop_succeeds = false;
-    std::cerr << "[FSSH] Hop is frustrated---will remain on " << active_state + min_state << "; ";
+    std::cerr << "[FSSH] " << call_idx() <<
+      ": Hop is frustrated---will remain on " << active_state + min_state << "; ";
     /*
       Momentum reversal along nac as per Jasper, A. W.; Truhlar,
       D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
@@ -386,14 +411,6 @@ double FSSH::update_gradient(void){
 
 // FIXME: should alter velocity rescale interface so we take inverse masses as 3N vector
 bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy){
-  // call parent to update edrift
-  BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
-
-  // FIXME: don't fire on the first inf
-  if (std::abs(edrift) > delta_e_tol){
-    std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
-  }
-  
   if (masses.has_inf() || arma::any(masses==0)){
     throw std::logic_error("Cannot do surface hopping with massless atoms or momentum sinks!");
   }
@@ -408,8 +425,9 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   bool update = hopping; // copy so hopping can be reset
   double deltaE = 0;
   if (hopping){
-    std::cerr <<  "[FSSH] Attempting hop: " << active_state + min_state
-              << "->" << target_state + min_state << std::endl;
+    std::cerr <<  "[FSSH] " << call_idx() <<
+      ": Attempting hop: " << active_state + min_state <<
+      "->" << target_state + min_state << std::endl;
     
     deltaE = hop_and_scale(total_gradient, velocities, m);
     
@@ -420,6 +438,14 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
 
   if (decoherence){
     decoherence->decohere(c, U, active_state, velocities.as_col(), m);
+  }
+
+  // call parent to update edrift and call_idx
+  BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
+
+  // FIXME: don't fire on the first inf
+  if (std::abs(edrift) > delta_e_tol){
+    std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
   }
   
   // update indicates we need to copy velocity and gradient back to GMX
