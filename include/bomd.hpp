@@ -28,6 +28,15 @@ protected:
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
   inline int call_idx() const noexcept { return md_call_idx; };
 
+  template <typename T>
+  void saveh5(const T &tensor, std::string kind){
+    tensor.save(
+                arma::hdf5_name("gifs.hdf5", "/" + kind + "/" +
+                                std::to_string(call_idx()),
+                                arma::hdf5_opts::replace)
+                );
+  };
+
   /* Config for keys common to all dynamics classes */
   void add_common_keys(ConfigBlockReader& reader);
   
@@ -49,7 +58,8 @@ protected:
   double elast = 0, edrift = 0;
   
 private:
-  int md_call_idx = 0; // tracks each call to rescale_velocities();
+  //FIXME: need to unify _call_idx() tracking at a higher level (gifs?)
+  int md_call_idx = 1; // tracks each call to rescale_velocities();
 };
 
 class PrintBomd:
