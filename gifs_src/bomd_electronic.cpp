@@ -83,19 +83,22 @@ double ElectronicBomd::update_gradient(void){
 
   Electronic::phase_match(U);
   saveh5(U, "overlap");
-  T = arma::real(arma::logmat(U)) / dtc;
+  T = util::logmat_unitary(U) / dtc;
   V = diagmat(energy);
 
   // compute max time step for electronic propagation (Jain 2016 eqs. 20, 21)
   {
-    double dtq_ = std::min(dtc,
-			   std::min(0.02 / T.max(),
-				    0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
-				    )
-			   );
+    double dtq_ =
+      std::min(dtc/20, // make sure 20dtq < dtc
+               std::min(dtc,
+                        std::min(0.02 / T.max(),
+                                 0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
+                                 )
+                        ));
 
     dtq = dtc / std::round(dtc / dtq_);
   }
+
   const size_t n_steps = (size_t) dtc / dtq;
   const std::complex<double> I(0,1);
 

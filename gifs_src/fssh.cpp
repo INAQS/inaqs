@@ -133,12 +133,12 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 //Perform some basic checks on the overlap to make sure propagation is reasonable
 void FSSH::check_overlap(const arma::mat& U){
   double magnitude = arma::norm(U,"fro")/sqrt(shstates);
-  if (magnitude < 0.8){
+  if (magnitude < 0.5){
     std::cerr << "[FSSH] " << call_idx() <<
-      ": Warning, raw overlap matrix has small norm: " << magnitude << std::endl;
+      ": Warning, raw overlap matrix has relatively small norm: " << magnitude << std::endl;
   }
 
-  const double norm_thresh = 0.9;
+  const double norm_thresh = 0.1;
   arma::vec norms(shstates, arma::fill::zeros);
   for (int i = 0; i < shstates; i++){
     norms(i) = arma::norm(U.col(i));
@@ -165,7 +165,7 @@ void FSSH::electronic_evolution(void){
   check_overlap(U);
   Electronic::phase_match(U);
   saveh5(U, "overlap");
-  T = arma::real(arma::logmat(U)) / dtc;
+  T = util::logmat_unitary(U) / dtc;
 
   // R.B.: energy was updated in update_gradient()
   V = diagmat(energy);
@@ -182,15 +182,18 @@ void FSSH::electronic_evolution(void){
 
   // compute max time step for electronic propagation (eqs. 20, 21)
   {
-    double dtq_ = std::min(dtc,
-			   std::min(0.02 / T.max(),
-				    0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
-				    )
-			   );
+    double dtq_ =
+      std::min(dtc/20, // make sure 20dtq < dtc
+               std::min(dtc,
+                        std::min(0.02 / T.max(),
+                                 0.02 / arma::max( V.diag() - arma::mean(V.diag()) )
+                                 )
+                        ));
 
     dtq = dtc / std::round(dtc / dtq_);
   }
   const size_t n_steps = (size_t) dtc / dtq;
+  //std::cout << "[FSSH] " << call_idx() << ": dtc/dtq=" << n_steps << std::endl;
   const std::complex<double> I(0,1);
 
   // Propagate electronic coefficients and compute hopping probabilities for dtc
@@ -396,6 +399,8 @@ double FSSH::update_gradient(void){
     output << active_state + min_state << " ";
     c().st().print(output);
     output.close();
+
+    saveh5(c.get(), "amps");
   }
 
   electronic_evolution();
