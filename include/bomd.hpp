@@ -30,11 +30,11 @@ protected:
 
   template <typename T>
   void saveh5(const T &tensor, std::string kind){
-    tensor.save(
-                arma::hdf5_name("gifs.hdf5", "/" + kind + "/" +
-                                std::to_string(call_idx()),
-                                arma::hdf5_opts::replace)
-                );
+    tensor.eval().save(
+                       arma::hdf5_name("gifs.hdf5", "/" + kind + "/" +
+                                       std::to_string(call_idx()),
+                                       arma::hdf5_opts::replace)
+                       );
   };
 
   /* Config for keys common to all dynamics classes */
