@@ -278,8 +278,8 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   }
   saveh5(nac, "nac");
   saveh5(total_gradient, "grad/total");
-  saveh5(arma::join_horiz(qm_grd, mm_grd),"grad/active");
-  saveh5(arma::join_horiz(qmg_new, mmg_new),"grad/target");
+  saveh5(arma::join_horiz(qm_grd, mm_grd), "grad/active");
+  saveh5(arma::join_horiz(qmg_new, mmg_new), "grad/target");
 
   // Make 3N vector versions of the NAC, velocity, and new
   // gradient. (m comes in as 3N.)
