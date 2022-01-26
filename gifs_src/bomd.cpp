@@ -110,11 +110,18 @@ BOMD::update_gradient()
 
 bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
   (void) total_gradient; (void) masses; (void) velocities;
-
   md_call_idx++;
   
   edrift = (total_energy - elast)/elast;
   elast = total_energy;
-  std::cout << "Total Energy: " << elast << "; Fractional drift: " << edrift << std::endl;
+  std::cout << "Total Energy: " << elast;
+  if (call_idx() > 3){
+    std::cout << "; Fractional drift: " << edrift << std::endl;
+  }
+  else{
+    std::cout << std::endl;
+  }
+
+
   return false;
 };
