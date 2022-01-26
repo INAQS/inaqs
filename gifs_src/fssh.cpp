@@ -133,19 +133,20 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 //Perform some basic checks on the overlap to make sure propagation is reasonable
 void FSSH::check_overlap(const arma::mat& U){
   double magnitude = arma::norm(U,"fro")/sqrt(shstates);
-  if (magnitude < 0.5){
+  if (magnitude < 0.8){
     std::cerr << "[FSSH] " << call_idx() <<
       ": Warning, raw overlap matrix has relatively small norm: " << magnitude << std::endl;
   }
 
-  const double norm_thresh = 0.1;
+  const double norm_thresh = 0.8;
   arma::vec norms(shstates, arma::fill::zeros);
   for (int i = 0; i < shstates; i++){
     norms(i) = arma::norm(U.col(i));
     if (norms(i) < norm_thresh && i == (int) active_state){
+      int a = min_state + active_state;
       std::cerr << "[FSSH] " << call_idx() <<
-        ": Warning, very little overlap with the active surface, " <<
-        min_state + active_state << ", which has overlap " << norms(i) << std::endl;
+        ": Warning, little raw overlap with the active surface, " <<
+        a << "; |<I|" << a << ">|=" << norms(i) << std::endl;
     }
   }
 }
@@ -276,7 +277,10 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     qm->get_properties(props);
   }
   saveh5(nac, "nac");
-  
+  saveh5(total_gradient, "grad/total");
+  saveh5(arma::join_horiz(qm_grd, mm_grd),"grad/active");
+  saveh5(arma::join_horiz(qmg_new, mmg_new),"grad/target");
+
   // Make 3N vector versions of the NAC, velocity, and new
   // gradient. (m comes in as 3N.)
   // FIXME: How do each of these interact with link atoms?
@@ -448,8 +452,7 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   // call parent to update edrift and call_idx
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
 
-  // FIXME: don't fire on the first inf
-  if (std::abs(edrift) > delta_e_tol){
+  if (call_idx() > 3 && std::abs(edrift) > delta_e_tol){
     std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
   }
   
