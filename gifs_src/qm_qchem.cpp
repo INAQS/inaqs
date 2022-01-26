@@ -333,6 +333,11 @@ void QM_QChem::state_tracker(PropMap &props){
     readQFMan(QCFILE::FILE_CIS_S2, S2);
   }
 
+  S2.save(arma::hdf5_name("gifs.hdf5",
+                          "/spin2/" + std::to_string(call_idx()),
+                          arma::hdf5_opts::replace));
+
+
   /* 1.2 is the default for REM_CIS_S2_THRESH; If we want to change,
      we can specify our threshold via sing_thresh, which is synced
      with the rem section.
