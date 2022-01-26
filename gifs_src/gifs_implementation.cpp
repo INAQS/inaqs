@@ -123,6 +123,8 @@ void GifsImpl::rescale_velocities(T total_energy, T* in_grad, T* in_masses, T* i
     veloc.resize(3, ntot);
     //
     from_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
+    // FIXME: change names for the call tree up to this point to reflect a force
+    total_gradient *= -1.0; // the in_grad parameter is actually a force
     from_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
     //
     // FIXME: rewrite FSSH to take inv masses so we don't do this conversion
@@ -143,6 +145,7 @@ void GifsImpl::rescale_velocities(T total_energy, T* in_grad, T* in_masses, T* i
         //
         conv.transform_veloc_au2md(veloc.begin(), veloc.end(), veloc.begin());
         conv.transform_gradient_au2md(total_gradient.begin(), total_gradient.end(), total_gradient.begin());
+        total_gradient *= -1.0; // transform back to a force
         //
         to_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
         to_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
