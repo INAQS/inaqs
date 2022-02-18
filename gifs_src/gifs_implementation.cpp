@@ -7,6 +7,7 @@
 #include "fssh.hpp"
 #include "bomd_rescale.hpp"
 #include "bomd_electronic.hpp"
+#include "ehrenfest.hpp"
 #include "configreader.hpp"
 //
 // creation
@@ -178,6 +179,9 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     }
     else if (runtype == "bomd-electronic") {
         bomd = new ElectronicBomd(qm_grd, mm_grd);
+    }
+    else if (runtype == "ehrenfest") {
+        bomd = new Ehrenfest(qm_grd, mm_grd);
     }
     else {
         throw "unknown runtype";

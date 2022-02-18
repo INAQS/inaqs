@@ -18,6 +18,7 @@ add_library(gifs SHARED
     conversion.cpp
     decoherence_afssh.cpp
     electronic.cpp
+    ehrenfest.cpp
     fssh.cpp
     gifs.cpp
     gifs_implementation.cpp

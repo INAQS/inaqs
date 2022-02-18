@@ -1,4 +1,4 @@
-#include "bomd_electronic.hpp"
+#include "ehrenfest.hpp"
 #include "electronic.hpp"
 #include "constants.hpp"
 #include "util.hpp"
@@ -7,24 +7,28 @@
 #include <cmath>
 
 
-ConfigBlockReader ElectronicBomd::setup_reader()
+ConfigBlockReader Ehrenfest::setup_reader()
 {
     using types = ConfigBlockReader::types;
-    ConfigBlockReader reader{"bomd-electronic"};
+    ConfigBlockReader reader{"ehrenfest"};
+    reader.add_entry("amplitude_file", "cs.dat");
     reader.add_entry("dtc", types::DOUBLE);
-    reader.add_entry("amplitude_file", "cs.hdf5");
+
+    {
+      std::vector<std::complex<double>> cs {};
+      reader.add_entry("amplitudes", cs);
+    }
 
     return reader;
 }
 
 
-void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
+void Ehrenfest::get_reader_data(ConfigBlockReader& reader) {
   {
     double in_dtc;
     reader.get_data("dtc", in_dtc);  // in fs
     dtc = in_dtc * (1e-15 / AU2SI_TIME);  // fs -> a.u.
   }
-
   reader.get_data("amplitude_file", amplitude_file);
 
   /* added in BOMD::add_qm_keys() */
@@ -53,34 +57,61 @@ void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
   U.set_size(nstates, nstates);
   T.set_size(nstates, nstates);
   V.set_size(nstates, nstates);
+  qm_grds.set_size(3, NQM(), nstates);
 
   {
-    arma::cx_mat initial(nstates, nstates, arma::fill::eye);
-    c = Electronic(initial);
+    std::vector<std::complex<double>> cs_vec {};
+    reader.get_data("amplitudes", cs_vec);
+    if (cs_vec.size() > 0){
+      if (cs_vec.size() != (arma::uword) nstates){
+        throw std::runtime_error("Number of Amplitudes do not match number of hopping surfaces!");
+      }
+      double norm = 0;
+      for (const auto& c: cs_vec){
+        norm += std::norm(c);
+      }
+      std::cerr << "[Ehrenfest] amplitude norm = " << norm << std::endl;
+      if (std::abs(1.0 -norm) > 1e-6){
+        throw std::runtime_error("Amplitudes are not normed; check your input!");
+      }
+      arma::cx_vec cs_arma(nstates);
+      for (int i = 0; i < nstates; i++){
+        cs_arma(i) = cs_vec[i];
+      }
+      c = Electronic(cs_arma);
+    }
+    else{
+      c.reset(nstates, 1, active_state);
+    }
   }
 }
 
 // This is our primary hook into the Gromacs (or other) MD loop
-double ElectronicBomd::update_gradient(void){
+double Ehrenfest::update_gradient(void){
   qm->update();
-
+  mm_grds.set_size(3, NMM(), nstates);
+  
   // get gradients, energies, and overlap
   {
     PropMap props{};
-    props.emplace(QMProperty::qmgradient, {min_state + active_state}, &qm_grd);
-    props.emplace(QMProperty::mmgradient, {min_state + active_state}, &mm_grd);
-    props.emplace(QMProperty::energies, util::range(min_state, min_state + nstates), &energy);
+    auto states = util::range(min_state, min_state + nstates);
+    props.emplace(QMProperty::qmgradient_multi, states, &qm_grds);
+    props.emplace(QMProperty::mmgradient_multi, states, &mm_grds);
+    props.emplace(QMProperty::energies, states, &energy);
     props.emplace(QMProperty::wfoverlap, &U);
     qm->get_properties(props);
   }
-
-  // write amplitudes first so we include the initial conditions
-  c.get().save(arma::hdf5_name(amplitude_file,
-                               "/amps/" + std::to_string(call_idx()),
-                               arma::hdf5_opts::replace));
+  
+  // write populations/amplitudes first so we include the initial conditions
+  {
+    std::ofstream output(amplitude_file, std::ios_base::app);
+    auto a = c();
+    a.transform( [](std::complex<double> ci) { return std::norm(ci); } );
+    arma::real(a).st().print(output);
+    output.close();
+  }
+  saveh5(c.get(), "amps");  
   saveh5(U, "overlapraw");
-  saveh5(c.get(), "amps");
-
   Electronic::phase_match(U);
   saveh5(U, "overlap");
   T = util::logmat_unitary(U) / dtc;
@@ -106,6 +137,16 @@ double ElectronicBomd::update_gradient(void){
   for (size_t nt = 0; nt < n_steps; nt++){
     c.advance_exact(V - I*T, dtq);
   }
-    
-  return energy(active_state);
+
+  double eh_energy = 0;
+  mm_grd.zeros();
+  qm_grd.zeros();
+  for (int i = 0; i < nstates; i++){
+    double ai = std::norm(c(i));
+    eh_energy += ai * energy(i);
+    qm_grd += ai * qm_grds.slice(i);
+    mm_grd += ai * mm_grds.slice(i);
+  }
+  
+  return eh_energy;
 }
