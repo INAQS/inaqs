@@ -14,7 +14,7 @@ export CC=gcc CXX=g++
 
 # make sure gromacs can find libgifs/libmemes during linking
 # shouldn't matter afterwards
-export LD_LIBRARY_PATH=$INAQSROOT/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$INAQSROOT/lib:${LD_LIBRARY_PATH-}
 
 function buildINAQS(){
     mkdir -p "$INAQSBUILD"
