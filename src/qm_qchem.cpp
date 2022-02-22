@@ -359,6 +359,11 @@ void QM_QChem::state_tracker(PropMap &props){
       statei(n_singlets++) = i+1; // the ground state is state 0
     }
   }
+
+  if (n_singlets == 1 && excited_states > 0){
+    throw std::runtime_error("No states of the desired multiplicity computed!");
+  }
+  
   statei.resize(n_singlets);
 
   for (QMProperty p: props.keys()){
@@ -366,7 +371,7 @@ void QM_QChem::state_tracker(PropMap &props){
       arma::uvec & idxs = props.get_writable_idx(p);
       for (arma::uword & i: idxs){
         if (i >= n_singlets){
-          std::cerr << "Requested " << p << "(" << i << "); have " << n_singlets-1 << "." << std::endl;
+          std::cerr << "Requested " << p << "(" << i << "); have up to" << n_singlets-1 << "." << std::endl;
           throw std::runtime_error("The requested state is not within those states computed!");
         }
         else{
@@ -806,7 +811,7 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
     // If using a global scratch path, make it unique
     // FIXME: could still collide if QCSCRATCH is on a network device
     std::srand(getpid());
-    scratch_path += "/GIFS_" + std::to_string(std::time(nullptr)) + "_" + std::to_string(rand());
+    scratch_path += "/INAQS_" + std::to_string(std::time(nullptr)) + "_" + std::to_string(rand());
   }
 
   /* Make sure the directory exists; create otherwise */

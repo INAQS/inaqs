@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/mfsjmenger/gifs_release/issues and by contacting the authors (see the README).
+Report bugs at https://github.com/INAQS/inaqs and by contacting the authors (see the README).
 
 If you are reporting a bug, please include:
 
@@ -27,7 +27,7 @@ If you are reporting a bug, please include:
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-GIFS can always use more documentation, whether as part of the docs,
+INAQS can always use more documentation, whether as part of the docs,
 in docstrings, or even on the web in blog posts, articles, and such.
 
 Submit Feedback

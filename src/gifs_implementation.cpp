@@ -186,29 +186,44 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     else {
         throw "unknown runtype";
     }
+    std::cerr << "Begining INAQS run of type " << runtype << std::endl;
     bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
     return bomd;
 };
 
-ConfigBlockReader
-GifsImpl::setup_reader() {
+void
+GifsImpl::setup_reader(ConfigBlockReader& reader) {
   //using types = ConfigBlockReader::types;
-    ConfigBlockReader reader{"gifs"};
     //
     reader.add_entry("runtype", std::string("bomd"));
 //    reader.add_entry("latoms", std::vector<int>{});
-    return reader;
 }
 
 
 GifsImpl::GifsImpl(const char* file, size_t in_nqm, const int * ian, const double mass, const double length, const double time)
     : nqm{in_nqm}, nmm{0}, qm_atomicnumbers(in_nqm), qm_index(in_nqm), conv(mass, length, time)
 {
-    ConfigBlockReader reader = setup_reader();
-    FileHandle fh{file};
-    // parse input
-    reader.parse(fh);
-    // set to correct size:
+
+  FileHandle fh{file};
+  ConfigBlockReader reader;
+  {
+    std::vector<std::string> block_names = {
+      "inaqs", // primary block first
+      "gifs"   // legacy blocks follow
+    };
+    for (const auto & b: block_names){
+      reader = ConfigBlockReader(b);
+      setup_reader(reader);
+      if (0 == reader.parse(fh)){
+        if (b != block_names[0]){
+          std::cerr << "DEPRECATION WARNING: you are not using the standard config block, ["
+                    << block_names[0] << "]. Please update your inputs." << std::endl;
+        }
+        break;
+      }
+    }
+  }
+
     qm_crd.resize(3, nqm);
     qm_frc.resize(3, nqm);
     mm_frc.resize(3, 0);

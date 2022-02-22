@@ -10,7 +10,7 @@ find_package(HDF5 REQUIRED)
 include_directories(${HDF5_INCLUDE_DIRS})
 link_libraries(${HDF5_LIBRARIES})
 
-add_library(gifs SHARED
+add_library(inaqs SHARED
     bomd.cpp
     bomd_rescale.cpp
     bomd_electronic.cpp
@@ -30,14 +30,14 @@ add_library(gifs SHARED
     util.cpp
 )
 
-target_compile_options(gifs PRIVATE -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5)
-target_compile_options(gifs PRIVATE -Werror -Wall -Wextra)
+target_compile_options(inaqs PRIVATE -DARMA_DONT_USE_WRAPPER -DARMA_USE_HDF5)
+target_compile_options(inaqs PRIVATE -Werror -Wall -Wextra)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set_target_properties(gifs PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(gifs PROPERTIES PUBLIC_HEADER ../include/gifs.hpp)
+set_target_properties(inaqs PROPERTIES VERSION ${PROJECT_VERSION})
+set_target_properties(inaqs PROPERTIES PUBLIC_HEADER ../include/gifs.hpp)
 
-install(TARGETS gifs
+install(TARGETS inaqs
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

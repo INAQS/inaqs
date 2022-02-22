@@ -14,7 +14,7 @@ target_include_directories(gifsgmx
 
 target_link_libraries(gifsgmx
     PRIVATE
-    ${GMX_GIFS}/lib/libgifs.so
+    ${GMX_GIFS}/lib/libinaqs.so
 )
 
 install(TARGETS gifsgmx 

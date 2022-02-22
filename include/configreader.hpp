@@ -173,6 +173,7 @@ class ConfigBlockReader
 {
 public:
     using types = Data::types;
+    explicit ConfigBlockReader(void): name{}, data{} {} // needed so we can create an 'empty' reader
     explicit ConfigBlockReader(std::string block): name{block}, data{} {}
     // add entry by type
     template<typename T>

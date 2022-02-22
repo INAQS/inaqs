@@ -49,7 +49,7 @@ private:
     // Singleton Pointer
     static GifsImpl* impl; 
     //
-    ConfigBlockReader setup_reader(void);
+    void setup_reader(ConfigBlockReader&);
     // Local data!
     arma::uword nqm;
     arma::uword nmm;
