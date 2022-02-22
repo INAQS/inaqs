@@ -170,6 +170,9 @@ real call_QMroutine(t_commrec *cr, t_forcerec *fr, t_QMrec *qm,
     QMener = gifs_do_qm_forces(qm->nrQMatoms, qm->atomicnumberQM, qm->xQM, 
 			       mm->nrMMatoms, mm->xMM, mm->MMcharges,
 			       f, fshift);
+    /* Update now so that we have the global information for
+     * the velocity_rescale call
+     */
     gifs_update_global_idx(&qm->indexQM[0], &mm->indexMM[0]);
     return QMener;
 #endif
