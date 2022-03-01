@@ -147,6 +147,28 @@ double Ehrenfest::update_gradient(void){
     qm_grd += ai * qm_grds.slice(i);
     mm_grd += ai * mm_grds.slice(i);
   }
-  
+
+
+  //coupling terms
+  {
+    arma::mat d(3, NQM()+NMM());
+    // Upper triangle of dij
+    for (arma::uword j=1; j < (arma::uword) nstates; j++){
+      for (arma::uword i=0; i < j; i++){
+        PropMap props{};
+        props.emplace(QMProperty::nacvector, {min_state + i, min_state + j}, &d);
+        qm->get_properties(props);
+        const arma::mat & dqm = d.submat(arma::span::all, arma::span(0, NQM()-1));
+        double cdv = 2 * (std::conj(c(i))*c(j)).real() * (energy(j) - energy(i));
+        std::cout << "[Ehrenfest] " << call_idx() << ": " <<
+          i << "," << j << ": " << cdv << std::endl;
+        qm_grd += cdv * dqm;
+        if (NMM() > 0){
+          const arma::mat & dmm = d.submat(arma::span::all, arma::span(NQM(), NMM()-1));
+          mm_grd += cdv * dmm;
+        }
+      }
+    }
+  }
   return eh_energy;
 }
