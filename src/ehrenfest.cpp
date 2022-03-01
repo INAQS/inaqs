@@ -160,8 +160,8 @@ double Ehrenfest::update_gradient(void){
         qm->get_properties(props);
         const arma::mat & dqm = d.submat(arma::span::all, arma::span(0, NQM()-1));
         double cdv = 2 * (std::conj(c(i))*c(j)).real() * (energy(j) - energy(i));
-        std::cout << "[Ehrenfest] " << call_idx() << ": " <<
-          i << "," << j << ": " << cdv << std::endl;
+        //std::cout << "[Ehrenfest] " << call_idx() << ": " <<
+        //i << "," << j << ": " << cdv << std::endl;
         qm_grd += cdv * dqm;
         if (NMM() > 0){
           const arma::mat & dmm = d.submat(arma::span::all, arma::span(NQM(), NMM()-1));
