@@ -183,6 +183,7 @@ void FSSH::electronic_evolution(void){
 
   // compute max time step for electronic propagation (eqs. 20, 21)
   {
+    //FIXME: do this in a nicer way (e.g. min of a vector)
     double dtq_ =
       std::min(dtc/20, // make sure 20dtq < dtc
                std::min(dtc,
@@ -205,6 +206,7 @@ void FSSH::electronic_evolution(void){
       held coefficients, c, according the Hamiltonian H for time dt
     */
 
+    //FIXME: consider interpolating V
     // FIXME: should use rk4
     //c.advance_rk4(V - I*T, dtq);
     c.advance_exact(V - I*T, dtq);

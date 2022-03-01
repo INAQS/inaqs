@@ -325,6 +325,7 @@ void QM_QChem::get_properties(PropMap &props){
 
 
 // modifies all properties requesting state k to request k' where k' is the (k+1)th *singlet*
+// Consider hooking into QC's state tracker via FILE_MECP_INFO
 void QM_QChem::state_tracker(PropMap &props){
   arma::vec S2(excited_states + 1);
   {
