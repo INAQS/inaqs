@@ -98,6 +98,9 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   T.set_size(shstates, shstates);
   V.set_size(shstates, shstates);
 
+  phases.set_size(shstates);
+  phases.ones();
+
   /*
     FIXME: should be able to configure (multiple) initial electronic
     state(s). Can use DVEC?
@@ -164,7 +167,7 @@ void FSSH::electronic_evolution(void){
 
   saveh5(U, "overlapraw");
   check_overlap(U);
-  Electronic::phase_match(U);
+  Electronic::phase_match(U, phases);
   saveh5(U, "overlap");
   T = util::logmat_unitary(U) / dtc;
 
@@ -278,6 +281,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
 
     qm->get_properties(props);
   }
+  nac *= phases(active_state) * phases(target_state);
   saveh5(nac, "nac");
   saveh5(total_gradient, "grad/total");
   saveh5(arma::join_horiz(qm_grd, mm_grd),"grad/active");

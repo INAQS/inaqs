@@ -18,6 +18,7 @@ protected:
   ConfigBlockReader setup_reader() override;
   
   arma::mat U, T, V;
+  arma::vec phases;
   arma::cube qm_grds, mm_grds;
   
   double dtc;

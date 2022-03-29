@@ -15,7 +15,8 @@ TEST_CASE( "Jacobi sweeps locate minimum for A", "[Electronic]"){
                   {-0.0916, -0.6991, -0.0847, -0.7041},
                   {-0.7355, -0.1199,  0.6527,  0.1363}};
 
-  Electronic::phase_match(A8);
+  arma::vec p = arma::ones(4);
+  Electronic::phase_match(A8, p);
   CHECK(TrLg2(A8) == Approx(6.8250));
   REQUIRE((A8*A8.t() - arma::eye(arma::size(A8))).is_zero(1e-14));
 }
@@ -26,7 +27,8 @@ TEST_CASE( "Jacobi sweeps locate minimum for B", "[Electronic]"){
                   { 0.5694,  0.1139, -0.2188,  0.7842},
                   {-0.1942, -0.8182, -0.5294,  0.1121}};
 
-  Electronic::phase_match(B8);
+  arma::vec p = arma::ones(4);
+  Electronic::phase_match(B8, p);
   CHECK(TrLg2(B8) == Approx(7.7673));
   REQUIRE((B8*B8.t() - arma::eye(arma::size(B8))).is_zero(1e-14));
 }
@@ -37,7 +39,8 @@ TEST_CASE("More Jacobi Sweeps from ZZ", "[Electronic]"){
                   { 0, -1,  0}};
   T1.print("T1 before");
 
-  Electronic::phase_match(T1);
+  arma::vec p = arma::ones(3);
+  Electronic::phase_match(T1, p);
   T1.print("T1 after");
   CHECK(TrLg2(T1) == Approx(4.9348));
 
@@ -45,6 +48,7 @@ TEST_CASE("More Jacobi Sweeps from ZZ", "[Electronic]"){
                   {-1,  0,  0},
                   { 0,  0, -1}};
 
-  Electronic::phase_match(T2);
+  p = arma::ones(3);
+  Electronic::phase_match(T2, p);
   CHECK(TrLg2(T2) == Approx(4.9348));
 }

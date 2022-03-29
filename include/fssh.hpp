@@ -28,6 +28,7 @@ protected:
   void check_overlap(const arma::mat& U);
 
   arma::mat U, T, V;
+  arma::vec phases;
   arma::mat nac;
 
   double dtc;

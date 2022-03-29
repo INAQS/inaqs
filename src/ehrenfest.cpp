@@ -57,6 +57,9 @@ void Ehrenfest::get_reader_data(ConfigBlockReader& reader) {
   U.set_size(nstates, nstates);
   T.set_size(nstates, nstates);
   V.set_size(nstates, nstates);
+  phases.set_size(nstates);
+  phases.ones();
+
   qm_grds.set_size(3, NQM(), nstates);
 
   {
@@ -112,7 +115,7 @@ double Ehrenfest::update_gradient(void){
   }
   saveh5(c.get(), "amps");  
   saveh5(U, "overlapraw");
-  Electronic::phase_match(U);
+  Electronic::phase_match(U, phases);
   saveh5(U, "overlap");
   T = util::logmat_unitary(U) / dtc;
   V = arma::diagmat(energy);
@@ -157,6 +160,7 @@ double Ehrenfest::update_gradient(void){
       for (arma::uword i=0; i < j; i++){
         PropMap props{};
         props.emplace(QMProperty::nacvector, {min_state + i, min_state + j}, &d);
+        d *= phases(i) * phases(j);
         qm->get_properties(props);
         const arma::mat & dqm = d.submat(arma::span::all, arma::span(0, NQM()-1));
         double cdv = 2 * (std::conj(c(i))*c(j)).real() * (energy(j) - energy(i));

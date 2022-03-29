@@ -42,11 +42,23 @@ void Electronic::reserve(void){
 
   Results agree with the matrices in the paper's Appendix D
 */
-void Electronic::phase_match(arma::mat &U){
+void Electronic::phase_match(arma::mat &U, arma::vec &phases){
+  U = arma::diagmat(phases) * U; // update phases from previous time step if provided
+  phases.ones();// assume we're aligned this time
+
+  // align and construct phases for next step
+  for (arma::uword i = 0; i < U.n_cols; i++){
+    if (U(i,i) < 0){
+      U.col(i)*= -1.0;
+      phases(i) *= -1.0;
+    }
+  }
+
   // Step 1: det(U) == 1
   util::unitarize(U);
   if (arma::det(U) < 0){
     U.col(0) *= -1.0;
+    phases(0) *= -1.0;
   }
 
   // Step 2: Jacobi sweeps
@@ -69,6 +81,8 @@ void Electronic::phase_match(arma::mat &U){
 	if (deljk < 0){
 	  U.col(j) *= -1.0;
 	  U.col(k) *= -1.0;
+          phases(j) *= -1.0;
+          phases(k) *= -1.0;
           change = true;
 	}
       }
@@ -76,7 +90,8 @@ void Electronic::phase_match(arma::mat &U){
   }while(change);
 }
 
-void Electronic::phase_match(arma::cx_mat &U){
+void Electronic::phase_match(arma::cx_mat &U, arma::cx_vec &phases){
   (void) U;
+  (void) phases;
   throw std::runtime_error("complex phase matching not implemented");
 }

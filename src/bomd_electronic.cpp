@@ -54,6 +54,9 @@ void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
   T.set_size(nstates, nstates);
   V.set_size(nstates, nstates);
 
+  phases.set_size(nstates);
+  phases.ones();
+
   {
     arma::cx_mat initial(nstates, nstates, arma::fill::eye);
     c = Electronic(initial);
@@ -81,7 +84,7 @@ double ElectronicBomd::update_gradient(void){
   saveh5(U, "overlapraw");
   saveh5(c.get(), "amps");
 
-  Electronic::phase_match(U);
+  Electronic::phase_match(U, phases);
   saveh5(U, "overlap");
   T = util::logmat_unitary(U) / dtc;
   V = arma::diagmat(energy);

@@ -38,8 +38,8 @@ public:
   void advance_rk4(const arma::cx_mat &H, double dt);
   void advance_exact(const arma::cx_mat &H, double dt);
 
-  static void phase_match(arma::mat &U);
-  static void phase_match(arma::cx_mat &U);
+  static void phase_match(arma::mat &U, arma::vec &phases);
+  static void phase_match(arma::cx_mat &U, arma::cx_vec &phases);
   
 private:
   void reserve(void);
