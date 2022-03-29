@@ -346,9 +346,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     */
     if (arma::as_scalar((-gradv.t() * nacv)*(nacv.t() * (vel % m))) < 0){
       std::cerr << "velocities reversed." << std::endl;
-      const arma::vec nacu = arma::normalise(nacv);
-      //vel = vel - 2.0 * (nacu * nacu.t() * (vel % m))/m;
-      vel = vel - 2.0 * (nacu / m) * (nacu.t() * (vel % m));
+      vel = vel - 2.0 * (vd/dmd) * (nacv / m);
     }
     else{
       std::cerr << "velocities, unchanged." << std::endl;
