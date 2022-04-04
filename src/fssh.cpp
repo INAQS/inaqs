@@ -14,6 +14,7 @@ ConfigBlockReader FSSH::setup_reader()
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", 1e-4);
+    reader.add_entry("rescale_initial_velocities", 0); // for rate calculations
 
     reader.add_entry("amplitude_file", "cs.dat");
     reader.add_entry("decoherence", "");
@@ -105,6 +106,12 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     FIXME: should be able to configure (multiple) initial electronic
     state(s). Can use DVEC?
   */
+
+  {
+    int bool_in;
+    reader.get_data("rescale_initial_velocities", bool_in);
+    rescale_initial_velocities = bool_in;
+  }
 
   {
     std::vector<std::complex<double>> cs_vec {};
@@ -378,7 +385,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   position integration in a single step afterwards. See
   gifs/docs/GromacsVVImplementation.jpg for notes.
 
-  Conversation with Amber in Marhc 2021 indicated that it was faster
+  Conversation with Amber in March 2021 indicated that it was faster
   and didn't rely on an ad hoc selection of energy tolerance to simply
   converge properties in dtc directly rather than use this scheme.
 
@@ -408,7 +415,6 @@ double FSSH::update_gradient(void){
     output << active_state + min_state << " ";
     c().st().print(output);
     output.close();
-
     saveh5(c.get(), "amps");
   }
 
@@ -429,6 +435,13 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     throw std::logic_error("Cannot do surface hopping with massless atoms or momentum sinks!");
   }
 
+  if(rescale_initial_velocities){ // will fire only once; set to false at end of function
+    std::cerr << "[FSSH] " << call_idx() << ": Attempting to rescale initial velocities." << std::endl;
+    target_state = active_state;
+    active_state = 0;
+    hopping = true;
+  }
+
   // 3N vector of masses
   arma::vec m (3 * (NQM() + NMM()), arma::fill::zeros);
   for(arma::uword i = 0 ; i < m.n_elem ; i++){
@@ -447,6 +460,13 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
     
     if (decoherence && deltaE > 0){
       decoherence->hopped(c, active_state);
+    }
+  }
+
+  if (rescale_initial_velocities){
+    rescale_initial_velocities = false; // should never change again
+    if (!deltaE){
+      throw std::runtime_error("Invalid initial conditions");
     }
   }
 

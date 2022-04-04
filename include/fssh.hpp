@@ -33,6 +33,7 @@ protected:
 
   double dtc;
   double delta_e_tol;
+  bool rescale_initial_velocities = false;
   double dtq;
   
   size_t min_state;
