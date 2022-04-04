@@ -113,6 +113,10 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     rescale_initial_velocities = bool_in;
   }
 
+  if (active_state == 0){
+    rescale_initial_velocities = false;
+  }
+
   {
     std::vector<std::complex<double>> cs_vec {};
     reader.get_data("amplitudes", cs_vec);
