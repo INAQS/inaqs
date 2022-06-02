@@ -39,6 +39,11 @@
 #include <config.h>
 #endif
 
+#ifdef GMX_GIFS
+#include "../shqmmm/eshake.hpp"
+extern int bElectronicSHAKE;
+#endif
+
 #include <math.h>
 #include "sysstuff.h"
 #include "typedefs.h"
@@ -97,7 +102,7 @@ static void pv(FILE *log, char *s, rvec x)
 
 void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
             real dist2[], real xp[], real rij[], real m2[], real omega,
-            real invmass[], real tt[], real lagr[], int *nerror)
+            real invmass[], real tt[], real lagr[], int *nerror, real invdt, int natoms)
 {
     /*
      *     r.c. van schaik and w.f. van gunsteren
@@ -151,6 +156,8 @@ void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
 
             iconvf = fabs(diff)*tt[ll];
 
+            printf("DVCS: %d[%d], iconvf=%g\n", nit, ll, iconvf);
+            
             if (iconvf > 1)
             {
                 nconv   = iconvf;
@@ -159,6 +166,7 @@ void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
                 if (rrpr < toler*mytol)
                 {
                     error = ll+1;
+                    printf("DVCS: ll=%d, iconvf=%g, rrpr=%g, thresh=%g\n", ll, iconvf, rrpr, toler*mytol);
                 }
                 else
                 {
@@ -178,6 +186,12 @@ void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
                 }
             }
         }
+#ifdef GMX_GIFS
+        // FIXME: need to only do this if bElectronicSHAKE = 1;
+        if (bElectronicSHAKE){
+          lagr[ll+1] = inaqs_eshake(natoms, invmass, econqCoord, xp, invdt);
+        }
+#endif
     }
     *nnit   = nit;
     *nerror = error;
@@ -201,7 +215,6 @@ int vec_shakef(FILE *fplog, gmx_shakedata_t shaked,
     real     mm    = 0., tmp;
     int      error = 0;
     real     g, vscale, rscale, rvscale;
-
     if (ncon > shaked->nalloc)
     {
         shaked->nalloc = over_alloc_dd(ncon);
@@ -244,13 +257,13 @@ int vec_shakef(FILE *fplog, gmx_shakedata_t shaked,
     switch (econq)
     {
         case econqCoord:
-            cshake(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error);
+            cshake(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, natoms);
             break;
         case econqVeloc:
-            crattle(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, vetavar);
+            crattle(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, vetavar, natoms);
             break;
     }
-
+    
     if (nit >= maxnit)
     {
         if (fplog)
@@ -262,6 +275,7 @@ int vec_shakef(FILE *fplog, gmx_shakedata_t shaked,
     }
     else if (error != 0)
     {
+      printf("DVCS: {shake, rattle}[%d] error=%d\n", econq, error);
         if (fplog)
         {
             fprintf(fplog, "Inner product between old and new vector <= 0.0!\n"
@@ -390,11 +404,10 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
     real    *lam, dt_2, dvdl;
     int      i, n0, ncons, blen, type;
     int      tnit = 0, trij = 0;
-
 #ifdef DEBUG
     fprintf(log, "nblocks=%d, sblock[0]=%d\n", nblocks, sblock[0]);
 #endif
-
+    
     ncons = idef->il[F_CONSTR].nr/3;
 
     for (i = 0; i < ncons; i++)
@@ -406,7 +419,15 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
     lam    = lagr;
     for (i = 0; (i < nblocks); )
     {
+      /*
+        DVCS: looks like we could easily invoke UB with this
+        sblock[i+1]. Do we always need sblocks larger than 1?
+
+        NOPE! c.f. src/mdlib/constr.c::make_shake_sblock_pd()
+        ther's a "Last block..." that gets added after the regular blocks
+      */
         blen  = (sblock[i+1]-sblock[i]);
+        //printf("DVCS: in bshakef; sblock[%d] = %d ; blen*3=%d\n", i, sblock[i], blen);
         blen /= 3;
         n0    = vec_shakef(log, shaked, natoms, invmass, blen, idef->iparams,
                            iatoms, ir->shake_tol, x_s, prime, shaked->omega,
@@ -467,6 +488,10 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
 #ifdef DEBUG
     fprintf(log, "tnit: %5d  omega: %10.5f\n", tnit, omega);
 #endif
+    /*
+      DVCS: Shake Successive Over-relaxation; defaults to no and isn't listed in the manual
+      see also: https://en.wikipedia.org/wiki/Successive_over-relaxation
+    */
     if (ir->bShakeSOR)
     {
         if (tnit > shaked->gamma)
@@ -492,7 +517,7 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
 
 void crattle(atom_id iatom[], int ncon, int *nnit, int maxnit,
              real dist2[], real vp[], real rij[], real m2[], real omega,
-             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar)
+             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar, int natoms)
 {
     /*
      *     r.c. van schaik and w.f. van gunsteren
@@ -572,6 +597,12 @@ void crattle(atom_id iatom[], int ncon, int *nnit, int maxnit,
                 vp[jz] -= zh*jm;
             }
         }
+#ifdef GMX_GIFS
+        if (bElectronicSHAKE){
+          lagr[ll+1] = inaqs_eshake(natoms, invmass, econqVeloc, vp, invdt);
+        }
+#endif
+
     }
     *nnit   = nit;
     *nerror = error;

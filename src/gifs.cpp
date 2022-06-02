@@ -18,6 +18,7 @@ void create_qm_interface(const char* file, size_t nqm, const int* qm_atomids)
   is_init = true;
 }
 
+  bool gifs_interface_is_ready(void){ return is_init; }
 
 float gifs_get_forces(const float* qm_crd, 
                       const size_t* link_ids,
@@ -32,7 +33,7 @@ float gifs_get_forces(const float* qm_crd,
                                      mm_crd, mm_chg, 
                                      f_qm, f_mm);
 };
-
+  
 void
 gifs_update_global_index(int* indexQM, int* indexMM) {
   Gifs gifs_handle;
@@ -54,6 +55,10 @@ gifs_rescale_velocities(float total_energy, float* total_gradient, float* masses
 std::shared_ptr<QMInterface> gifs_QMInterface(void){
   Gifs gifs_handle;
   return gifs_handle.get_QMInterface();
-    
+}
+
+void gifs_update_coords(const arma::mat & R){
+  Gifs gifs_handle;
+  gifs_handle.update_coords(R);
 }
 #endif 

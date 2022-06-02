@@ -17,6 +17,7 @@ add_library(inaqs SHARED
     configreader.cpp
     conversion.cpp
     decoherence_afssh.cpp
+    diabatic_seam_dynamics.cpp
     electronic.cpp
     ehrenfest.cpp
     fssh.cpp

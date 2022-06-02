@@ -7,6 +7,7 @@
 #include "fssh.hpp"
 #include "bomd_rescale.hpp"
 #include "bomd_electronic.hpp"
+#include "diabatic_seam_dynamics.hpp"
 #include "ehrenfest.hpp"
 #include "configreader.hpp"
 //
@@ -38,31 +39,39 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
                             T* in_qm_frc, T* in_mm_frc)
 {
     nmm = in_nmm;
-    //
+  
     las->set_local_idx(local_index);
-    // set mm size
+    
+    // set mm size 
     mm_crd.resize(3, nmm);
     mm_frc.resize(3, nmm);
     mm_chg.resize(nmm);
     mm_index.resize(nmm);
+    
     // update charge
     for (arma::uword idx=0; idx<nmm; ++idx) {
-        mm_chg[idx] = in_mm_chg[idx];
+      mm_chg[idx] = in_mm_chg[idx];
     };
+    
     // update linkatom coordinates and set factors etc.
     las->update_crd(in_qm_crd, in_mm_crd);
+  
     // copy coordinates 
     size_t nqm_withoutlink = nqm-las->nlink;
+    
     // assumes linkatoms are below coordinate section
     conv.transform_crd_md2au(in_qm_crd, in_qm_crd+3*nqm_withoutlink, qm_crd.begin());
-    conv.transform_crd_md2au(in_mm_crd, in_mm_crd+3*nmm, mm_crd.begin()); 
+    conv.transform_crd_md2au(in_mm_crd, in_mm_crd+3*nmm, mm_crd.begin());
+    
     // linkatoms coords
     const auto& la_crd = las->get_crd();
     conv.transform_crd_md2au(la_crd.begin(), la_crd.end(), qm_crd.begin()+nqm_withoutlink*3);
+  
     // Compute Forces etc.
     double energy = bomd->update_gradient();
     // update linkatom
     auto& la_frc = las->get_frc();
+
     conv.transform_gradient_au2md(qm_frc.begin()+3*nqm_withoutlink, qm_frc.end(), la_frc.begin());
     // transform back forces
     conv.transform_gradient_au2md(qm_frc.begin(), qm_frc.end()-3*las->nlink, in_qm_frc);
@@ -72,6 +81,25 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     // return energy
     return conv.energy_au2md(energy);
 };
+
+//FIXME: pretty sure this is wrong wrt link atoms and .begin() / .end() ! 
+void GifsImpl::update_coords(const arma::mat & R){
+  if (R.n_cols != nmm + nqm){
+    throw std::logic_error("Invalid call to gifs_update_coords(); new size does not match!");
+  }
+  size_t nqm_withoutlink = nqm-las->nlink;
+  
+  // update linkatom coordinates and set factors etc.
+  las->update_crd(R.begin(), R.begin() + 3*nqm_withoutlink);
+  
+  // assumes linkatoms are below coordinate section
+  conv.transform_crd_md2au(R.begin(), R.begin()+3*nqm_withoutlink, qm_crd.begin());
+  conv.transform_crd_md2au(R.begin()+3*nqm_withoutlink, R.end() - 3*nqm_withoutlink, mm_crd.begin());
+  
+  // linkatoms coords
+  const auto& la_crd = las->get_crd();
+  conv.transform_crd_md2au(la_crd.begin(), la_crd.end(), qm_crd.begin()+nqm_withoutlink*3);  
+}
 
 template<typename T1, typename T2>
 void from_global(const T1* global, T2& local,
@@ -183,8 +211,11 @@ GifsImpl::select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     else if (runtype == "ehrenfest") {
       bomd.reset(new Ehrenfest(qm_grd, mm_grd));
     }
+    else if (runtype == "diabatic_seam") {
+      bomd.reset(new DiabaticSeam(qm_grd, mm_grd));
+    }
     else {
-        throw "unknown runtype";
+      throw std::runtime_error("unknown runtype");
     }
     std::cerr << "Begining INAQS run of type " << runtype << std::endl;
     qmi = bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
@@ -286,3 +317,5 @@ template void GifsImpl::rescale_velocities(double total_energy, double* total_gr
 template void GifsImpl::rescale_velocities(float total_energy, float* total_gradient, float* masses, float* velocities);
 template float GifsImpl::update_gradient(const float* in_qm_crd, const size_t* local_index, size_t in_nmm, const float* in_mm_crd, const float* in_mm_chg, float* in_qm_frc, float* in_mm_frc);
 template double GifsImpl::update_gradient(const double* in_qm_crd, const size_t* local_index, size_t in_nmm, const double* in_mm_crd, const double* in_mm_chg, double* in_qm_frc, double* in_mm_frc);
+
+  

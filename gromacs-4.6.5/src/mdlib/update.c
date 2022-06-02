@@ -1549,16 +1549,15 @@ void update_constraints(FILE             *fplog,
     tensor               vir_con;
     rvec                *vbuf, *xprime = NULL;
     int                  nth, th;
-
     if (constr)
     {
         bDoConstr = TRUE;
     }
+    // DVCS: skip if this is our first time through and we're not doing vv
     if (bFirstHalf && !EI_VV(inputrec->eI))
     {
         bDoConstr = FALSE;
     }
-
     /* for now, SD update is here -- though it really seems like it
        should be reformulated as a velocity verlet method, since it has two parts */
 
@@ -1594,6 +1593,7 @@ void update_constraints(FILE             *fplog,
         wallcycle_start(wcycle, ewcCONSTR);
         if (EI_VV(inputrec->eI) && bFirstHalf)
         {
+          // DVCS: first step under vv
             constrain(NULL, bLog, bEner, constr, idef,
                       inputrec, ekind, cr, step, 1, md,
                       state->x, state->v, state->v,
@@ -1604,6 +1604,7 @@ void update_constraints(FILE             *fplog,
         }
         else
         {
+          // DVCS: second vv step (or first/only step for everything else)
             constrain(NULL, bLog, bEner, constr, idef,
                       inputrec, ekind, cr, step, 1, md,
                       state->x, xprime, NULL,

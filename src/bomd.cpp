@@ -21,17 +21,16 @@ select_interface(ConfigBlockReader& reader,
     reader.get_data("qmcode", qmcode);
     reader.get_data("multiplicity", mult);
     reader.get_data("charge", chg);
-    
+
     reader.get_data("excited_states", excited_states);
     reader.get_data("min_state", min_state);
 
-    
     if (qmcode == "qchem") {
         return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else if (qmcode == "qmmodel") {
         return new QM_Model(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else {
-        throw "qm interface  not implemented!";
+      throw std::runtime_error("qm interface  not implemented!");
     }
 }
 
@@ -51,7 +50,7 @@ BOMD::add_common_keys(ConfigBlockReader& reader)
 BOMD::BOMD(arma::mat& qm_grd,
            arma::mat& mm_grd) :
     qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
-{};
+{}
 
 std::shared_ptr<QMInterface>
 BOMD::setup(FileHandle& fh,

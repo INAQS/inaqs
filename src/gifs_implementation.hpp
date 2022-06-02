@@ -17,6 +17,9 @@
 // factory to create new bomd instance, based on an input file!
 
 
+// consider using a reference to a method-static object in a static method like:
+// https://codereview.stackexchange.com/questions/13059/thread-safe-singleton-class-using-stdshared-ptr-in-c11/13082#13082
+
 class GifsImpl
 {
 public: 
@@ -42,7 +45,8 @@ public:
         return true;
     }
 
-  std::shared_ptr<QMInterface> get_QMInterface(void){return qmi;}  
+  std::shared_ptr<QMInterface> get_QMInterface(void){return qmi;}
+  void update_coords(const arma::mat & R);
 
 private:
     GifsImpl(const char* file, size_t nqm, const int * qmids,
@@ -122,6 +126,8 @@ public:
     void update_global_index(int* indexQM, int* indexMM);
 
     std::shared_ptr<QMInterface> get_QMInterface(void){return impl->get_QMInterface();}
+    void update_coords(const arma::mat & R){impl->update_coords(R);}
+
 private:
     GifsImpl* impl{nullptr}; 
 };

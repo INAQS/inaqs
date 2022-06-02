@@ -30,19 +30,29 @@ private:
     FILE_ENERGY           =   99,    //
     FILE_NUCLEAR_GRADIENT =  131,    //
     FILE_EFIELD           =  329,    //
-    FILE_DERCOUP          =  967,    // Derivative coupling
     FILE_WF_OVERLAP       =  398,    // wavefunction overlap
     FILE_DIAB_ROT_MAT     =  941,    // for diabatization rotations
     FILE_TRANS_DIP_MOM    =  942,    // Transition dipole moments: states along cols, rows: strength, x, y, z
+    FILE_DERCOUP          =  967,    // Derivative coupling
+    FILE_DC_DIPS          =  966,    // diabatic dipoles
     FILE_CIS_S2           = 1200,    // S^2 matrix elements for CIS states
   };
   std::string to_string(const QCFILE f);
 
   void state_tracker(PropMap &props);
 
-  void get_nac_vector(arma::mat &nac, size_t A, size_t B);
+
+  //FIXME: in the GREAT REFACTOR, should take all size_t/uword -> int as long as arma won't complain (since don't want 2s complement arithmetic)
+  void get_nac_vector(arma::mat &nac, size_t I, size_t J);
   void get_wf_overlap(arma::mat &U);
-  void get_diabatic_rot_mat(arma::mat &U);
+
+  REMKeys diabatization_rem(std::ofstream & input, size_t I, size_t J);
+  //void get_diabatic_rot_mat(arma::mat &U, size_t A, size_t B);
+  void get_diabats(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t A, size_t B);
+  void get_diabats_spin(arma::cube & gd_qm, arma::mat & U, arma::mat & H);
+  void get_diabats_loc(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t I, size_t J);
+  void parse_track_diabats(arma::cube & gd_qm, arma::mat & U);
+
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);
   void get_gradient(arma::mat &g_qm, arma::mat &g_mm, arma::uword surface);
@@ -94,14 +104,21 @@ private:
   std::string qc_log_file = "QCHEM.out";
   std::string exchange_method;
   std::string scf_algorithm;
+  std::string scf_guess;
+  std::string diabatization_method;
   std::string basis_set;
+  std::string verbatim_file;
+  int scf_convergence;
+  int two_electron_thresh;
   bool externalcharges_hack = false;
+  bool enable_qink_skips = true;
   bool time_properties = false;
 
   bool first_call = true;
 
   bool singlets = true;  // Defaults for CIS calculation
   bool triplets = false;
+  bool unrestricted = true;
   bool spin_flip = false;
   bool track_states = false;
 
@@ -109,8 +126,11 @@ private:
   
   bool state_analysis = false;
   bool record_spectrum = false;
-  std::vector<int> boys_states {};
+  std::vector<int> diabat_states {};
+  std::vector<int> spin_diabats {}; // an array of multiplicities
   bool boys_diabatization = false;
+  bool loc_cis_ov_separate = false;
+  bool strictly_diabatic_approximation = true;
   bool dump_qc_output = false;
   bool dump_qc_input = false;
 
@@ -120,12 +140,14 @@ private:
     scfman,
     setman,
     geometry, // for READ on molecule and external_charges
+    diabatization,
     once
   };
 
-  // As long as QM_Interface.update() is called before
-  // get_properties(), call_idx() will always return a value > 0. This
-  // is required behavior.
+  // called(Q) returns false on the first invocation per geometry and
+  // true thereafter.  As long as QM_Interface.update() is called
+  // before get_properties(), call_idx() will always return a value >
+  // 0. This is required behavior.
   bool called(Q q);
 
   // Some offsets for files

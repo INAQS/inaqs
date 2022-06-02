@@ -1,12 +1,23 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE 1)
 #
-file(GLOB GIFS_SOURCES *.c)
+
+enable_language(CXX)
+
+find_package(Armadillo)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+link_libraries(${ARMADILLO_LIBRARIES})
+
+set(GIFS_SOURCES
+    "gmxgifs.c"
+    "eshake.cpp"
+)
 
 add_library(gifsgmx
     SHARED
     ${GIFS_SOURCES}
 )
 
+                              
 target_include_directories(gifsgmx
     PRIVATE
     ${GMX_GIFS}/include

@@ -718,6 +718,20 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         fprintf(fplog, "\n");
     }
 
+#ifdef GMX_GIFS
+    if (fr->bQMMM){
+      float dt_fs = 1000 * ir->delta_t;
+      char * inaqsConfigFile = NULL;
+      t_QMrec * qm = fr->qr->qm[0];
+      size_t nqm = qm->nrQMatoms;
+      void * qm_atomids = qm->atomicnumberQM;
+
+      if (!inaqs_init(inaqsConfigFile, dt_fs, nqm, qm_atomids)){
+        fprintf(fplog, "Unable to initialize INAQS");
+      }
+    }
+#endif
+
     /* Set and write start time */
     runtime_start(runtime);
     print_date_and_time(fplog, cr->nodeid, "Started mdrun", runtime);
@@ -1771,6 +1785,13 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
                               ekind, M, wcycle, upd, bInitStep, etrtPOSITION, cr, nrnb, constr, &top->idef);
                 wallcycle_stop(wcycle, ewcUPDATE);
 
+                /* DVCS: dvdl_constr, later `dvdlambda`, seems used for
+                   free energy calculations and likely not something
+                   we'll worry about with seam sampling.
+
+                   This is the only time is gets passed and is later
+                   used to update enerd->term[F_DVDL_CONSTR].
+                */
                 update_constraints(fplog, step, &dvdl_constr, ir, ekind, mdatoms, state,
                                    fr->bMolPBC, graph, f,
                                    &top->idef, shake_vir, force_vir,

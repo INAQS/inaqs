@@ -39,6 +39,12 @@
 #include <config.h>
 #endif
 
+#ifdef GMX_GIFS
+#include "../shqmmm/eshake.hpp"
+// DVCS:FIXME move to ir
+int bElectronicSHAKE = 0;
+#endif
+
 #include "confio.h"
 #include "constr.h"
 #include "copyrite.h"
@@ -330,7 +336,6 @@ gmx_bool constrain(FILE *fplog, gmx_bool bLog, gmx_bool bEner,
     char        buf[22];
     t_vetavars  vetavar;
     int         nth, th;
-
     if (econq == econqForceDispl && !EI_ENERGY_MINIMIZATION(ir->eI))
     {
         gmx_incons("constrain called for forces displacements while not doing energy minimization, can not do this while the LINCS and SETTLE constraint connection matrices are mass weighted");
@@ -965,13 +970,25 @@ void set_constraints(struct gmx_constr *constr,
         }
         if (ir->eConstrAlg == econtSHAKE)
         {
-            if (cr->dd)
+            if (cr->dd) // DVCS: dd => domain decomposition 
             {
                 make_shake_sblock_dd(constr, &idef->il[F_CONSTR], &top->cgs, cr->dd);
             }
             else
             {
-                make_shake_sblock_pd(constr, idef, md);
+              make_shake_sblock_pd(constr, idef, md);
+                // DVCS:FIXME: verify that this works with solvent too
+                if (bElectronicSHAKE){ // put everything in one group and make sure we have the extra lagrange multiplier
+                    ncons++;
+                    /*
+                      want to get the *last* block, which is 1-past
+                      the putative end of the array, i.e., the array
+                      has nblocks+1 elements so we are setting element
+                      nblocks.
+                    */
+                    constr->sblock[1] = constr->sblock[constr->nblocks];
+                    constr->nblocks = 1;
+                }
             }
             if (ncons > constr->lagr_nalloc)
             {
@@ -1201,6 +1218,14 @@ gmx_constr_t init_constraints(FILE *fplog,
         gmx_mtop_ftype_count(mtop, F_CONSTRNC);
     nset = gmx_mtop_ftype_count(mtop, F_SETTLE);
 
+
+    #ifdef GMX_GIFS
+        if (bElectronicSHAKE){
+          ncon++;
+        }
+    #endif
+
+    
     if (ncon+nset == 0 && ir->ePull != epullCONSTRAINT && ed == NULL)
     {
         return NULL;

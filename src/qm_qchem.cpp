@@ -21,22 +21,30 @@ QM_QChem::qchem_reader() {
   ConfigBlockReader reader{"qchem"};
   reader.add_entry("qc_scratch", "DEFAULT");
   reader.add_entry("basis", types::STRING);
+  reader.add_entry("verbatim_file", ""); // sentinel value
   reader.add_entry("exchange", types::STRING);
   reader.add_entry("scf_algorithm", "DIIS");
-  reader.add_entry("boys_states", std::vector<int> {}); // sentinel value
-  // FIXME: add scf_guess and default to read
+  reader.add_entry("scf_convergence", 8);
+  reader.add_entry("two_electron_thresh", 11);
+  reader.add_entry("scf_guess", "read");
+  reader.add_entry("diabatization_method", "boys");
+  reader.add_entry("diabat_states", std::vector<int> {}); // sentinel value
   reader.add_entry("nthreads", 1);
   reader.add_entry("buffer_states", 0);
+  reader.add_entry("spin_diabats", std::vector<int> {});  // sentinel value
 
   reader.add_entry("sing_thresh", 1.2); // for state tracking
 
   // FIXME: ConfigReader should support bool
   reader.add_entry("singlets", 1);
   reader.add_entry("triplets", 0);
+  reader.add_entry("unrestricted", 1);
   reader.add_entry("state_analysis", 0);
   reader.add_entry("spin_flip", 0);
   reader.add_entry("record_spectrum", 0);
   reader.add_entry("track_states", 0);
+  reader.add_entry("strictly_diabatic_approximation", 1);
+  reader.add_entry("loc_cis_ov_separate", 0);
   reader.add_entry("dump_qc_output", 0);
   reader.add_entry("dump_qc_input", 0);
   reader.add_entry("externalcharges_hack", 0);
@@ -73,16 +81,28 @@ QM_QChem::QM_QChem(FileHandle& fh,
   reader.parse(fh);
 
   reader.get_data("basis", basis_set);
+  reader.get_data("verbatim_file", verbatim_file);
   reader.get_data("exchange", exchange_method);
   reader.get_data("scf_algorithm", scf_algorithm);
+  reader.get_data("scf_convergence", scf_convergence);
+  reader.get_data("two_electron_thresh", two_electron_thresh);
+  reader.get_data("scf_guess", scf_guess);
+  reader.get_data("diabatization_method", diabatization_method);
   reader.get_data("sing_thresh", sing_thresh);
 
+  // FIXME: maybe do this maybe not?
+  // if (two_electron_thresh < scf_convergence + 3){
+  //   std::cerr << "[QM_QChem] " << call_idx() << ": WARNING: two_electron_thresh should generally be 3 higher than scf_convergece." << std::endl;
+  // }
+  
   {
     int in;
     reader.get_data("singlets", in);
     singlets = in;
     reader.get_data("triplets", in);
     triplets = in;
+    reader.get_data("unrestricted", in);
+    unrestricted = in;    
     reader.get_data("state_analysis", in);
     state_analysis = in;
     reader.get_data("spin_flip", in);
@@ -91,6 +111,10 @@ QM_QChem::QM_QChem(FileHandle& fh,
     record_spectrum = in;
     reader.get_data("track_states", in);
     track_states = in;
+    reader.get_data("strictly_diabatic_approximation", in);
+    strictly_diabatic_approximation = in;
+    reader.get_data("loc_cis_ov_separate", in);
+    loc_cis_ov_separate = in;
     reader.get_data("dump_qc_output", in);
     dump_qc_output = in;
     reader.get_data("dump_qc_input", in);
@@ -132,16 +156,31 @@ QM_QChem::QM_QChem(FileHandle& fh,
     }
   }
 
-  reader.get_data("boys_states", boys_states);
-  if (boys_states.size() > 1){
+  //FIXME: need to do better error checking
+  reader.get_data("spin_diabats", spin_diabats);
+  for (auto m: spin_diabats){
+      if (m < 1){
+        valid_options = false;
+        std::cerr << "Invalid multiplicity for spin diabats: m=" << m << "!" << std::endl;
+      }
+    }  
+  
+  reader.get_data("diabat_states", diabat_states);
+  if (diabat_states.size() > 1){
     //FIXME: when we have capacity for diabatic dynamics, will need to expand control
     boys_diabatization = true;
 
-    for (auto s: boys_states){
+    for (auto s: diabat_states){
       if ((s < 0 ) || ((size_t) s > excited_states)){
         valid_options = false;
-        std::cerr << "Boys states must be within the excited states!" << std::endl;
+        std::cerr << "Diabatization states must be within the excited states!" << std::endl;
       }
+    }
+
+    // rely on `&&` to short-circut
+    if (spin_diabats.size() > 0 && spin_diabats.size() != diabat_states.size()){
+      valid_options = false;
+      std::cerr << "If specifying both diabat_states and spin_diabats, they must be of the same lenght!" << std::endl;
     }
   }
 
@@ -195,6 +234,11 @@ QM_QChem::QM_QChem(FileHandle& fh,
 }
 
 
+/*
+  FIXME:
+    - unify qm & mm gradients (all properties) [okay for link atoms?]
+    - unify *_multi so we just give the indexes and a cube if we want multiple [why not use our kludge polymorphism]
+*/
 void QM_QChem::get_properties(PropMap &props){
   if(track_states){
     state_tracker(props);
@@ -209,18 +253,47 @@ void QM_QChem::get_properties(PropMap &props){
       break;
     }
 
-    case QMProperty::diabatic_rot_mat:
-      get_diabatic_rot_mat(props.get(p));
-      break;
+    // FIXME: The scheme for diabats is horribly coupled
+    case QMProperty::diabatic_rot_mat: break; // if we need U or H, pick them up with Ga
+    case QMProperty::diabatic_H: break;
+    case QMProperty::diabatic_gradients:{
+      size_t A = 0, B = 0;
 
+      const arma::uvec &idx = *props.get_idx(p);
+      if (idx.size() > 1){
+        A = idx[0];
+        B = idx[1];
+      }
+      else if (diabat_states.size() > 1){
+        A = diabat_states[0];
+        B = diabat_states[1];
+      }
+      
+
+      arma::mat H(2, 2, arma::fill::zeros), U(2, 2, arma::fill::zeros);
+      arma::cube & gd = props.get(p);
+      // FIXME: should set size for ecerything that asks for it!
+      gd.set_size(3, NQM, 2);
+      get_diabats(gd, U, H, A, B);
+
+      if (props.has(QMProperty::diabatic_rot_mat)){
+        props.get(QMProperty::diabatic_rot_mat) = U;
+      }
+      if (props.has(QMProperty::diabatic_H)){
+        props.get(QMProperty::diabatic_H) = H;
+      }
+      
+      break;
+    }
+      
     case QMProperty::nacvector_imag:
       throw std::invalid_argument("Imaginary NAC not implemented!");
       break;
 
     case QMProperty::nacvector:{
       const arma::uvec &idx = *props.get_idx(p);
-      size_t A = idx[0]; size_t B = idx[1];
-      get_nac_vector(props.get(p), A, B);
+      size_t I = idx[0]; size_t J = idx[1];
+      get_nac_vector(props.get(p), I, J);
       break;
     }
 
@@ -386,7 +459,8 @@ void QM_QChem::state_tracker(PropMap &props){
 
 void QM_QChem::do_boys_diabatization(void){
   REMKeys keys = {{"jobtype","sp"},
-                  {"boys_cis_numstate", std::to_string(boys_states.size())},
+                  {diabatization_method + "_cis_numstate", std::to_string(diabat_states.size())},
+                  {"loc_cis_ov_separate", std::to_string(loc_cis_ov_separate)},
                   {"sts_mom", "1"}};
 
   REMKeys ex = excited_rem();
@@ -399,7 +473,7 @@ void QM_QChem::do_boys_diabatization(void){
   { // write boys section
     input << "$localized_diabatization" << std::endl;
     input << "Comment: states we mix" << std::endl;
-    for (const auto& s: boys_states){
+    for (const auto& s: diabat_states){
       input << s << " ";
     }
     input << std::endl << "$end" << std::endl;
@@ -549,30 +623,6 @@ void QM_QChem::get_wf_overlap(arma::mat &U){
 }
 
 
-/*
-  FIXME: Need to rectify min_state or choose which states to mix
-  FIXME: Want to choose between ER and Boys and ...
-  FIXME: Want to pick separate spin states (rem_boys_cis_spin_separate)
-  FIXME: May want to increase REM_CIS_CONVERGENCE to 7 (from default 6)
-  FIXME: Do we need to include $localised_diabatization section?
-*/
-void QM_QChem::get_diabatic_rot_mat(arma::mat &U){
-  REMKeys k = excited_rem();
-  k.insert({
-      {"jobtype","sp"},
-      {"boys_cis_numstate", std::to_string(excited_states)}
-    });
-
-  std::ofstream input = get_input_handle();
-  write_rem_section(input, k);
-  write_molecule_section(input);
-  input.close();
-  exec_qchem();
-
-  readQFMan(QCFILE::FILE_DIAB_ROT_MAT, U);
-}
-
-
 void QM_QChem::get_ground_energy(arma::vec & e){
   // Build job if we need to
   if (! called(Q::scfman)){
@@ -643,7 +693,181 @@ void QM_QChem::get_gradient(arma::mat &g_qm, arma::uword surface){
 }
 
 
-void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
+/*
+  FIXME: Want to pick separate spin states (rem_boys_cis_spin_separate)
+  diabatization_method \in {boys, er}
+*/
+REMKeys QM_QChem::diabatization_rem(std::ofstream & input, size_t I, size_t J){
+  //FIXME: need to be careful about NAC skips and excited rem...
+  REMKeys keys = excited_rem(false);
+  keys.insert({{diabatization_method + "_cis_numstate", "2"},
+	       {"calc_nac", "true"},
+               {"cis_der_numstate", "2"},  // number of states for DC calculation
+	       {"loc_dia_grad", "1"},      // calculates Hamiltonian gradients of diabatic states
+	       {"loc_dia_der_type", strictly_diabatic_approximation ? "1": "0"},   // {1 = Strictly diabatic approximation, 0 = exact diabatic dc}
+               {"cis_convergence", "7"},
+               {"loc_cis_ov_separate", std::to_string(loc_cis_ov_separate)}
+    });
+
+  // Necessary for Boys code
+  input << "$localized_diabatization" << std::endl;
+  input << "(comment)" << std::endl;
+  input << I << " " << J << std::endl;
+  input << "$end" << std::endl;
+  
+  input << "$derivative_coupling" << std::endl;
+  input << "(comment)" << std::endl;
+  input << I << " " << J << std::endl;
+  input << "$end" << std::endl;
+
+  return keys;
+}
+
+
+//FIXME: refactor diabatization schemes into their own type
+void QM_QChem::get_diabats(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t A, size_t B){
+  if (spin_diabats.size() > 0){
+    get_diabats_spin(gd_qm, U, H);
+  }
+  else{
+    get_diabats_loc(gd_qm, U, H, A, B);
+  }
+}
+
+
+void QM_QChem::get_diabats_loc(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t I, size_t J){
+  if (NMM > 0){
+    throw std::logic_error("Diabatic gradients in QM/MM environment not implemented!");
+  }
+  //if (!called(Q::diabatization)){  // figure out how to make it faster later!
+    REMKeys keys = {{"jobtype","sp"}};
+    std::ofstream input = get_input_handle();
+    REMKeys diab = diabatization_rem(input, I, J);
+    keys.insert(diab.begin(), diab.end());
+  
+    write_rem_section(input, keys);
+    write_molecule_section(input);
+    input.close();
+
+    exec_qchem();
+    //}
+  parse_track_diabats(gd_qm, U);
+
+  arma::vec adiabats(1 + excited_states);
+  parse_energies(adiabats);
+  adiabats -= adiabats(0); // switch to excitations
+  
+  H = (U.t() * arma::diagmat(adiabats(arma::uvec({I,J}))) * U);
+}
+
+
+
+void QM_QChem::get_diabats_spin(arma::cube & gd_qm, arma::mat & U, arma::mat & H){
+  const int mult_orig = qm_multiplicity;
+  const int N = spin_diabats.size();
+  U.zeros(N,N);
+  H.zeros(N,N);
+
+  bool use_excited_states = diabat_states.size() > 0;
+  if (use_excited_states){enable_qink_skips = false;}
+  for (int i = 0; i < N; i++){
+    qm_multiplicity = spin_diabats[i];
+    int state = 0;
+    if (use_excited_states){
+      state = diabat_states[i];
+    }
+    
+    // when we do the above, will need to make sure we interact with called() correctly
+
+    get_gradient(gd_qm.slice(i), state);
+
+    arma::vec e(excited_states +1, arma::fill::zeros);
+    parse_energies(e);
+
+    // Assume zero coupling
+    H(i,i) = e(state);
+  }
+
+  
+  qm_multiplicity = mult_orig;
+}
+
+
+void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
+  // Read-in diabatic gradients and determine if they need to be swapped
+  {
+    const size_t NRoot = excited_states;
+    const size_t NRoot2 = NRoot * NRoot;
+    const size_t NCoord = 3 * NQM;
+
+    // Verified these offsets are correct for the me-bridged closs system
+    // c.f. code in $QC/drvman/do_cis_dia_couple.C
+    for (int I = 0; I < 2; I++){
+      int offset = NCoord*((I+1)*(NRoot + 1) + 4*NRoot2);
+      if (strictly_diabatic_approximation){
+        offset += 2*NRoot2*NCoord;
+      }
+      readQFMan(QCFILE::FILE_DERCOUP, gd_qm.slice(I), offset);
+      //readQFMan(QCFILE::FILE_DERCOUP, gd_qm.slice(0), (1 +   NRoot + 6*NRoot2)*NCoord);
+      //readQFMan(QCFILE::FILE_DERCOUP, gd_qm.slice(1), (2 + 2*NRoot + 6*NRoot2)*NCoord);
+    }
+    
+    readQFMan(QCFILE::FILE_DIAB_ROT_MAT, U);
+  }
+
+  /*
+    We track the identity of the diabatic gradients (states) by
+    tracking the dipole centers associated with each state. On each
+    invocation, we construct all inter-state distances, (D)_{A',B} =
+    ||{\mu}_{A'A'} - {\mu}_{BB}|| (where the primed indicies are the
+    previous (reference) dipole centers) and taking as identical the
+    state with the smallest difference. The other state is therefore
+    also determined.
+
+    This information is not exposed, but all gradients returned by
+    repeated invocation of this function are consistent up to the
+    criterion above.
+  */
+  
+  size_t numkeep2 = 2*2; // keeping 2 diabatic states
+  arma::mat mu(numkeep2,3);
+  // our little corner of FILE_DC_DIPS is laid out as:
+  // u*(N*N) + A*N + B; u \on {x,y,z}; A,B \on 1..N
+  // numkeep2 = N*N = 4
+  // yields (Mu)_{ABu}
+  readQFMan(QCFILE::FILE_DC_DIPS, mu, 3 + 9 * numkeep2);
+  mu = mu.t();  // now each column is a dipole: AA, AB, BA, BB
+  
+  mu.save(arma::hdf5_name("gifs.hdf5",
+                          "/diabaticdipoles/" + std::to_string(call_idx()),
+                          arma::hdf5_opts::replace));
+  
+  mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
+
+  //FIXME: use some class-level state for ref
+  static arma::mat ref = mu; // only initialized on first invocation
+
+  arma::mat D(2,2);
+  
+  for (arma::uword i = 0; i < 2; i++){
+    for (arma::uword j = 0; j < 2; j++){
+      D(i,j) = arma::norm(ref.col(i)-mu.col(j));
+    }
+  }
+
+  size_t idx=arma::index_min(arma::vectorise(D));
+  if ((1==idx) || (2==idx)){ // if the smallest difference is off-diagonal
+    gd_qm.slice(0).swap(gd_qm.slice(1));
+    U.swap_rows(0,1);
+    mu.swap_cols(0,1);
+    std::cerr << "[QM_QChem] " << call_idx() << ": Swapping diabats; " << D(idx) << " < " << D(0) << std::endl;
+  }
+
+  ref = mu; // update for subsequent invocations
+}
+
+
+void QM_QChem::get_nac_vector(arma::mat & nac, size_t I, size_t J){
   /*
     cannot skip setman for nac; no need to skip scfman because it will
     be so quick
@@ -684,7 +908,7 @@ void QM_QChem::get_nac_vector(arma::mat & nac, size_t A, size_t B){
   */
   input << "$derivative_coupling" << std::endl;
   input << "comment" << std::endl;
-  input << A << " " << B << std::endl;
+  input << I << " " << J << std::endl;
   input << "$end" << std::endl;
   
   write_molecule_section(input);
@@ -818,7 +1042,9 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   /* Make sure the directory exists; create otherwise */
   struct stat st = {};
   if (-1 == stat(scratch_path.c_str(), &st)){
-    mkdir(scratch_path.c_str(), 0700);
+    if (mkdir(scratch_path.c_str(), 0700)){
+      throw std::runtime_error("Unable to construct scratch directory at " + scratch_path);
+    }
   }
 
   /*
@@ -855,6 +1081,10 @@ std::ofstream QM_QChem::get_input_handle(){
   os.setf(std::ios_base::fixed, std::ios_base::floatfield);
   os.precision(std::numeric_limits<double>::digits10);
 
+  if (!os){
+    throw std::runtime_error("Unable to open for writing the file: " + qc_scratch_directory + "/" + qc_input_file);
+  }
+  
   return os;
 }
 
@@ -874,7 +1104,7 @@ REMKeys QM_QChem::excited_rem(bool detectQinks){
       {"cis_triplets", std::to_string(triplets)} 
     };
 
-  if (detectQinks){
+  if (detectQinks && enable_qink_skips){
     bool skip_scfman = called(Q::scfman);  // called() updates internal state so we
     bool skip_setman = called(Q::setman);  // need to make sure both are touched.
     if (skip_scfman){
@@ -896,20 +1126,26 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   // Default options 
   REMKeys rem_keys
     {
-      {"method",         exchange_method},
-      {"basis",          basis_set},
-      {"scf_algorithm",  scf_algorithm},
-      {"thresh_diis_switch", "7"},  // control change-over to GDM if
-      {"max_diis_cycles", "50"},    // scf_alg is DIIS_GDM
-      {"sym_ignore",     "true"},
-      {"qm_mm",          "true"},
-      {"max_scf_cycles", "500"},
-      {"skip_charge_self_interact", "1"}, // since the MD driver will compute MM-MM interaction
-      {"cis_s2_thresh",  std::to_string(int(sing_thresh * 100))},
-      {"print_input",    std::to_string(dump_qc_input)},
-      {"input_bohr",     "true"} // .../libgen/PointCharges.C works for MM charges
+      {"method",                    exchange_method},
+      {"basis",                     basis_set},
+      {"scf_algorithm",             scf_algorithm},
+      {"scf_convergence",           std::to_string(scf_convergence)},
+      {"thresh",                    std::to_string(two_electron_thresh)},
+      {"thresh_diis_switch",        "7"},     // control change-over to GDM if
+      {"max_diis_cycles",           "50"},    // scf_alg is DIIS_GDM
+      {"sym_ignore",                "true"},
+      {"max_scf_cycles",            "500"},
+      {"unrestricted",              std::to_string(unrestricted)},
+      {"cis_s2_thresh",             std::to_string(int(sing_thresh * 100))},
+      {"print_input",               std::to_string(dump_qc_input)},
+      {"input_bohr",                "true"}  // works for MM charges; c.f. $QC/libgen/PointCharges.C
     };
 
+  if (NMM > 0){
+    rem_keys.emplace("qm_mm", "true");
+    rem_keys.emplace("skip_charge_self_interact", "1");  // since the MD driver will compute MM-MM interaction
+  }
+    
   if (spin_flip){
     rem_keys.emplace("spin_flip", "1");
     rem_keys.emplace("sts_mom", "1");
@@ -919,7 +1155,7 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   }
   else{
     rem_keys.emplace("qmmm_ext_gifs", "2");
-    rem_keys.emplace("scf_guess",     "read");
+    rem_keys.emplace("scf_guess",     scf_guess);
   }  
 
   /*
@@ -935,7 +1171,26 @@ void QM_QChem::write_rem_section(std::ostream &os, const REMKeys &options){
   for (const auto& e: rem_keys){
     os << e.first << " " << e.second << std::endl;
   }
-  os << "$end" << std::endl;  
+  os << "$end" << std::endl;
+
+  /*
+    write the contents of the verbatim file.
+
+    N.B. that if the verbatim file contains a $rem section, those
+    options will take precedence over those written above.
+  */
+  if (verbatim_file.length() > 0)
+  {
+    std::ifstream verb(verbatim_file);
+    if (!verb){
+      throw std::runtime_error("Unable to open verbatim file for reading: " + verbatim_file);
+    }
+    std::string buff;
+    while (std::getline(verb, buff)) {
+      os << buff << std::endl;
+    }
+    verb.close();
+  }
 }
 
 
@@ -1060,9 +1315,6 @@ std::string QM_QChem::to_string(const QCFILE f){
   case QCFILE::FILE_EFIELD:
     name = "FILE_EFIELD, 329.0";
     break;
-  case QCFILE::FILE_DERCOUP:
-    name = "FILE_DERCOUP, 967.0";
-    break;
   case QCFILE::FILE_WF_OVERLAP:
     name = "FILE_WF_OVERLAP, 398.0";
     break;
@@ -1071,6 +1323,12 @@ std::string QM_QChem::to_string(const QCFILE f){
     break;
   case QCFILE::FILE_TRANS_DIP_MOM:
     name = "FILE_TRANS_DIP_MOM, 942.0";
+    break;
+  case QCFILE::FILE_DC_DIPS:
+    name = "FILE_DC_DIPS, 966.0";
+    break;
+  case QCFILE::FILE_DERCOUP:
+    name = "FILE_DERCOUP, 967.0";
     break;
   case QCFILE::FILE_CIS_S2:
     name = "FILE_CIS_S2, 1200.0";
