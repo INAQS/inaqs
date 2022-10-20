@@ -1,7 +1,7 @@
 #include "decoherence_afssh.hpp"
 #include "util.hpp"
 
-AFSSH::AFSSH(QMInterface ** const qm, const double dtc,
+AFSSH::AFSSH(std::shared_ptr<QMInterface> qm, const double dtc,
              const size_t min_state,
              const size_t shstates,
              const size_t nqm, const size_t nmm):
@@ -114,7 +114,7 @@ void AFSSH::evolve_moments(const Electronic &c, const arma::mat U, const size_t 
     props.emplace(QMProperty::qmgradient_multi, states, &gqm);
     props.emplace(QMProperty::mmgradient_multi, states, &gmm);
     props.emplace(QMProperty::energies, states, &V);
-    (*qm)->get_properties(props);
+    qm->get_properties(props);
 
     // V used in build_rates()
   }

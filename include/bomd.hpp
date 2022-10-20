@@ -1,7 +1,7 @@
 #ifndef GIFS_SH_BOMD_CORE_H
 #define GIFS_SH_BOMD_CORE_H
 
-
+#include <memory>
 #include <armadillo>
 #include "qm_interface.hpp"
 #include "configreader.hpp"
@@ -11,12 +11,13 @@ class BOMD
 {
 public:
   explicit BOMD(arma::mat& qm_grd, arma::mat& mm_grd);
-  virtual ~BOMD() {delete qm;}
+  //virtual ~BOMD() {delete qm;}
+  virtual ~BOMD() {}
   
   virtual double update_gradient(void);
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy);
   // setup from user input
-  void setup(FileHandle& fh,
+  std::shared_ptr<QMInterface> setup(FileHandle& fh,
              const arma::uvec& atomicnumbers,
 	         arma::mat& qm_crd,
 	         arma::mat& mm_crd,
@@ -44,7 +45,7 @@ protected:
   virtual ConfigBlockReader setup_reader(void);
   virtual void get_reader_data(ConfigBlockReader& reader);
   
-  QMInterface* qm{nullptr};
+  std::shared_ptr<QMInterface> qm;
   // fixed size
   arma::mat& qm_grd;
   // flexible size

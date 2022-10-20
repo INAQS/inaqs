@@ -11,7 +11,7 @@ class RescaleBomd:
 public:
   explicit RescaleBomd(arma::mat& qm_grd, arma::mat& mm_grd): BOMD(qm_grd, mm_grd) {}
       
-  ~RescaleBomd() {delete qm;}
+  ~RescaleBomd() {}
   
   virtual double update_gradient(void) override;
   virtual bool rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double e_drift) override;

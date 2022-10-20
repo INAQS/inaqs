@@ -53,7 +53,7 @@ BOMD::BOMD(arma::mat& qm_grd,
     qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
 {};
 
-void
+std::shared_ptr<QMInterface>
 BOMD::setup(FileHandle& fh,
             const arma::uvec& atomicnumbers,
             arma::mat& qm_crd, 
@@ -63,9 +63,11 @@ BOMD::setup(FileHandle& fh,
   auto reader = setup_reader();   // keys and block for child class
   add_common_keys(reader);        // active_state + keys for qm_interface 
   reader.parse(fh);
+  qm.reset(select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg));
   BOMD::get_reader_data(reader);  // call base to set/check active_state
   get_reader_data(reader);        // call child to conclude setup_reader(); base keys already parsed
-  qm = select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
+
+  return qm;  // pass this back to GIFS so we can reach it from other tools (e.g. Plumed)
 };
 
 

@@ -2,13 +2,14 @@
 #define GIFS_SH_GIFS_IMPLEMENTATION_HPP
 
 #include <vector>
-//
+#include <memory>
 #include <armadillo>
 //
 #include "bomd.hpp"
 #include "conversion.hpp"
 #include "linkatoms.hpp"
 #include "configreader.hpp"
+#include "qm_interface.hpp"
 
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
@@ -41,6 +42,8 @@ public:
         return true;
     }
 
+  std::shared_ptr<QMInterface> get_QMInterface(void){return qmi;}  
+
 private:
     GifsImpl(const char* file, size_t nqm, const int * qmids,
              const double mass, const double length, const double time);
@@ -50,6 +53,9 @@ private:
     static GifsImpl* impl; 
     //
     void setup_reader(ConfigBlockReader&);
+    std::unique_ptr<BOMD> select_bomd(ConfigBlockReader& reader, FileHandle& fh, arma::uvec& atomicnumbers,arma::mat& qm_crd,
+                       arma::mat& mm_crd, arma::vec& mm_chg, arma::mat& qm_grd, arma::mat& mm_grd);
+
     // Local data!
     arma::uword nqm;
     arma::uword nmm;
@@ -74,8 +80,10 @@ private:
     arma::mat total_gradient{};
     // Classes
     Conversion conv;
-    BOMD* bomd{nullptr};
-    LinkAtoms* las{nullptr};
+
+    std::unique_ptr<BOMD> bomd;
+    std::unique_ptr<LinkAtoms> las;
+    std::shared_ptr<QMInterface> qmi;
 };
 
 
@@ -112,6 +120,8 @@ public:
     }
     //
     void update_global_index(int* indexQM, int* indexMM);
+
+    std::shared_ptr<QMInterface> get_QMInterface(void){return impl->get_QMInterface();}
 private:
     GifsImpl* impl{nullptr}; 
 };

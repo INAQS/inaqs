@@ -26,7 +26,7 @@ GifsImpl* GifsImpl::get_instance(const char* file, size_t nqm, const int * qmid,
 //
 GifsImpl* GifsImpl::get_instance() {
     if (!instance_exists()) {
-        //   throw std::Exception("GIFS object was not initialized, yet!");
+      throw std::logic_error("GIFS object was not initialized, yet!");
     }
     return impl;
 };
@@ -153,8 +153,8 @@ void GifsImpl::rescale_velocities(T total_energy, T* in_grad, T* in_masses, T* i
     }
 };
 //
-BOMD*
-select_bomd(ConfigBlockReader& reader, FileHandle& fh,
+std::unique_ptr<BOMD>
+GifsImpl::select_bomd(ConfigBlockReader& reader, FileHandle& fh,
              arma::uvec& atomicnumbers,
              arma::mat& qm_crd, 
              arma::mat& mm_crd, 
@@ -162,32 +162,33 @@ select_bomd(ConfigBlockReader& reader, FileHandle& fh,
              arma::mat& qm_grd,
              arma::mat& mm_grd) 
 {
-    BOMD* bomd;
+    std::unique_ptr<BOMD> bomd;
     std::string runtype;
     reader.get_data("runtype", runtype);
     if (runtype == "bomd") {
-        bomd = new BOMD(qm_grd, mm_grd);
+      bomd.reset(new BOMD(qm_grd, mm_grd));
     }
     else if (runtype == "fssh") {
-        bomd = new FSSH(qm_grd, mm_grd);
+      bomd.reset(new FSSH(qm_grd, mm_grd));
     }
     else if (runtype == "bomd-rescale") {
-        bomd = new RescaleBomd(qm_grd, mm_grd);
+      bomd.reset(new RescaleBomd(qm_grd, mm_grd));
     }
     else if (runtype == "bomd-print") {
-        bomd = new PrintBomd(qm_grd, mm_grd);
+      bomd.reset(new PrintBomd(qm_grd, mm_grd));
     }
     else if (runtype == "bomd-electronic") {
-        bomd = new ElectronicBomd(qm_grd, mm_grd);
+      bomd.reset(new ElectronicBomd(qm_grd, mm_grd));
     }
     else if (runtype == "ehrenfest") {
-        bomd = new Ehrenfest(qm_grd, mm_grd);
+      bomd.reset(new Ehrenfest(qm_grd, mm_grd));
     }
     else {
         throw "unknown runtype";
     }
     std::cerr << "Begining INAQS run of type " << runtype << std::endl;
-    bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
+    qmi = bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
+    
     return bomd;
 };
 
@@ -250,13 +251,11 @@ GifsImpl::GifsImpl(const char* file, size_t in_nqm, const int * ian, const doubl
     arma::umat global_idx(0, 0);
     arma::vec factors(1);
     factors.resize(0);
-    las = LinkAtoms::with_const_factors(global_idx, factors);
+    las.reset(LinkAtoms::with_const_factors(global_idx, factors));
 };
 //
 void GifsImpl::destroy_instance() {
     if (instance_exists()) {
-        delete impl->bomd;
-        delete impl->las;
         delete impl;
     }
 }

@@ -47,6 +47,13 @@ gifs_rescale_velocities(float total_energy, float* total_gradient, float* masses
   }
 }
 
+  
 #ifdef __cplusplus
+}
+
+std::shared_ptr<QMInterface> gifs_QMInterface(void){
+  Gifs gifs_handle;
+  return gifs_handle.get_QMInterface();
+    
 }
 #endif 

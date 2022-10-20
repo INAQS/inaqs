@@ -1,6 +1,7 @@
 #ifndef __GIFS_DECOHERENCE_HPP
 #define __GIFS_DECOHERENCE_HPP
 
+#include <memory>
 #include "qm_interface.hpp"
 #include "electronic.hpp"
 
@@ -11,7 +12,7 @@
 */
 class Decoherence {
 public:
-  explicit Decoherence (QMInterface ** const qm, const double dtc,
+  explicit Decoherence (std::shared_ptr<QMInterface> qm, const double dtc,
                         const size_t min_state,
                         const size_t hopping_states,
                         const size_t nqm, const size_t nmm):
@@ -22,7 +23,8 @@ public:
   virtual void hopped(Electronic &c, size_t active_state) = 0;
   
 protected:
-  QMInterface ** const qm;
+  //QMInterface ** const qm;
+  std::shared_ptr<QMInterface> qm;
   const double dtc;
   const size_t min_state;
   const size_t nstates;

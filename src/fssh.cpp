@@ -84,7 +84,7 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
       // do nothing; already nullptr
     } else if (decoherence_in == "afssh" ||
                decoherence_in == "jain2016" ) {
-      decoherence = new AFSSH(&qm, dtc, min_state, shstates, NQM(), NMM());
+      decoherence = new AFSSH(qm, dtc, min_state, shstates, NQM(), NMM());
     }
     else{
       throw std::runtime_error("Decoherence class, '" + decoherence_in + "', not recognized!");

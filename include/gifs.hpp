@@ -2,6 +2,9 @@
 #define GIFS_MAIN_H
 
 #ifdef __cplusplus
+#include <memory>
+#include "qm_interface.hpp"
+
 extern "C" {
 #endif
  
@@ -17,6 +20,8 @@ void gifs_update_global_index(int* indexQM, int* indexMM);
 
 #ifdef __cplusplus 
 }
+
+std::shared_ptr<QMInterface> gifs_QMInterface(void);
 #endif
 
 #endif
