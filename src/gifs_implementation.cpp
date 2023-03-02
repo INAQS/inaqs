@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 //
 #include "gifs_implementation.hpp"
 #include "fssh.hpp"
@@ -94,7 +95,7 @@ void GifsImpl::update_coords(const arma::mat & R){
   
   // assumes linkatoms are below coordinate section
   conv.transform_crd_md2au(R.begin(), R.begin()+3*nqm_withoutlink, qm_crd.begin());
-  conv.transform_crd_md2au(R.begin()+3*nqm_withoutlink, R.end() - 3*nqm_withoutlink, mm_crd.begin());
+  conv.transform_crd_md2au(R.begin()+3*nqm_withoutlink, R.begin() + 3*(nqm_withoutlink + nmm), mm_crd.begin());
   
   // linkatoms coords
   const auto& la_crd = las->get_crd();

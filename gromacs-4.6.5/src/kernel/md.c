@@ -105,6 +105,7 @@
 #endif
 
 #ifdef GMX_GIFS
+extern char * inaqsConfigFile;
 #include "../shqmmm/gmxgifs.h"
 #endif
 
@@ -727,7 +728,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
       void * qm_atomids = qm->atomicnumberQM;
 
       if (!inaqs_init(inaqsConfigFile, dt_fs, nqm, qm_atomids)){
-        fprintf(fplog, "Unable to initialize INAQS");
+        gmx_fatal(FARGS, "Unable to initialize INAQS!");
       }
     }
 #endif
@@ -1267,7 +1268,7 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
 
             if (fr->bQMMM){
               float gifs_energy = enerd->term[F_ETOT];
-              gifs_scale_velocities(gifs_energy, &state->v[0][0], &f[0][0], &mdatoms->invmass[0]);
+              gifs_scale_velocities(gifs_energy, state->v, f, mdatoms->invmass);
             }
 #endif
             if (bIterativeCase && do_per_step(step-1, ir->nstpcouple) && !bInitStep)

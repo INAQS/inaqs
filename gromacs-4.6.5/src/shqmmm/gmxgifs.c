@@ -5,34 +5,38 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-void gifs_scale_velocities(float energy, float *v, float *f, float* invmass) {
-  gifs_rescale_velocities(energy, f, invmass, v);
+void gifs_scale_velocities(real energy, rvec *v, rvec *f, real* invmass) {
+  _Generic(
+           energy,
+           float: gifs_rescale_velocities_float,
+           double: gifs_rescale_velocities_double)(energy, (real*) f, invmass, (real*) v);
 };
 
 void gifs_update_global_idx(int* indexQM, int* indexMM) {
   gifs_update_global_index(indexQM, indexMM);
 };
 
-float gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const float* qm_crd,
-			size_t nmm, const float* mm_crd, const float* mm_chg,
-			float* f, float* fshift){
+real gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const rvec * qm_crd,
+			size_t nmm, const rvec* mm_crd, const real* mm_chg,
+			rvec* f, rvec* fshift){
 
   if (!gifs_interface_is_ready()){
     fprintf(stderr, "[INAQS] WARNING: attempt to call %s before init().\n", __func__);
   }
 
-  return gifs_get_forces(qm_crd, NULL, nmm, mm_crd,  mm_chg, f, f + nqm*3);
+  real energy =  _Generic(
+    qm_crd,
+    const float (*)[3]: gifs_get_forces_float,
+    const double (*)[3]: gifs_get_forces_double)((real*) qm_crd, NULL, nmm,
+                                                 (real*) mm_crd,  mm_chg,
+                                                 (real*) f,
+                                                 (real*) (f + nqm));
+  return energy;
 };
 
-bool inaqs_init(char * inaqsConfigFile, float timeStep, size_t nqm, const int * qm_atomids){
+bool inaqs_init(char * inaqsConfigFile, real timeStep, size_t nqm, const int * qm_atomids){
   (void) inaqsConfigFile;  // FIXME: need to actually use
   (void) timeStep;         // FIXME: need to actually use
-
-  printf("NQM = %ld:", nqm);
-  for (size_t i = 0; i < nqm; i++){
-    printf(" %d", qm_atomids[i]);
-  }
-  printf("\n");
   
   char * config_names[] = {
     "inaqs_config.ini", // default name is first

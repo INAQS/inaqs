@@ -20,19 +20,33 @@ void create_qm_interface(const char* file, size_t nqm, const int* qm_atomids)
 
   bool gifs_interface_is_ready(void){ return is_init; }
 
-float gifs_get_forces(const float* qm_crd, 
-                      const size_t* link_ids,
-                      size_t nmm, 
-                      const float* mm_crd, 
-                      const float* mm_chg, 
-                      float* f_qm, float* f_mm)
-{
-  Gifs gifs_handle;
-  return gifs_handle.update_gradient(qm_crd, 
-                                     link_ids, nmm, 
-                                     mm_crd, mm_chg, 
-                                     f_qm, f_mm);
-};
+  float gifs_get_forces_float(const float* qm_crd,
+                              const size_t* link_ids,
+                              size_t nmm,
+                              const float* mm_crd,
+                              const float* mm_chg,
+                              float* f_qm, float* f_mm)
+  {
+    Gifs gifs_handle;
+    return gifs_handle.update_gradient(qm_crd,
+                                       link_ids, nmm,
+                                       mm_crd, mm_chg,
+                                       f_qm, f_mm);
+  };
+
+  double gifs_get_forces_double(const double* qm_crd,
+                                const size_t* link_ids,
+                                size_t nmm,
+                                const double* mm_crd,
+                                const double* mm_chg,
+                                double* f_qm, double* f_mm)
+  {
+    Gifs gifs_handle;
+    return gifs_handle.update_gradient(qm_crd,
+                                       link_ids, nmm,
+                                       mm_crd, mm_chg,
+                                       f_qm, f_mm);
+  };
   
 void
 gifs_update_global_index(int* indexQM, int* indexMM) {
@@ -40,13 +54,21 @@ gifs_update_global_index(int* indexQM, int* indexMM) {
   gifs_handle.update_global_index(indexQM, indexMM);
 }
 
-void
-gifs_rescale_velocities(float total_energy, float* total_gradient, float* masses, float* velocities) {
-  if (is_init){
-    Gifs gifs_handle;
-    gifs_handle.rescale_velocities(total_energy, total_gradient, masses, velocities);
+  void
+  gifs_rescale_velocities_float(float total_energy, float* total_gradient, float* masses, float* velocities) {
+    if (is_init){
+      Gifs gifs_handle;
+      gifs_handle.rescale_velocities(total_energy, total_gradient, masses, velocities);
+    }
   }
-}
+
+  void
+  gifs_rescale_velocities_double(double total_energy, double* total_gradient, double* masses, double* velocities) {
+    if (is_init){
+      Gifs gifs_handle;
+      gifs_handle.rescale_velocities(total_energy, total_gradient, masses, velocities);
+    }
+  }
 
   
 #ifdef __cplusplus
