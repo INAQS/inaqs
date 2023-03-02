@@ -10,6 +10,9 @@ import sys
 from pathlib import Path
 
 
+# FIXME: Should xform GIFS->INAQS
+
+
 class Atom:
     S = ''
     x = np.array([])
@@ -190,6 +193,7 @@ def fmtTopAtoms(nr, atom, residue, resnr=1):
     return f"{nr:5} {sym:12} {resnr:5} {residue:7} {atom.S:5} {cgnr:5} {chg:8.3}"
 
 
+# FIXME: should verify that we have LJ parameters for atoms where possible
 def genffD(forcefield):
 
     ff = Path(forcefield)
@@ -230,7 +234,7 @@ def main():
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Convert a Q-Chem input file for use with Gromacs under GIFS')
-    parser.add_argument("-f", metavar="input", required=True,
+    parser.add_argument("-f", metavar="input", required=True, type=Path,
                         help="name of Q-Chem input file")
     parser.add_argument("-o", metavar="output", required=True,
                         help="name of output .gro/.top files")
