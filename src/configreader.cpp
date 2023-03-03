@@ -412,6 +412,7 @@ ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
         data[key].set_from_string(value);
     } else {
         std::cerr << "Unknown field " << key << std::endl;
+	throw std::runtime_error("Bad config");
     }
 };
 
