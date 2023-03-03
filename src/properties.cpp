@@ -18,8 +18,17 @@ std::ostream& operator<<( std::ostream& oss, const QMProperty p)
   case QMProperty::wfoverlap:
     name = "wfoverlap";
     break;
+  case QMProperty::qmcharge:
+    name = "qmcharge";
+    break;
   case QMProperty::diabatic_rot_mat:
     name = "diabatic_rot_mat";
+    break;
+  case QMProperty::diabatic_H:
+    name = "diabatic_H";
+    break;
+  case QMProperty::diabatic_gradients:
+    name = "diabatic_gradients";
     break;
   case QMProperty::qmgradient:
     name = "qmgradient";

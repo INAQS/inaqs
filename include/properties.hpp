@@ -9,15 +9,18 @@
   requested of a QMInterface.
 */
 enum class QMProperty{
-   nacvector,        // mat
-   nacvector_imag,   // mat
-   wfoverlap,        // mat
-   diabatic_rot_mat, //mat
-   qmgradient,       // mat
-   mmgradient,       // mat
-   qmgradient_multi, // cube
-   mmgradient_multi, // cube
-   energies,         // vec
+   nacvector,          // mat
+   nacvector_imag,     // mat
+   wfoverlap,          // mat
+   qmcharge,           // vec
+   diabatic_rot_mat,   // mat
+   diabatic_H,         // mat
+   diabatic_gradients, // cube(3, N, 2)
+   qmgradient,         // mat
+   mmgradient,         // mat
+   qmgradient_multi,   // cube
+   mmgradient_multi,   // cube
+   energies,           // vec
 };
 
 std::ostream& operator<<( std::ostream& oss, const QMProperty p);
