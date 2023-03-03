@@ -12,7 +12,12 @@ ConfigBlockReader ElectronicBomd::setup_reader()
     using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"bomd-electronic"};
     reader.add_entry("dtc", types::DOUBLE);
+    reader.add_entry("backpropagate", 0);
     reader.add_entry("amplitude_file", "cs.hdf5");
+    {
+      std::vector<std::complex<double>> cs {};
+      reader.add_entry("amplitudes", cs);
+    }
 
     return reader;
 }
@@ -29,6 +34,12 @@ void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
 
   /* added in BOMD::add_qm_keys() */
   reader.get_data("min_state", min_state);
+
+  {
+    int in_bool;
+    reader.get_data("backpropagate", in_bool);
+    backpropagate = in_bool;
+  }
 
   {
     size_t excited_states;
@@ -58,8 +69,22 @@ void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
   phases.ones();
 
   {
-    arma::cx_mat initial(nstates, nstates, arma::fill::eye);
-    c = Electronic(initial);
+    std::vector<std::complex<double>> cs_in {};
+    reader.get_data("amplitudes", cs_in);
+    if (cs_in.size() > 0){
+      if (cs_in.size() != (arma::uword) nstates){
+        throw std::runtime_error("Number of Amplitudes do not match number of dynamics surfaces!");
+      }
+      c = Electronic(arma::cx_vec(cs_in)); 
+    }
+    else{
+      arma::cx_mat initial(nstates, nstates, arma::fill::eye);
+      c = Electronic(initial);
+    }
+
+    if (!c.normed()){
+      throw std::runtime_error("Amplitudes are not normed; check your input!");
+    }
   }
 }
 
@@ -107,7 +132,12 @@ double ElectronicBomd::update_gradient(void){
 
   // Propagate electronic coefficients
   for (size_t nt = 0; nt < n_steps; nt++){
-    c.advance_exact(V - I*T, dtq);
+    if (!backpropagate){ // usual hamiltonian
+      c.advance_exact(V - I*T, dtq);
+    }
+    else{
+      c.advance_exact(-1.0*(V + I*T), dtq); 
+    }
   }
     
   return energy(active_state);

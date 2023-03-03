@@ -22,7 +22,8 @@ protected:
 
   double dtc;
   double dtq;
-  
+
+  bool backpropagate = false;
   size_t min_state;
   int nstates;
 
