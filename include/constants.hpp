@@ -5,6 +5,8 @@
 #define AU2SI_MASS 9.1093837015e-31    // kilogram: au
 #define AU2SI_TIME 2.418884326509e-17  // seconds:  au
 
+#define BOHR2ANG (0.529177249)
+
 // From Gromacs
 #define AVOGADRO         (6.0221367e23)
 #define HARTREE2KJ       (4.3597482e-21)
