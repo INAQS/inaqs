@@ -12,6 +12,8 @@ public:
     reset(NStates, NSets, active);
   }
 
+  bool normed(double threshold=1e-6) const;
+
   void reset(arma::uword NStates, arma::uword NSets, arma::uword active){
     amplitudes.set_size(NStates, NSets);
     amplitudes.zeros();

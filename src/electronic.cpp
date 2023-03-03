@@ -2,6 +2,16 @@
 #include "electronic.hpp"
 #include "util.hpp"
 
+bool Electronic::normed(double threshold) const{
+  bool normed = true;
+  amplitudes.each_col([&normed, threshold] (const arma::cx_vec &c){
+    normed &= (std::abs(1.0 - arma::norm(c)) < threshold);
+  });
+
+  return normed;
+}
+
+
 /*
   From NR 17.1.3 and A&S 25.5.10. For systems of the form $i \hbar
   \dot{c} = H c$, advances c using a 4th order Runge-Kutta integrator
