@@ -7,6 +7,7 @@
 #include <complex>
 #include <cmath>
 #include <iostream>
+#include <utility>  // swap
 
 ConfigBlockReader FSSH::setup_reader()
 {
@@ -14,6 +15,8 @@ ConfigBlockReader FSSH::setup_reader()
     ConfigBlockReader reader{"fssh"};
     reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", 1e-4);
+    reader.add_entry("trivial_crossing_threshold", 0.9);
+    reader.add_entry("velocity_reversal", "derivative_coupling");
     reader.add_entry("rescale_initial_velocities", 0); // for rate calculations
 
     reader.add_entry("amplitude_file", "cs.dat");
@@ -40,6 +43,7 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   reader.get_data("delta_e_tol", delta_e_tol);
+  reader.get_data("trivial_crossing_threshold", trivial_crossing_threshold);
   reader.get_data("amplitude_file", amplitude_file);
 
   /* added in BOMD::add_qm_keys() */
@@ -108,9 +112,19 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   */
 
   {
-    int bool_in;
+    int bool_in = 0;
     reader.get_data("rescale_initial_velocities", bool_in);
     rescale_initial_velocities = bool_in;
+  }
+
+  {
+    std::string string_in;
+    reader.get_data("velocity_reversal", string_in);
+    velocity_reversal = from_string(string_in);
+  }
+
+  if (! (bool) velocity_reversal){
+    std::cerr << "[FSSH] Warning, velocity reversal turned off. " << std::endl;
   }
 
   if (active_state == 0){
@@ -118,25 +132,17 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   {
-    std::vector<std::complex<double>> cs_vec {};
-    reader.get_data("amplitudes", cs_vec);
-    if (cs_vec.size() > 0){
-      if (cs_vec.size() != (arma::uword) shstates){
+    std::vector<std::complex<double>> cs_in {};
+    reader.get_data("amplitudes", cs_in);
+    if (cs_in.size() > 0){
+      if (cs_in.size() != (arma::uword) shstates){
         throw std::runtime_error("Number of Amplitudes do not match number of hopping surfaces!");
       }
-      double norm = 0;
-      for (const auto& c: cs_vec){
-        norm += std::norm(c);
-      }
-      std::cerr << "[FSSH] amplitude norm = " << norm << std::endl;
-      if (std::abs(1.0 -norm) > 1e-6){
+      c = Electronic(arma::cx_vec(cs_in));
+
+      if (!c.normed()){
         throw std::runtime_error("Amplitudes are not normed; check your input!");
       }
-      arma::cx_vec cs_arma(shstates);
-      for (arma::uword i = 0; i < (arma::uword) shstates; i++){
-        cs_arma(i) = cs_vec[i];
-      }
-      c = Electronic(cs_arma);
     }
     else{
       c.reset(shstates, 1, active_state);
@@ -212,6 +218,7 @@ void FSSH::electronic_evolution(void){
   //std::cout << "[FSSH] " << call_idx() << ": dtc/dtq=" << n_steps << std::endl;
   const std::complex<double> I(0,1);
 
+  arma::vec hop_probability(shstates, arma::fill::ones);
   // Propagate electronic coefficients and compute hopping probabilities for dtc
   for (size_t nt = 0; nt < n_steps; nt++){
     /*
@@ -245,6 +252,9 @@ void FSSH::electronic_evolution(void){
       */
       g(a) += 1.0 - arma::sum(g);
 
+      //compute cumulative hop probability as p = 1 - \prod (1-pi)
+      hop_probability %= (1-g);
+
       // randomly select an element from the discrete distribution represented by g
       arma::uword j = util::sample_discrete(g);
       if (a != j){
@@ -254,6 +264,17 @@ void FSSH::electronic_evolution(void){
       }
     }  // end hopping check
   }  // end loop over dtq
+  hop_probability = 1 - hop_probability;
+  hop_probability(active_state) = 0; // don't report active
+  saveh5(hop_probability, "hop_probability");
+  /*
+  // to print hopping probabilities
+  std::cerr << "[FSSH] " << call_idx() << ": Hop probabilities: ";
+  for (const auto & p: hop_probability){
+    std::cerr << p << " ";
+  }
+  std::cerr << std::endl;
+  */
 }
 
 
@@ -350,18 +371,97 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     hop_succeeds = false;
     std::cerr << "[FSSH] " << call_idx() <<
       ": Hop is frustrated---will remain on " << active_state + min_state << "; ";
-    /*
-      Momentum reversal along nac as per Jasper, A. W.; Truhlar,
-      D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
 
-      In Jain (2016) a second criterion was imposed. But, in January
-      2020 A. Jain indicated to JES that this was not necessary. We
-      follow the original Jasper-Truhlar prescription in line with
-      Jain's updated advice.
+    bool trivial_crossing =
+      ((std::abs(U(active_state,active_state)) < trivial_crossing_threshold) &&
+       (std::abs(U(active_state,target_state)) > trivial_crossing_threshold));
+
+    if (trivial_crossing){
+      arma::uword a = min_state + active_state;
+      arma::uword j = min_state + target_state;
+      std::cerr << "trivial crossing detected |<" << a << "|"<< j << ">|="
+                << std::abs(U(active_state,target_state)) << ", ";
+    }
+
+    /*
+      Per discussions with Zeyu Zhou---if we detect a trivial crossing
+      and the hop is frustrated, we unconditionally reverse the
+      velocity.
     */
-    if (arma::as_scalar((-gradv.t() * nacv)*(nacv.t() * (vel % m))) < 0){
-      std::cerr << "velocities reversed." << std::endl;
-      vel = vel - 2.0 * (vd/dmd) * (nacv / m);
+    if ((bool) velocity_reversal){
+      bool criterion = false;
+      arma::vec direction;
+
+      switch (velocity_reversal){
+      case VelocityReversal::derivative_coupling:{
+        /*
+          Momentum reversal along nac as per Jasper, A. W.; Truhlar,
+          D. G. Chem. Phys. Lett. 2003, 369, 60--67 c.f. eqns. 1 & 2
+
+          In Jain (2016) a second criterion was imposed. But, in January
+          2020 A. Jain indicated to JES that this was not necessary. We
+          follow the original Jasper-Truhlar prescription in line with
+          Jain's updated advice.
+        */
+        criterion = arma::as_scalar((-gradv.t() * nacv)*(nacv.t() * (vel % m))) < 0;
+        direction = nacv;
+        break;
+      }
+      case VelocityReversal::derivative_coupling_velocity:{
+        /*
+          Velocity reversal along nac if velocity opposes
+        */
+        criterion = arma::as_scalar((-gradv.t() * nacv)*(nacv.t() * vel)) < 0;
+        direction = nacv;
+        break;
+      }
+      case VelocityReversal::target_gradient:{
+        /*
+          Reverse momentum along target adiabat if the target surface
+          opposes our direction of motion.
+        */
+        criterion = arma::as_scalar((-gradv.t() * (vel % m))) < 0;
+        direction = gradv;
+        break;
+      }
+      case VelocityReversal::diabatic_difference:{
+        /*
+          Reverse momentum along difference of dibatic gradients if
+          d(E1-E2)/dt > 0. i.e., if we're going forward in the
+          direction of the Marcus coordinate.
+
+          dDE/dt = dDE/dR * dR/dt
+          Units of meV/fs with factor of 27211 / 0.024189
+        */
+        arma::cube gd(3, NQM() + NMM(), 2);
+        arma::mat diabatic_H(2, 2, arma::fill::zeros);
+        PropMap props{};
+        props.emplace(QMProperty::diabatic_gradients, {min_state + active_state, min_state + target_state}, &gd);
+        props.emplace(QMProperty::diabatic_H, &diabatic_H);
+        qm->get_properties(props);
+
+        arma::uword upper = 0, lower = 1;
+        if (diabatic_H(1, 1) > diabatic_H(0, 0)) {
+          std::swap(upper, lower);
+        }
+
+        direction = gd.slice(upper).as_col() - gd.slice(lower).as_col();
+        criterion = arma::as_scalar((-gd.slice(upper).as_col().t() * direction) * (direction.t() * (vel))) < 0;
+        break;
+      }
+      case VelocityReversal::none: throw std::logic_error("Bad VelocityReversal branch!"); break;
+      }
+
+      if (criterion || trivial_crossing){
+        double vu  = arma::as_scalar(vel.t() * direction);
+        double umu = arma::as_scalar(direction.t() * (direction / m));
+
+        vel = vel - 2.0 * (vu/umu) * (direction / m);
+        std::cerr << "velocities reversed along " << velocity_reversal << "." << std::endl;
+      }
+      else{
+        std::cerr << "velocities, unchanged." << std::endl;
+      }
     }
     else{
       std::cerr << "velocities, unchanged." << std::endl;
@@ -487,4 +587,43 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   
   // update indicates we need to copy velocity and gradient back to GMX
   return update;
+}
+
+
+std::ostream& operator<<( std::ostream& os, const VelocityReversal& v){
+  switch (v){
+  case VelocityReversal::derivative_coupling:
+    os << "derivative_coupling";
+    break;
+  case VelocityReversal::derivative_coupling_velocity:
+    os << "derivative_coupling_velocity";
+    break;
+  case VelocityReversal::target_gradient:
+    os << "target_gradient";
+    break;
+  case VelocityReversal::diabatic_difference:
+    os << "diabatic_difference";
+    break;
+  case VelocityReversal::none:
+    os << "none";
+    break;
+  }
+  return os;
+}
+
+VelocityReversal from_string(std::string str){
+  static std::map<std::string, VelocityReversal> names{
+    {"derivative_coupling", VelocityReversal::derivative_coupling},
+    {"derivative_coupling_velocity", VelocityReversal::derivative_coupling_velocity},
+    {"target_gradient", VelocityReversal::target_gradient},
+    {"diabatic_difference", VelocityReversal::diabatic_difference},
+    {"none", VelocityReversal::none},
+  };
+
+  try{
+    return names.at(str);
+  }
+  catch (const std::out_of_range& e){
+    throw std::runtime_error("Cannot convert '" + str + "' to VelocityReversal");
+  }
 }

@@ -8,6 +8,16 @@
 #include "configreader.hpp"
 #include "electronic.hpp"
 
+enum class VelocityReversal{
+  none = false,
+  derivative_coupling,
+  derivative_coupling_velocity,
+  target_gradient,
+  diabatic_difference,
+};
+
+std::ostream& operator<<( std::ostream& os, const VelocityReversal& v);
+VelocityReversal from_string(std::string str);
 
 class FSSH: public BOMD{
 public:
@@ -26,6 +36,9 @@ protected:
   void electronic_evolution(void);
   double hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, const arma::vec &m);
   void check_overlap(const arma::mat& U);
+
+  VelocityReversal velocity_reversal = VelocityReversal::derivative_coupling;
+  double trivial_crossing_threshold;
 
   arma::mat U, T, V;
   arma::vec phases;
