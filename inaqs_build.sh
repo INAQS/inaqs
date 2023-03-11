@@ -22,6 +22,7 @@ function buildINAQS(){
         cd "$INAQSBUILD"
         cmake "$INAQSROOT" \
               -DCMAKE_INSTALL_PREFIX="$INAQSROOT" \
+              -DCMAKE_PREFIX_PATH="$HOME/.local" \
               -DCMAKE_BUILD_TYPE=RelWithDebInfo
         [ $? ] && make -j "$N"
         [ $? ] && make test
@@ -37,7 +38,14 @@ function buildGMX(){
             cd "$GMXBUILD"
             cmake .. -DGMX_GIFS="$INAQSROOT" \
                   -DCMAKE_INSTALL_PREFIX="$GMXROOT/install" \
+                  -DCMAKE_PREFIX_PATH="$HOME/.local" \
+                  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                  -DGMX_DEFAULT_SUFFIX=OFF \
+                  -DGMX_BINARY_SUFFIX="" \
+                  -DGMX_DOUBLE=ON \
                   -DGMX_BUILD_OWN_FFTW=ON
+                  #-DFFTWF_LIBRARY=/opt/fftw/gnu/3.3.8/lib/libfftw3.so \
+                  #-DFFTWF_INCLUDE_DIR=/opt/fftw/gnu/3.3.8/include \
 
             [ $? ] && make install -j "$N"
         )
