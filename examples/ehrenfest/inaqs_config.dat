@@ -1,17 +1,16 @@
-[gifs]
-runtype=fssh
+[inaqs]
+runtype=ehrenfest
 
 [qchem]
 basis = 3-21G
 exchange = hf
 nthreads = 4
 buffer_states = 2
+dump_qc_input = 1
+dump_qc_output = 1
 
-[fssh]
+[ehrenfest]
 qmcode = qchem
 excited_states = 2
 min_state = 1
 active_state = 2
-dtc = 0.5
-random_seed = 1234
-amplitude_file = cs.dat

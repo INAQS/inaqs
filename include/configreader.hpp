@@ -83,7 +83,7 @@ class File
         inline int fnum() const noexcept {return fileno(fh_);}
 
     private:
-        std::string name{};    
+        std::string name{};
         iterator fh_{nullptr};
 };
 
@@ -227,7 +227,7 @@ public:
   std::vector<std::string> enumerate_keys(void);
 
 private:
-    void parse_line(const std::string& key, const std::string& value); 
+    bool parse_line(const std::string& key, const std::string& value);
 
     bool parsed = false;
   

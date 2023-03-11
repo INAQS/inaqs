@@ -29,6 +29,8 @@ Conversion::Conversion(const double mass, const double length, const double time
     _grd_md2au = gradient/internal_gradient;
     // mass
     _mass_au2md = internal_mass/mass;
-    _mass_md2au = mass/internal_mass; 
-    //
+    _mass_md2au = mass/internal_mass;
+    // time
+    _time_au2md = internal_time/time;
+    _time_md2au = time/internal_time;
 };

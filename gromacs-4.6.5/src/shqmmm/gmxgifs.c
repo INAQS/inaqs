@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include "gmxgifs.h"
 #include "gifs.hpp"
+#include "typedefs.h"
+#include "gmx_fatal.h"
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 void gifs_scale_velocities(real energy, rvec *v, rvec *f, real* invmass) {
   _Generic(
@@ -21,7 +24,7 @@ real gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const rvec * qm_crd,
 			rvec* f, rvec* fshift){
 
   if (!gifs_interface_is_ready()){
-    fprintf(stderr, "[INAQS] WARNING: attempt to call %s before init().\n", __func__);
+    gmx_fatal(FARGS, "Attempt to use INAQS before init()");
   }
 
   real energy =  _Generic(
@@ -34,29 +37,36 @@ real gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const rvec * qm_crd,
   return energy;
 };
 
-bool inaqs_init(char * inaqsConfigFile, real timeStep, size_t nqm, const int * qm_atomids){
-  (void) inaqsConfigFile;  // FIXME: need to actually use
-  (void) timeStep;         // FIXME: need to actually use
+/*
+  FIXME: support restarts
+  FIXME: consider wraping all the MD parameters (dt, restart...) in a struct
+*/
+bool inaqs_init(const char * inaqsConfigFile, real classicalTimeStep, size_t nqm, const int * qm_atomids){
+  if (inaqsConfigFile){
+    create_qm_interface(inaqsConfigFile, classicalTimeStep, nqm, qm_atomids);
+    return true;
+  }
   
-  char * config_names[] = {
-    "inaqs_config.ini", // default name is first
-    "gifs_config.ini",  // legacy inputs later
+  const char * config_names[] = {
+    "inaqs_config.dat", // default name is first
+    "inaqs_config.ini", // legacy inputs later
+    "gifs_config.ini",
     NULL                // NULL-terminate
   };
+
+  gmx_warning("No config file passed to mdrun via -inaqs; attempting to find the default: %s", config_names[0]);
   
-  for (char ** fname = config_names; *fname; fname++){
+  for (const char ** fname = config_names; *fname; fname++){
     if (0 == access(*fname, F_OK)){
       if (fname != config_names){
-        fprintf(stderr,
-                "DEPRECATION WARNING: you are not using the standard config file"
-                ", '%s'. Please update your inputs.\n", config_names[0]);
+        gmx_warning("DEPRECATION NOTICE, you are not using the standard config file"
+                    ", '%s'. Please update your inputs.\n", config_names[0]);
       }
-      create_qm_interface(*fname, nqm, qm_atomids);
+      create_qm_interface(*fname, classicalTimeStep, nqm, qm_atomids);
       return true;
     }
   }
-    
-  fprintf(stderr, "Unable to locate INAQS config file, '%s', terminating!\n",
-          config_names[0]);
+
+  gmx_fatal(FARGS, "Unable to locate INAQS config file, %s", config_names[0]);
   exit(-1);
 }

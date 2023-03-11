@@ -8,7 +8,7 @@
 
 class Ehrenfest: public BOMD {
 public:
-  explicit Ehrenfest(arma::mat& qm_grd, arma::mat& mm_grd): BOMD{qm_grd, mm_grd} {}
+  explicit Ehrenfest(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
   ~Ehrenfest() { }
   double update_gradient(void) override;
 
@@ -20,8 +20,7 @@ protected:
   arma::mat U, T, V;
   arma::vec phases;
   arma::cube qm_grds, mm_grds;
-  
-  double dtc;
+
   double dtq;
   
   size_t min_state;

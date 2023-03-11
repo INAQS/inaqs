@@ -24,7 +24,7 @@ class GifsImpl
 {
 public: 
     // creation
-    static GifsImpl* get_instance(const char* file, size_t nqm, const int * qmid,
+    static GifsImpl* get_instance(const char* file, double classicalTimeStep, size_t nqm, const int * qmid,
             const double mass, const double length, const double time);
     static GifsImpl* get_instance();
     // methods
@@ -49,7 +49,7 @@ public:
   void update_coords(const arma::mat & R);
 
 private:
-    GifsImpl(const char* file, size_t nqm, const int * qmids,
+    GifsImpl(const char* file, double classicalTimeStep, size_t nqm, const int * qmids,
              const double mass, const double length, const double time);
     // private destructor
     static void destroy_instance(void);
@@ -57,8 +57,11 @@ private:
     static GifsImpl* impl; 
     //
     void setup_reader(ConfigBlockReader&);
-    std::unique_ptr<BOMD> select_bomd(ConfigBlockReader& reader, FileHandle& fh, arma::uvec& atomicnumbers,arma::mat& qm_crd,
-                       arma::mat& mm_crd, arma::vec& mm_chg, arma::mat& qm_grd, arma::mat& mm_grd);
+    std::unique_ptr<BOMD> select_bomd(ConfigBlockReader& reader, FileHandle& fh,
+                                      double classicalTimeStep, arma::uvec& atomicnumbers,
+                                      arma::mat& qm_crd, arma::mat& mm_crd,
+                                      arma::vec& mm_chg,
+                                      arma::mat& qm_grd, arma::mat& mm_grd);
 
     // Local data!
     arma::uword nqm;
@@ -95,9 +98,9 @@ class Gifs
 {
 public:
     // create instance, can only be called once!
-    explicit Gifs(const char* file, size_t nqm, const int * qmid, const double mass, const double length, const double time) {
+    explicit Gifs(const char* file, double classicalTimeStep, size_t nqm, const int * qmid, const double mass, const double length, const double time) {
         if (!GifsImpl::instance_exists()) {
-            impl = GifsImpl::get_instance(file, nqm, qmid, mass, length, time);   
+            impl = GifsImpl::get_instance(file, classicalTimeStep, nqm, qmid, mass, length, time);
         } else {
             impl = GifsImpl::get_instance();   
         }

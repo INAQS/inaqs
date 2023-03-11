@@ -73,6 +73,9 @@ public:
     //
     inline double mass_au2md(double value) const noexcept {return _mass_au2md*value;}
     inline double mass_md2au(double value) const noexcept {return _mass_md2au*value;}
+      //
+    inline double time_au2md(double value) const noexcept {return _time_au2md*value;}
+    inline double time_md2au(double value) const noexcept {return _time_md2au*value;}
 
 private:
     // energies
@@ -90,7 +93,9 @@ private:
     // mass
     double _mass_au2md;
     double _mass_md2au;
-    //
+    // time
+    double _time_au2md;
+    double _time_md2au;
 };
 
 #endif

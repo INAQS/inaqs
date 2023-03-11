@@ -95,12 +95,7 @@ const std::vector<QMProperty> PropMap::keys(void) const {
 }
 
 void PropMap::emplace(QMProperty p, ArmaWrap vec) {
-  if (has(p) || has_idx(p)){
-    throw std::invalid_argument("Property already in Map!");
-  }
-  else{
-    prop.emplace(p, vec);
-  }
+  emplace(p, {}, vec);
 }
 
 void PropMap::emplace(QMProperty p, arma::uvec iv, ArmaWrap vec) {

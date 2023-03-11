@@ -9,9 +9,7 @@
 
 ConfigBlockReader ElectronicBomd::setup_reader()
 {
-    using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"bomd-electronic"};
-    reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("backpropagate", 0);
     reader.add_entry("amplitude_file", "cs.hdf5");
     {
@@ -24,12 +22,6 @@ ConfigBlockReader ElectronicBomd::setup_reader()
 
 
 void ElectronicBomd::get_reader_data(ConfigBlockReader& reader) {
-  {
-    double in_dtc;
-    reader.get_data("dtc", in_dtc);  // in fs
-    dtc = in_dtc * (1e-15 / AU2SI_TIME);  // fs -> a.u.
-  }
-
   reader.get_data("amplitude_file", amplitude_file);
 
   /* added in BOMD::add_qm_keys() */

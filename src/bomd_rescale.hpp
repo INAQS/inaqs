@@ -9,7 +9,7 @@ class RescaleBomd:
     public BOMD 
 {
 public:
-  explicit RescaleBomd(arma::mat& qm_grd, arma::mat& mm_grd): BOMD(qm_grd, mm_grd) {}
+  explicit RescaleBomd(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD(classicalTimeStep, qm_grd, mm_grd) {}
       
   ~RescaleBomd() {}
   

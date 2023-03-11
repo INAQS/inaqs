@@ -1,4 +1,4 @@
-[gifs]
+[inaqs]
 #runtype = bomd
 runtype = fssh
 
@@ -7,7 +7,6 @@ qmcode = qmmodel
 
 [fssh]
 qmcode = qmmodel
-dtc = 0.05
 decoherence = afssh
 active_state = 0
 excited_states = 1

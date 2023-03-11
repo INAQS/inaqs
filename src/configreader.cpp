@@ -370,6 +370,7 @@ ConfigBlockReader::parse(FileHandle& file)
     }
     // get next line
     line = file.get_line();
+    bool goodKeys = true;
     while (line != nullptr) {
         std::string string(line);
         if (std::regex_match(string, block_match, block_expr)) {
@@ -380,7 +381,7 @@ ConfigBlockReader::parse(FileHandle& file)
                     // pass for comment
 	        }
                 else if (std::regex_match(string, line_match, line_expr)) {
-                    parse_line(trim(line_match[1]), line_match[2]);
+                    goodKeys &= parse_line(trim(line_match[1]), line_match[2]);
                 } else {
 		  std::cerr << "Input Error: " << line << std::endl;
                     return -1;
@@ -389,6 +390,11 @@ ConfigBlockReader::parse(FileHandle& file)
             line = file.get_line();
         }
     }
+
+    if (! goodKeys){
+      throw std::runtime_error("Bad field(s) encountered while parsing [" + name + "]");
+    }
+
     parsed = true;
     return 0;
 };
@@ -405,14 +411,15 @@ std::vector<std::string> ConfigBlockReader::enumerate_keys(void){
   return keys;
 }
 
-void 
+bool
 ConfigBlockReader::parse_line(const std::string& key, const std::string& value)
 {
     if (key_in_map(key, data)) {
         data[key].set_from_string(value);
+        return true;
     } else {
         std::cerr << "Unknown field " << key << std::endl;
-	throw std::runtime_error("Bad config");
+        return false;
     }
 };
 

@@ -9,10 +9,8 @@
 
 ConfigBlockReader Ehrenfest::setup_reader()
 {
-    using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"ehrenfest"};
     reader.add_entry("amplitude_file", "cs.dat");
-    reader.add_entry("dtc", types::DOUBLE);
 
     {
       std::vector<std::complex<double>> cs {};
@@ -24,11 +22,6 @@ ConfigBlockReader Ehrenfest::setup_reader()
 
 
 void Ehrenfest::get_reader_data(ConfigBlockReader& reader) {
-  {
-    double in_dtc;
-    reader.get_data("dtc", in_dtc);  // in fs
-    dtc = in_dtc * (1e-15 / AU2SI_TIME);  // fs -> a.u.
-  }
   reader.get_data("amplitude_file", amplitude_file);
 
   /* added in BOMD::add_qm_keys() */

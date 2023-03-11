@@ -47,9 +47,10 @@ BOMD::add_common_keys(ConfigBlockReader& reader)
 
 
 
-BOMD::BOMD(arma::mat& qm_grd,
+BOMD::BOMD(double classicalTimeStep,
+           arma::mat& qm_grd,
            arma::mat& mm_grd) :
-    qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
+  dtc{classicalTimeStep}, qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
 {}
 
 std::shared_ptr<QMInterface>

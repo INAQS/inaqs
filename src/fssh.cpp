@@ -11,9 +11,7 @@
 
 ConfigBlockReader FSSH::setup_reader()
 {
-    using types = ConfigBlockReader::types;
     ConfigBlockReader reader{"fssh"};
-    reader.add_entry("dtc", types::DOUBLE);
     reader.add_entry("delta_e_tol", 1e-4);
     reader.add_entry("trivial_crossing_threshold", 0.9);
     reader.add_entry("velocity_reversal", "derivative_coupling");
@@ -34,14 +32,6 @@ ConfigBlockReader FSSH::setup_reader()
 
 
 void FSSH::get_reader_data(ConfigBlockReader& reader) {
-  {
-    double in_dtc;
-    reader.get_data("dtc", in_dtc);
-    // FIXME?: Should input time be in fs as it is (because our
-    // interface is general) or in ns to match GMX?
-    dtc = in_dtc * (1e-15 / AU2SI_TIME); // fs -> a.u.
-  }
-
   reader.get_data("delta_e_tol", delta_e_tol);
   reader.get_data("trivial_crossing_threshold", trivial_crossing_threshold);
   reader.get_data("amplitude_file", amplitude_file);
@@ -55,7 +45,7 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
      armadillo random number generator
   */
   {
-    size_t seed = 0; // a default seed is set in setup_reader(); this value will not be propagated.
+    size_t seed = 0; // a default seed is set in setup_reader(); 0 will not be propagated.
 
     // FIXME: ConfigReader won't throw an error if the wrong type is passed in
     reader.get_data("random_seed", seed);
@@ -522,6 +512,7 @@ double FSSH::update_gradient(void){
     saveh5(c.get(), "amps");
   }
 
+  //FIXME: only should happen after 2nd call; unless we're doing a restart
   electronic_evolution();
 
   return energy(active_state);

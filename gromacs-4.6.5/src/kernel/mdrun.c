@@ -397,6 +397,9 @@ int cmain(int argc, char *argv[])
         { efXVG, "-ffout",  "gct",      ffOPTWR },
         { efXVG, "-devout", "deviatie", ffOPTWR },
         { efXVG, "-runav",  "runaver",  ffOPTWR },
+#ifdef GMX_GIFS
+        { efDAT, "-inaqs",  "inaqs",   ffOPTRD },
+#endif
         { efXVG, "-px",     "pullx",    ffOPTWR },
         { efXVG, "-pf",     "pullf",    ffOPTWR },
         { efXVG, "-ro",     "rotation", ffOPTWR },

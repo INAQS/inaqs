@@ -21,7 +21,7 @@ VelocityReversal from_string(std::string str);
 
 class FSSH: public BOMD{
 public:
-  explicit FSSH(arma::mat& qm_grd, arma::mat& mm_grd): BOMD{qm_grd, mm_grd} {}
+  explicit FSSH(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
   virtual ~FSSH() { delete decoherence; }
   virtual double update_gradient(void) override;
 
@@ -44,7 +44,6 @@ protected:
   arma::vec phases;
   arma::mat nac;
 
-  double dtc;
   double delta_e_tol;
   bool rescale_initial_velocities = false;
   double dtq;

@@ -721,13 +721,16 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
 
 #ifdef GMX_GIFS
     if (fr->bQMMM){
-      float dt_fs = 1000 * ir->delta_t;
-      char * inaqsConfigFile = NULL;
+      const char * inaqsConfigFile =
+        opt2bSet("-inaqs", nfile, fnm) ?
+        ftp2fn(efDAT, nfile, fnm) : NULL;
+
+      real mdTimeStep = ir->delta_t;
       t_QMrec * qm = fr->qr->qm[0];
       size_t nqm = qm->nrQMatoms;
       void * qm_atomids = qm->atomicnumberQM;
 
-      if (!inaqs_init(inaqsConfigFile, dt_fs, nqm, qm_atomids)){
+      if (!inaqs_init(inaqsConfigFile, mdTimeStep, nqm, qm_atomids)){
         gmx_fatal(FARGS, "Unable to initialize INAQS!");
       }
     }

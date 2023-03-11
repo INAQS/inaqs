@@ -10,7 +10,7 @@
 class BOMD
 {
 public:
-  explicit BOMD(arma::mat& qm_grd, arma::mat& mm_grd);
+  explicit BOMD(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd);
   //virtual ~BOMD() {delete qm;}
   virtual ~BOMD() {}
   
@@ -46,6 +46,7 @@ protected:
   virtual void get_reader_data(ConfigBlockReader& reader);
   
   std::shared_ptr<QMInterface> qm;
+  double dtc; // classical timestep
   // fixed size
   arma::mat& qm_grd;
   // flexible size
@@ -68,8 +69,8 @@ class PrintBomd:
 {
 public:
   virtual ~PrintBomd() {};
-  explicit PrintBomd(arma::mat& qm_grd,
-                     arma::mat& mm_grd) : BOMD(qm_grd, mm_grd) {}
+  explicit PrintBomd(double classicalTimeStep, arma::mat& qm_grd,
+                     arma::mat& mm_grd) : BOMD(classicalTimeStep, qm_grd, mm_grd) {}
   
   double update_gradient(void) {
     double e = BOMD::update_gradient();
@@ -77,6 +78,7 @@ public:
     qm->crd_mm.t().print("mm_crd: ");
     qm_grd.t().print("qm_grd");
     mm_grd.t().print("mm_grd");
+    std::cout << "dtc: " << dtc << std::endl;
     return e;
   }
 

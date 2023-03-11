@@ -8,7 +8,7 @@
 
 class ElectronicBomd: public BOMD {
 public:
-  explicit ElectronicBomd(arma::mat& qm_grd, arma::mat& mm_grd): BOMD{qm_grd, mm_grd} {}
+  explicit ElectronicBomd(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
   ~ElectronicBomd() { }
   double update_gradient(void) override;
 
@@ -20,7 +20,6 @@ protected:
   arma::mat U, T, V;
   arma::vec phases;
 
-  double dtc;
   double dtq;
 
   bool backpropagate = false;
