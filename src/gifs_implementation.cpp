@@ -69,6 +69,7 @@ T GifsImpl::update_gradient(const T* in_qm_crd, const size_t* local_index,
     conv.transform_crd_md2au(la_crd.begin(), la_crd.end(), qm_crd.begin()+nqm_withoutlink*3);
   
     // Compute Forces etc.
+    // FIXME: consider qmi->update() at this point so dynamics classes don't need to worry about it
     double energy = bomd->update_gradient();
     // update linkatom
     auto& la_frc = las->get_frc();
