@@ -977,18 +977,20 @@ void set_constraints(struct gmx_constr *constr,
             else
             {
               make_shake_sblock_pd(constr, idef, md);
-                // DVCS:FIXME: verify that this works with solvent too
-                if (bElectronicSHAKE){ // put everything in one group and make sure we have the extra lagrange multiplier
-                    ncons++;
-                    /*
-                      want to get the *last* block, which is 1-past
-                      the putative end of the array, i.e., the array
-                      has nblocks+1 elements so we are setting element
-                      nblocks.
-                    */
-                    constr->sblock[1] = constr->sblock[constr->nblocks];
-                    constr->nblocks = 1;
-                }
+#ifdef GMX_GIFS
+              // DVCS:FIXME: verify that this works with solvent too
+              if (bElectronicSHAKE){ // put everything in one group and make sure we have the extra lagrange multiplier
+                ncons++;
+                /*
+                  Want to get the *last* block, which is 1-past the
+                  putative end of the array, i.e., the array has
+                  nblocks+1 elements so we are setting element
+                  nblocks.
+                */
+                constr->sblock[1] = constr->sblock[constr->nblocks];
+                constr->nblocks = 1;
+              }
+#ifdef GMX_GIFS
             }
             if (ncons > constr->lagr_nalloc)
             {
