@@ -16,19 +16,13 @@ protected:
   // Called within BOMD initialization
   void get_reader_data(ConfigBlockReader& reader) override; 
   ConfigBlockReader setup_reader() override;
-  
-  double build_diabatic_forces_projected(void);
-  double build_diabatic_forces_restrained(void);
 
   arma::cube g_qm, g_mm;
   arma::cube gd_qm, gd_mm;
   
-  arma::vec diabatic_energy;  
-  arma::mat diabatic_rot_mat;
-
-  double alpha = 0;
-
+  arma::mat H;  // diabatic Hamiltonian
   bool single_diabat = false;
+  int which_diabat = -1;
   
   // FIXME: should probaly regularize all code on uwords etc.
   size_t upper, lower; // indicies of the adiabats to diabatize
