@@ -1,11 +1,14 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE 1)
-#
 
 enable_language(CXX)
 
 find_package(Armadillo)
-include_directories(${ARMADILLO_INCLUDE_DIRS})
-link_libraries(${ARMADILLO_LIBRARIES})
+if(${ARMADILLO_FOUND})
+    include_directories(${ARMADILLO_INCLUDE_DIRS})
+    link_libraries(${ARMADILLO_LIBRARIES})
+else()
+    include_directories(${GMX_GIFS}/armadillo/include)
+endif()
 
 set(GIFS_SOURCES
     "gmxgifs.c"

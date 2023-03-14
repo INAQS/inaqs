@@ -1,4 +1,4 @@
-find_package(Armadillo 10)
+find_package(Armadillo)
 if(${ARMADILLO_FOUND})
     include_directories(${ARMADILLO_INCLUDE_DIRS})
     link_libraries(${ARMADILLO_LIBRARIES})
