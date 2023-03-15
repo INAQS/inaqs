@@ -990,7 +990,7 @@ void set_constraints(struct gmx_constr *constr,
                 constr->sblock[1] = constr->sblock[constr->nblocks];
                 constr->nblocks = 1;
               }
-#ifdef GMX_GIFS
+#endif
             }
             if (ncons > constr->lagr_nalloc)
             {
