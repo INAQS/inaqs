@@ -129,6 +129,7 @@ private:
   std::vector<int> diabat_states {};
   std::vector<int> spin_diabats {}; // an array of multiplicities
   bool boys_diabatization = false;
+  arma::mat donor_acceptor_ref {};
   bool loc_cis_ov_separate = false;
   bool strictly_diabatic_approximation = true;
   bool dump_qc_output = false;

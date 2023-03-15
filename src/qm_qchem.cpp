@@ -29,6 +29,7 @@ QM_QChem::qchem_reader() {
   reader.add_entry("scf_guess", "read");
   reader.add_entry("diabatization_method", "boys");
   reader.add_entry("diabat_states", std::vector<int> {}); // sentinel value
+  reader.add_entry("donor_acceptor_ref", "");  // sentinel value
   reader.add_entry("nthreads", 1);
   reader.add_entry("buffer_states", 0);
   reader.add_entry("spin_diabats", std::vector<int> {});  // sentinel value
@@ -153,6 +154,24 @@ QM_QChem::QM_QChem(FileHandle& fh,
     }
     else{
       excited_states += buffer_states;
+    }
+  }
+
+  {
+    std::string in;
+    reader.get_data("donor_acceptor_ref", in);
+    if (in.length() > 0){
+      arma::mat out(in);
+      if (out.n_cols == 3 && out.n_rows == 2){
+        donor_acceptor_ref = out.t();
+        donor_acceptor_ref.print("Reference DA dipoles:");
+      }
+      else{
+        valid_options = false;
+        std::cerr << "Invalid attempt to set donor_acceptor_ref; must be of the form:" << std::endl;
+        std::cerr << "  donor_acceptor_ref = Dx Dy Dz ; Ax Ay Az "<< std::endl;
+        std::cerr << "where Di and Ai are respectively the dipole moments for the donor and acceptor states." << std::endl;
+      }
     }
   }
 
@@ -844,14 +863,16 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
   
   mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
 
-  //FIXME: use some class-level state for ref
-  static arma::mat ref = mu; // only initialized on first invocation
+  if (!(donor_acceptor_ref.n_cols == 2 && donor_acceptor_ref.n_rows == 3)){
+    std::cerr << "[QM_QChem] " << call_idx() << ": No reference dipoles provided via 'donor_acceptor_ref'; this trajectory will not be reproducible." << std::endl;
+    donor_acceptor_ref = mu;
+  }
 
   arma::mat D(2,2);
   
   for (arma::uword i = 0; i < 2; i++){
     for (arma::uword j = 0; j < 2; j++){
-      D(i,j) = arma::norm(ref.col(i)-mu.col(j));
+      D(i,j) = arma::norm(donor_acceptor_ref.col(i)-mu.col(j));
     }
   }
 
@@ -863,7 +884,7 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
     std::cerr << "[QM_QChem] " << call_idx() << ": Swapping diabats; " << D(idx) << " < " << D(0) << std::endl;
   }
 
-  ref = mu; // update for subsequent invocations
+  donor_acceptor_ref = mu; // update for subsequent invocations
 }
 
 
