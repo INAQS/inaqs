@@ -26,7 +26,7 @@ namespace util{
     const double eps = 1e-12;
     if (p.has_nan()){die = "P is malformed; it contains NaN!";}
     if (arma::any(p < -1 * eps)){die = "P cannot have negative elements!";}
-    if (std::abs(arma::sum(p) - 1) > eps){ die = "P is not normed!";}
+    if (std::abs(arma::sum(p) - 1) > eps * p.n_elem ){ die = "P is not normed!";}
 
     if (die != ""){
       p.t().print("P");

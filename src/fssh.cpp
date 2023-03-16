@@ -16,7 +16,7 @@ ConfigBlockReader FSSH::setup_reader()
     reader.add_entry("trivial_crossing_threshold", 0.9);
     reader.add_entry("velocity_reversal", "derivative_coupling");
     reader.add_entry("rescale_initial_velocities", 0); // for rate calculations
-
+    reader.add_entry("stochastic_surface_selection", 0);
     reader.add_entry("amplitude_file", "cs.dat");
     reader.add_entry("decoherence", "");
     // FIXME: make ConfigBlockReader complain if adding the same key twice!
@@ -66,10 +66,6 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     throw std::logic_error("Cannot run FSSH on a single surface!");
   }
 
-  if (!(min_state <= active_state && active_state <= min_state + shstates)){
-    throw std::range_error("Active state not in the range of hopping states!");
-  }
-
   {
     std::string decoherence_in;
     reader.get_data("decoherence", decoherence_in);
@@ -85,8 +81,6 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     }
   }
 
-  active_state -= min_state;
-
   energy.set_size(shstates);
 
   U.set_size(shstates, shstates);
@@ -95,11 +89,6 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 
   phases.set_size(shstates);
   phases.ones();
-
-  /*
-    FIXME: should be able to configure (multiple) initial electronic
-    state(s). Can use DVEC?
-  */
 
   {
     int bool_in = 0;
@@ -117,26 +106,51 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     std::cerr << "[FSSH] Warning, velocity reversal turned off. " << std::endl;
   }
 
-  if (active_state == 0){
-    rescale_initial_velocities = false;
-  }
-
   {
+    bool need_ci = true;
     std::vector<std::complex<double>> cs_in {};
     reader.get_data("amplitudes", cs_in);
     if (cs_in.size() > 0){
       if (cs_in.size() != (arma::uword) shstates){
         throw std::runtime_error("Number of Amplitudes do not match number of hopping surfaces!");
       }
-      c = Electronic(arma::cx_vec(cs_in));
+      // FIXME: Config reader should return arma tensors
+      arma::cx_vec cs = (cs_in);  // arma vectors are nicer to work with
 
-      if (!c.normed()){
+      if (std::abs(arma::as_scalar(arma::real(cs.t() * cs))  - 1) > 1e-6){
         throw std::runtime_error("Amplitudes are not normed; check your input!");
       }
+
+      // scale so they're normed to machine precision:
+      cs /= arma::as_scalar(arma::real(cs.t() * cs));
+      c = Electronic(cs);
+      need_ci = false;
+    }
+
+    int stochastic_surface_selection = 0;
+    reader.get_data("stochastic_surface_selection", stochastic_surface_selection);
+    if(stochastic_surface_selection){
+      if(need_ci){
+        throw std::runtime_error("Cannot request stochastic surface selection without specifying amplitudes as well!");
+      }
+      active_state = util::sample_discrete(arma::real(c.p().diag()));
     }
     else{
-      c.reset(shstates, 1, active_state);
+      if (!(min_state <= active_state && active_state <= min_state + shstates)){
+        throw std::range_error("Active state not in the range of hopping states!");
+      }
+      active_state -= min_state;
+
+      if (need_ci){
+        c.reset(shstates, 1, active_state);
+      }
     }
+  }
+
+  std::cerr << "[FSSH] active_state = " << active_state + min_state << std::endl;
+
+  if (active_state == 0){
+    rescale_initial_velocities = false;
   }
 }
 
@@ -315,7 +329,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
   // FIXME: How do each of these interact with link atoms?
   const arma::vec & nacv = nac.as_col();
 
-  // FIXME: find a safer way to have a writeable velocity view
+  // FIXME: find a safer way to have a writable velocity view
   arma::vec vel(velocities.memptr(), 3 * (NQM() + NMM()), false, true);
 
   arma::vec gradv(3 * (NQM() + NMM()));
@@ -416,7 +430,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
       }
       case VelocityReversal::diabatic_difference:{
         /*
-          Reverse momentum along difference of dibatic gradients if
+          Reverse momentum along difference of diabatic gradients if
           d(E1-E2)/dt > 0. i.e., if we're going forward in the
           direction of the Marcus coordinate.
 
