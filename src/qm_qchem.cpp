@@ -858,6 +858,7 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
     size_t offset = 3 + 9 * numkeep2;  // c.f. boys_diabat_nogs.C::297
     if (loc_cis_ov_separate){ offset = 3 + 12 * numkeep2; }  // just take occupied component
     readQFMan(QCFILE::FILE_DC_DIPS, mu, offset);
+    if (loc_cis_ov_separate){ mu *= -1.0; }  // flip the signs back to match QC's text output
   }
   mu = mu.t();  // now each column is a dipole: AA, AB, BA, BB
   mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
