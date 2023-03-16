@@ -856,11 +856,6 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
   // yields (Mu)_{ABu}
   readQFMan(QCFILE::FILE_DC_DIPS, mu, 3 + 9 * numkeep2);
   mu = mu.t();  // now each column is a dipole: AA, AB, BA, BB
-  
-  mu.save(arma::hdf5_name("gifs.hdf5",
-                          "/diabaticdipoles/" + std::to_string(call_idx()),
-                          arma::hdf5_opts::replace));
-  
   mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
 
   if (!(donor_acceptor_ref.n_cols == 2 && donor_acceptor_ref.n_rows == 3)){
@@ -883,6 +878,10 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
     mu.swap_cols(0,1);
     std::cerr << "[QM_QChem] " << call_idx() << ": Swapping diabats; " << D(idx) << " < " << D(0) << std::endl;
   }
+
+  mu.save(arma::hdf5_name("gifs.hdf5",
+                          "/diabaticdipoles/" + std::to_string(call_idx()),
+                          arma::hdf5_opts::replace));
 
   donor_acceptor_ref = mu; // update for subsequent invocations
 }
