@@ -854,9 +854,17 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
   // u*(N*N) + A*N + B; u \on {x,y,z}; A,B \on 1..N
   // numkeep2 = N*N = 4
   // yields (Mu)_{ABu}
-  readQFMan(QCFILE::FILE_DC_DIPS, mu, 3 + 9 * numkeep2);
+  {
+    size_t offset = 3 + 9 * numkeep2;  // c.f. boys_diabat_nogs.C::297
+    if (loc_cis_ov_separate){ offset = 3 + 12 * numkeep2; }  // just take occupied component
+    readQFMan(QCFILE::FILE_DC_DIPS, mu, offset);
+  }
   mu = mu.t();  // now each column is a dipole: AA, AB, BA, BB
   mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
+
+  mu.save(arma::hdf5_name("gifs.hdf5",
+                          "/diabaticdipoles_untracked/" + std::to_string(call_idx()),
+                          arma::hdf5_opts::replace));
 
   if (!(donor_acceptor_ref.n_cols == 2 && donor_acceptor_ref.n_rows == 3)){
     std::cerr << "[QM_QChem] " << call_idx() << ": No reference dipoles provided via 'donor_acceptor_ref'; this trajectory will not be reproducible." << std::endl;
