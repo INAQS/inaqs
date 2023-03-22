@@ -41,7 +41,6 @@
 
 #ifdef GMX_GIFS
 #include "../shqmmm/eshake.hpp"
-extern int bElectronicSHAKE;
 #endif
 
 #include <math.h>
@@ -102,7 +101,8 @@ static void pv(FILE *log, char *s, rvec x)
 
 void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
             real dist2[], real xp[], real rij[], real m2[], real omega,
-            real invmass[], real tt[], real lagr[], int *nerror, real invdt, int natoms)
+            real invmass[], real tt[], real lagr[], int *nerror, real invdt, int natoms,
+            gmx_bool bElectronicShake)
 {
     /*
      *     r.c. van schaik and w.f. van gunsteren
@@ -187,8 +187,7 @@ void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
             }
         }
 #ifdef GMX_GIFS
-        // FIXME: need to only do this if bElectronicSHAKE = 1;
-        if (bElectronicSHAKE){
+        if (bElectronicShake){
           lagr[ll+1] = inaqs_eshake(natoms, invmass, econqCoord, xp, invdt);
         }
 #endif
@@ -204,7 +203,7 @@ int vec_shakef(FILE *fplog, gmx_shakedata_t shaked,
                gmx_bool bFEP, real lambda, real lagr[],
                real invdt, rvec *v,
                gmx_bool bCalcVir, tensor vir_r_m_dr, int econq,
-               t_vetavars *vetavar)
+               gmx_bool bElectronicShake, t_vetavars *vetavar)
 {
     rvec    *rij;
     real    *M2, *tt, *dist2;
@@ -257,10 +256,10 @@ int vec_shakef(FILE *fplog, gmx_shakedata_t shaked,
     switch (econq)
     {
         case econqCoord:
-            cshake(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, natoms);
+            cshake(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, natoms, bElectronicShake);
             break;
         case econqVeloc:
-            crattle(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, vetavar, natoms);
+            crattle(iatom, ncon, &nit, maxnit, dist2, prime[0], rij[0], M2, omega, invmass, tt, lagr, &error, invdt, vetavar, natoms, bElectronicShake);
             break;
     }
     
@@ -429,10 +428,15 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
         blen  = (sblock[i+1]-sblock[i]);
         //printf("DVCS: in bshakef; sblock[%d] = %d ; blen*3=%d\n", i, sblock[i], blen);
         blen /= 3;
+
+        gmx_bool bElectronicShake = 0;
+#ifdef GMX_GIFS
+        bElectronicShake = ir->bElectronicShake;
+#endif
         n0    = vec_shakef(log, shaked, natoms, invmass, blen, idef->iparams,
                            iatoms, ir->shake_tol, x_s, prime, shaked->omega,
                            ir->efep != efepNO, lambda, lam, invdt, v, bCalcVir, vir_r_m_dr,
-                           econq, vetavar);
+                           econq, bElectronicShake, vetavar);
 
 #ifdef DEBUGSHAKE
         check_cons(log, blen, x_s, prime, v, idef->iparams, iatoms, invmass, econq);
@@ -517,7 +521,8 @@ gmx_bool bshakef(FILE *log, gmx_shakedata_t shaked,
 
 void crattle(atom_id iatom[], int ncon, int *nnit, int maxnit,
              real dist2[], real vp[], real rij[], real m2[], real omega,
-             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar, int natoms)
+             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar, int natoms,
+             gmx_bool bElectronicShake)
 {
     /*
      *     r.c. van schaik and w.f. van gunsteren
@@ -598,7 +603,7 @@ void crattle(atom_id iatom[], int ncon, int *nnit, int maxnit,
             }
         }
 #ifdef GMX_GIFS
-        if (bElectronicSHAKE){
+        if (bElectronicShake){
           lagr[ll+1] = inaqs_eshake(natoms, invmass, econqVeloc, vp, invdt);
         }
 #endif

@@ -770,6 +770,9 @@ void pr_inputrec(FILE *fp, int indent, const char *title, t_inputrec *ir,
         PS("bPeriodicMols", EBOOL(ir->bPeriodicMols));
         PS("bContinuation", EBOOL(ir->bContinuation));
         PS("bShakeSOR", EBOOL(ir->bShakeSOR));
+#ifdef GMX_GIFS
+        PS("bElectronicShake", EBOOL(ir->bElectronicShake));
+#endif
         PS("etc", ETCOUPLTYPE(ir->etc));
         PS("bPrintNHChains", EBOOL(ir->bPrintNHChains));
         PI("nsttcouple", ir->nsttcouple);

@@ -41,8 +41,6 @@
 
 #ifdef GMX_GIFS
 #include "../shqmmm/eshake.hpp"
-// DVCS:FIXME move to ir
-int bElectronicSHAKE = 0;
 #endif
 
 #include "confio.h"
@@ -979,7 +977,7 @@ void set_constraints(struct gmx_constr *constr,
               make_shake_sblock_pd(constr, idef, md);
 #ifdef GMX_GIFS
               // DVCS:FIXME: verify that this works with solvent too
-              if (bElectronicSHAKE){ // put everything in one group and make sure we have the extra lagrange multiplier
+              if (ir->bElectronicShake){ // put everything in one group and make sure we have the extra lagrange multiplier
                 ncons++;
                 /*
                   Want to get the *last* block, which is 1-past the
@@ -1222,7 +1220,7 @@ gmx_constr_t init_constraints(FILE *fplog,
 
 
     #ifdef GMX_GIFS
-        if (bElectronicSHAKE){
+        if (ir->bElectronicShake){
           ncon++;
         }
     #endif

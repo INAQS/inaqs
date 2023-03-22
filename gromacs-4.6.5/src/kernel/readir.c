@@ -522,6 +522,11 @@ void check_ir(const char *mdparin, t_inputrec *ir, t_gromppopts *opts,
         warning(wi, warn_buf);
     }
 
+#ifdef GMX_GIFS
+    sprintf(err_buf, "To use electronic-shake, you must have constraint-algorithm = SHAKE");
+    CHECK(ir->bElectronicShake && (ir->eConstrAlg != econtSHAKE));
+#endif
+
     if ((EI_SD(ir->eI) || ir->eI == eiBD) &&
         ir->bContinuation && ir->ld_seed != -1)
     {
@@ -1930,6 +1935,11 @@ void get_ir(const char *mdparin, const char *mdparout,
     RTYPE ("lincs-warnangle", ir->LincsWarnAngle, 30.0);
     CTYPE ("Convert harmonic bonds to morse potentials");
     EETYPE("morse",       opts->bMorse, yesno_names);
+
+#ifdef GMX_GIFS
+    CTYPE ("Seam sampling with Electronic SHAKE");
+    EETYPE("electronic-shake", ir->bElectronicShake, yesno_names);
+#endif
 
     /* Energy group exclusions */
     CCTYPE ("ENERGY GROUP EXCLUSIONS");

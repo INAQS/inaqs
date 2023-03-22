@@ -356,6 +356,9 @@ typedef struct {
     real            tabext;               /* Extension of the table beyond the cut-off,   *
                                            * as well as the table length for 1-4 interac. */
     real            shake_tol;            /* tolerance for shake				*/
+#ifdef GMX_GIFS
+    gmx_bool        bElectronicShake;     /* Enable electronic SHAKE constraints          */
+#endif
     int             efep;                 /* free energy calculations                     */
     t_lambda       *fepvals;              /* Data for the FEP state                       */
     gmx_bool        bSimTemp;             /* Whether to do simulated tempering            */

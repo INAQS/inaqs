@@ -780,6 +780,9 @@ static void cmp_inputrec(FILE *fp, t_inputrec *ir1, t_inputrec *ir2, real ftol, 
     cmp_int(fp, "inputrec->bOptFFT", -1, ir1->bOptFFT, ir2->bOptFFT);
     cmp_int(fp, "inputrec->bContinuation", -1, ir1->bContinuation, ir2->bContinuation);
     cmp_int(fp, "inputrec->bShakeSOR", -1, ir1->bShakeSOR, ir2->bShakeSOR);
+#ifdef GMX_GIFS
+    cmp_int(fp, "inputrec->bElectronicShake", -1, ir1->bElectronicShake, ir2->bElectronicShake);
+#endif
     cmp_int(fp, "inputrec->etc", -1, ir1->etc, ir2->etc);
     cmp_int(fp, "inputrec->bPrintNHChains", -1, ir1->bPrintNHChains, ir2->bPrintNHChains);
     cmp_int(fp, "inputrec->epc", -1, ir1->epc, ir2->epc);

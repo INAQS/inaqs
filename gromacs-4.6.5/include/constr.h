@@ -130,12 +130,12 @@ void settle_proj(FILE *fp,
 
 void cshake(atom_id iatom[], int ncon, int *nnit, int maxnit,
             real dist2[], real xp[], real rij[], real m2[], real omega,
-            real invmass[], real tt[], real lagr[], int *nerror, real invdt, int natoms);
+            real invmass[], real tt[], real lagr[], int *nerror, real invdt, int natoms, gmx_bool bElectronicShake);
 /* Regular iterative shake */
 
 void crattle(atom_id iatom[], int ncon, int *nnit, int maxnit,
              real dist2[], real vp[], real rij[], real m2[], real omega,
-             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar, int natoms);
+             real invmass[], real tt[], real lagr[], int *nerror, real invdt, t_vetavars *vetavar, int natoms, gmx_bool bElectronicShake);
 
 gmx_bool constrain(FILE *log, gmx_bool bLog, gmx_bool bEner,
                    gmx_constr_t constr,
