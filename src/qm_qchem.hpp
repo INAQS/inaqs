@@ -51,7 +51,7 @@ private:
   void get_diabats(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t A, size_t B);
   void get_diabats_spin(arma::cube & gd_qm, arma::mat & U, arma::mat & H);
   void get_diabats_loc(arma::cube & gd_qm, arma::mat & U, arma::mat & H, size_t I, size_t J);
-  void parse_track_diabats(arma::cube & gd_qm, arma::mat & U);
+  void parse_track_diabats(arma::cube & gd_qm, arma::mat & U, size_t I, size_t J);
 
 
   void get_gradient(arma::mat &g_qm, arma::uword surface);

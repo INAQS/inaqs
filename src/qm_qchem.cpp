@@ -199,7 +199,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
     // rely on `&&` to short-circut
     if (spin_diabats.size() > 0 && spin_diabats.size() != diabat_states.size()){
       valid_options = false;
-      std::cerr << "If specifying both diabat_states and spin_diabats, they must be of the same lenght!" << std::endl;
+      std::cerr << "If specifying both diabat_states and spin_diabats, they must be of the same length!" << std::endl;
     }
   }
 
@@ -770,7 +770,7 @@ void QM_QChem::get_diabats_loc(arma::cube & gd_qm, arma::mat & U, arma::mat & H,
 
     exec_qchem();
     //}
-  parse_track_diabats(gd_qm, U);
+    parse_track_diabats(gd_qm, U, I, J);
 
   arma::vec adiabats(1 + excited_states);
   parse_energies(adiabats);
@@ -812,17 +812,19 @@ void QM_QChem::get_diabats_spin(arma::cube & gd_qm, arma::mat & U, arma::mat & H
 }
 
 
-void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U){
+void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U, size_t A, size_t B){
   // Read-in diabatic gradients and determine if they need to be swapped
   {
     const size_t NRoot = excited_states;
     const size_t NRoot2 = NRoot * NRoot;
     const size_t NCoord = 3 * NQM;
 
+    std::vector<size_t> states = {A,B};
     // Verified these offsets are correct for the me-bridged closs system
     // c.f. code in $QC/drvman/do_cis_dia_couple.C
     for (int I = 0; I < 2; I++){
-      int offset = NCoord*((I+1)*(NRoot + 1) + 4*NRoot2);
+      size_t S = states[I] - 1; // since 1st excited state is index 0
+      int offset = NCoord*((S+1)*(NRoot + 1) + 4*NRoot2);
       if (strictly_diabatic_approximation){
         offset += 2*NRoot2*NCoord;
       }

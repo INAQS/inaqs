@@ -20,7 +20,7 @@ void DiabaticSeam::get_reader_data(ConfigBlockReader& reader) {
     single_diabat = true;
 
     if (!(which_diabat == 0 || which_diabat == 1)){
-      throw std::runtime_error("Must specify 'which_diabat' as {0,1} to indicate upper or lower at starting geometry!");
+      throw std::runtime_error("Must specify 'which_diabat' as {0,1} to indicate donor or acceptor at starting geometry!");
     }
   }
 
@@ -60,12 +60,8 @@ double DiabaticSeam::update_gradient(void){
 
     if (call_idx() == 1){ // figure out which diabat is "upper" on the first step
       H.print("Initial diabatic Hamiltonian");
-      if(H(1,1) < H(0,0)){  // do we need to swap?
-        which_diabat = (which_diabat + 1) % 2;  // 0->1; 1->0
-      }
-      std::cerr << "[DSEAM]: requested " << (which_diabat?"upper":"lower") << " diabat; "
+      std::cerr << "[DSEAM]: requested " << (which_diabat==0 ? "donor":"acceptor") << " diabat; "
                 << "selecting state " << which_diabat << "." << std::endl;
-
     }
 
     saveh5(H, "diabatic_H");
