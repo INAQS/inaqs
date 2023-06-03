@@ -2,6 +2,10 @@
 #define INAQS_SHARED_HPP
 
 #include <armadillo>
+#include <typeinfo>
+#include <cxxabi.h>
+
+#define INAQS_LOG(SHARED, MSG) do{SHARED->log(this, MSG);}while(0)
 
 class INAQSShared{
 public:
@@ -18,8 +22,16 @@ public:
   
   void inc_step(void){mdTimeStep++;} // FIXME: want this hidden
 
-  void log(const std::string & component, const std::string & message){
-    logstream << "[" + component + "] " << get_step() << ": " << message << std::endl;
+  // FIXME: better to have this be a variadic function
+  template <typename T>
+  void log(T * component, const std::string & message){
+    char * name;
+    {
+      int status = -1;
+      name = abi::__cxa_demangle(typeid(*component).name(), NULL, NULL, &status);
+    }
+    logstream << "[" << name << "] " << mdTimeStep << ": " << message << std::endl;
+    free(name);
   }
   
   template <typename T>

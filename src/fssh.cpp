@@ -50,7 +50,8 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     reader.get_data("random_seed", seed);
     arma::arma_rng::set_seed(seed);
 
-    std::cerr << "[FSSH] random_seed = " << seed << std::endl;
+    INAQS_LOG(shared, "random_seed = " + std::to_string(seed));
+    //std::cerr << "[FSSH] random_seed = " << seed << std::endl;
   }
 
   {
@@ -102,7 +103,8 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   }
 
   if (! (bool) velocity_reversal){
-    std::cerr << "[FSSH] Warning, velocity reversal turned off. " << std::endl;
+    INAQS_LOG(shared, "Warning, velocity reversal turned off.");
+    //std::cerr << "[FSSH] Warning, velocity reversal turned off. " << std::endl;
   }
 
   
@@ -147,7 +149,8 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     }
   }
   else{
-    std::cerr << "[FSSH] This is a restart job!" << std::endl;
+    INAQS_LOG(shared, "This is a restart job!");
+    //std::cerr << "[FSSH] This is a restart job!" << std::endl;
 
     arma::uvec temp;
     shared->loadh5(temp, "surface", shared->get_step());
@@ -615,7 +618,7 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
 
   if (shared->get_step() - shared->initial_step > 1 && std::abs(edrift) > delta_e_tol){
-    shared->log("FSSH", "WARNING, energy drift exceeds tolerance!");
+    INAQS_LOG(shared, "WARNING, energy drift exceeds tolerance!");
   }
   
   // update indicates we need to copy velocity and gradient back to GMX
