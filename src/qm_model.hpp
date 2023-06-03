@@ -68,7 +68,8 @@ private:
 
 class QM_Model: public QMInterface{
 public:
-  QM_Model(FileHandle& fh, 
+  QM_Model(std::shared_ptr<INAQSShared> shared,
+           FileHandle& fh, 
            const arma::uvec& in_qmids, 
 	   arma::mat& in_qm_crd, 
 	   arma::mat& in_mm_crd, 

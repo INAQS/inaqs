@@ -67,7 +67,8 @@ QM_QChem::qchem_reader() {
   This is fixed by setting set_roots_orig and making sure we have
   headroom on our hopping states.
 */
-QM_QChem::QM_QChem(FileHandle& fh, 
+QM_QChem::QM_QChem(std::shared_ptr<INAQSShared> shared,
+                   FileHandle& fh, 
                    const arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
 		   arma::mat& in_mm_crd, 
@@ -76,7 +77,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
 		   const int mult,
 		   const int excited_states_in,
                    const int min_state_in):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state_in)
+  QMInterface(shared, in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states_in, min_state_in)
 {
   ConfigBlockReader reader = qchem_reader();
   reader.parse(fh);
@@ -225,7 +226,7 @@ QM_QChem::QM_QChem(FileHandle& fh,
   }
 
   if (!valid_options){
-    throw std::runtime_error("Invalid options; see above!");
+    throw std::runtime_error("[QM_QChem] Invalid options; see above!");
   }
   
   /*
@@ -426,10 +427,7 @@ void QM_QChem::state_tracker(PropMap &props){
     readQFMan(QCFILE::FILE_CIS_S2, S2);
   }
 
-  S2.save(arma::hdf5_name("gifs.hdf5",
-                          "/spin2/" + std::to_string(call_idx()),
-                          arma::hdf5_opts::replace));
-
+  shared->saveh5(S2, "spin2");
 
   /* 1.2 is the default for REM_CIS_S2_THRESH; If we want to change,
      we can specify our threshold via sing_thresh, which is synced
@@ -558,9 +556,7 @@ void QM_QChem::do_record_spectrum(void){
 
     {
       arma::vec osc = spec.col(1);
-      osc.save(arma::hdf5_name("gifs.hdf5",
-                               "/oscillator/" + std::to_string(call_idx()),
-                               arma::hdf5_opts::replace));
+      shared->saveh5(osc, "oscillator");
     }
 
     {
@@ -865,9 +861,7 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U, size_t A, 
   mu = mu.t();  // now each column is a dipole: AA, AB, BA, BB
   mu = mu.cols(arma::uvec({0,3}));  // now the columns are AA BB
 
-  mu.save(arma::hdf5_name("gifs.hdf5",
-                          "/diabaticdipoles_untracked/" + std::to_string(call_idx()),
-                          arma::hdf5_opts::replace));
+  shared->saveh5(mu, "diabaticdipoles_untracked");
 
   if (!(donor_acceptor_ref.n_cols == 2 && donor_acceptor_ref.n_rows == 3)){
     std::cerr << "[QM_QChem] " << call_idx() << ": No reference dipoles provided via 'donor_acceptor_ref'; this trajectory will not be reproducible." << std::endl;
@@ -890,9 +884,7 @@ void QM_QChem::parse_track_diabats(arma::cube & gd_qm, arma::mat & U, size_t A, 
     std::cerr << "[QM_QChem] " << call_idx() << ": Swapping diabats; " << D(idx) << " < " << D(0) << std::endl;
   }
 
-  mu.save(arma::hdf5_name("gifs.hdf5",
-                          "/diabaticdipoles/" + std::to_string(call_idx()),
-                          arma::hdf5_opts::replace));
+  shared->saveh5(mu, "diabaticdipoles");
 
   donor_acceptor_ref = mu; // update for subsequent invocations
 }
@@ -971,9 +963,8 @@ void QM_QChem::parse_energies(arma::vec &e){
     e += e_ground;
     e[0] = e_ground;
   }
-  e.save(arma::hdf5_name("gifs.hdf5",
-                         "/energies/" + std::to_string(call_idx()),
-                         arma::hdf5_opts::replace));
+
+  shared->saveh5(e, "energies");
 }
 
 
@@ -1057,10 +1048,10 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   
   char * qc_str = std::getenv("QCSCRATCH");
   if (nullptr == qc_str){
-    std::cerr << "Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
+    std::cerr << "[QM_QChem] Warning, $QCSCRATCH not set; using " << scratch_path << std::endl;
   }
   else if (qc_str[0] != '/'){
-    std::cerr << "Warning, $QCSCRATCH is not an absolute path; instead using " << scratch_path << std::endl;
+    std::cerr << "[QM_QChem] Warning, $QCSCRATCH is not an absolute path; instead using " << scratch_path << std::endl;
   }
   else{
     scratch_path = std::string(qc_str);
@@ -1074,7 +1065,7 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
   struct stat st = {};
   if (-1 == stat(scratch_path.c_str(), &st)){
     if (mkdir(scratch_path.c_str(), 0700)){
-      throw std::runtime_error("Unable to construct scratch directory at " + scratch_path);
+      throw std::runtime_error("[QM_QChem] Unable to construct scratch directory at " + scratch_path);
     }
   }
 
@@ -1084,7 +1075,7 @@ const std::string QM_QChem::get_qcscratch(std::string conf_dir){
     the empty string.
   */
   setenv("QCSCRATCH", scratch_path.c_str(), true);
-  std::cerr << "taking scratch path to be: " << scratch_path << std::endl;
+  std::cerr << "[QM_QChem] Taking scratch path to be: " << scratch_path << std::endl;
 
   return scratch_path;
 }
@@ -1291,12 +1282,13 @@ void QM_QChem::write_external_charges_section(std::ostream &os){
 */
 bool QM_QChem::called(Q q){
   static std::unordered_map<Q, int> calls;
-  if(call_idx() == calls[q]){
-    return true;
+  if (calls.find(q) == calls.end() || // test for existance; short-ciruit required
+      call_idx() != calls.at(q) ){    // test for equality
+    calls[q] = call_idx();            // operator[] will insert if new key
+    return false;
   }
   else{
-    calls[q] = call_idx();
-    return false;
+    return true;
   }
 }
 

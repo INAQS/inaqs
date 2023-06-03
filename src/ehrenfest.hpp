@@ -8,7 +8,7 @@
 
 class Ehrenfest: public BOMD {
 public:
-  explicit Ehrenfest(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
+  explicit Ehrenfest(std::shared_ptr<INAQSShared> shared, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{shared, qm_grd, mm_grd} {}
   ~Ehrenfest() { }
   double update_gradient(void) override;
 

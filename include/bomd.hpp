@@ -5,12 +5,13 @@
 #include <armadillo>
 #include "qm_interface.hpp"
 #include "configreader.hpp"
+#include "inaqs_shared.hpp"
 
 
 class BOMD
 {
 public:
-  explicit BOMD(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd);
+  explicit BOMD(std::shared_ptr<INAQSShared> shared, arma::mat& qm_grd, arma::mat& mm_grd);
   //virtual ~BOMD() {delete qm;}
   virtual ~BOMD() {}
   
@@ -27,16 +28,9 @@ public:
 protected:
   inline arma::uword NQM(void) const { return qm_grd.n_cols; }
   inline arma::uword NMM(void) const { return mm_grd.n_cols; }
-  inline int call_idx() const noexcept { return md_call_idx; };
+  inline int call_idx() const noexcept { return shared->get_step(); };
 
-  template <typename T>
-  void saveh5(const T &tensor, std::string kind){
-    tensor.eval().save(
-                       arma::hdf5_name("gifs.hdf5", "/" + kind + "/" +
-                                       std::to_string(call_idx()),
-                                       arma::hdf5_opts::replace)
-                       );
-  };
+  std::shared_ptr<INAQSShared> shared;
 
   /* Config for keys common to all dynamics classes */
   void add_common_keys(ConfigBlockReader& reader);
@@ -61,7 +55,7 @@ protected:
   
 private:
   //FIXME: need to unify _call_idx() tracking at a higher level (gifs?)
-  int md_call_idx = 1; // tracks each call to rescale_velocities();
+  //int md_call_idx = 1; // tracks each call to rescale_velocities();
 };
 
 class PrintBomd:
@@ -69,8 +63,8 @@ class PrintBomd:
 {
 public:
   virtual ~PrintBomd() {};
-  explicit PrintBomd(double classicalTimeStep, arma::mat& qm_grd,
-                     arma::mat& mm_grd) : BOMD(classicalTimeStep, qm_grd, mm_grd) {}
+  explicit PrintBomd(std::shared_ptr<INAQSShared> shared, arma::mat& qm_grd,
+                     arma::mat& mm_grd) : BOMD(shared, qm_grd, mm_grd) {}
   
   double update_gradient(void) {
     double e = BOMD::update_gradient();

@@ -726,11 +726,12 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         ftp2fn(efDAT, nfile, fnm) : NULL;
 
       real mdTimeStep = ir->delta_t;
+      int mdStepStart = ir->init_step;
       t_QMrec * qm = fr->qr->qm[0];
       size_t nqm = qm->nrQMatoms;
       void * qm_atomids = qm->atomicnumberQM;
 
-      if (!inaqs_init(inaqsConfigFile, mdTimeStep, nqm, qm_atomids)){
+      if (!inaqs_init(inaqsConfigFile, mdStepStart, mdTimeStep, nqm, qm_atomids)){
         gmx_fatal(FARGS, "Unable to initialize INAQS!");
       }
     }

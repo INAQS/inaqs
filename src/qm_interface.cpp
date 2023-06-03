@@ -1,7 +1,8 @@
 #include "properties.hpp"
 #include "qm_interface.hpp"
 
-QMInterface::QMInterface(const arma::uvec& in_qmids, 
+QMInterface::QMInterface(std::shared_ptr<INAQSShared> shared,
+                         const arma::uvec& in_qmids, 
                          arma::mat& in_qm_crd, 
                          arma::mat& in_mm_crd, 
                          arma::vec& in_mm_chg, 
@@ -9,6 +10,7 @@ QMInterface::QMInterface(const arma::uvec& in_qmids,
                          const int mult,
                          const int excited_states,
                          const int min_state) :
+  shared{shared},
   NQM {in_qmids.size()},
   qm_charge(charge), qm_multiplicity(mult),
   excited_states(excited_states),
@@ -31,5 +33,5 @@ QMInterface::QMInterface(const arma::uvec& in_qmids,
 void QMInterface::update()
 {
   NMM = chg_mm.size();
-  qm_call_idx++;
+  //qm_call_idx++;
 }

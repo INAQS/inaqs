@@ -41,9 +41,9 @@ real gifs_do_qm_forces(size_t nqm, const int* qm_atomids, const rvec * qm_crd,
   FIXME: support restarts
   FIXME: consider wraping all the MD parameters (dt, restart...) in a struct
 */
-bool inaqs_init(const char * inaqsConfigFile, real classicalTimeStep, size_t nqm, const int * qm_atomids){
+bool inaqs_init(const char * inaqsConfigFile, int mdStepStart, real classicalTimeStep, size_t nqm, const int * qm_atomids){
   if (inaqsConfigFile){
-    create_qm_interface(inaqsConfigFile, classicalTimeStep, nqm, qm_atomids);
+    create_qm_interface(inaqsConfigFile, mdStepStart, classicalTimeStep, nqm, qm_atomids);
     return true;
   }
   
@@ -62,7 +62,7 @@ bool inaqs_init(const char * inaqsConfigFile, real classicalTimeStep, size_t nqm
         gmx_warning("DEPRECATION NOTICE, you are not using the standard config file"
                     ", '%s'. Please update your inputs.\n", config_names[0]);
       }
-      create_qm_interface(*fname, classicalTimeStep, nqm, qm_atomids);
+      create_qm_interface(*fname, mdStepStart, classicalTimeStep, nqm, qm_atomids);
       return true;
     }
   }

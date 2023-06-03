@@ -10,6 +10,7 @@
 #include "linkatoms.hpp"
 #include "configreader.hpp"
 #include "qm_interface.hpp"
+#include "inaqs_shared.hpp"
 
 /* Virtual base class, defining all operations that 
  * should be called from the MD software */
@@ -24,7 +25,7 @@ class GifsImpl
 {
 public: 
     // creation
-    static GifsImpl* get_instance(const char* file, double classicalTimeStep, size_t nqm, const int * qmid,
+    static GifsImpl* get_instance(const char* file, int mdStepStart, double classicalTimeStep, size_t nqm, const int * qmid,
             const double mass, const double length, const double time);
     static GifsImpl* get_instance();
     // methods
@@ -47,9 +48,9 @@ public:
 
   std::shared_ptr<QMInterface> get_QMInterface(void){return qmi;}
   void update_coords(const arma::mat & R);
-
+  
 private:
-    GifsImpl(const char* file, double classicalTimeStep, size_t nqm, const int * qmids,
+  GifsImpl(const char* file, int mdStepStart, double classicalTimeStep, size_t nqm, const int * qmids,
              const double mass, const double length, const double time);
     // private destructor
     static void destroy_instance(void);
@@ -58,7 +59,7 @@ private:
     //
     void setup_reader(ConfigBlockReader&);
     std::unique_ptr<BOMD> select_bomd(ConfigBlockReader& reader, FileHandle& fh,
-                                      double classicalTimeStep, arma::uvec& atomicnumbers,
+                                      arma::uvec& atomicnumbers,
                                       arma::mat& qm_crd, arma::mat& mm_crd,
                                       arma::vec& mm_chg,
                                       arma::mat& qm_grd, arma::mat& mm_grd);
@@ -91,6 +92,7 @@ private:
     std::unique_ptr<BOMD> bomd;
     std::unique_ptr<LinkAtoms> las;
     std::shared_ptr<QMInterface> qmi;
+    std::shared_ptr<INAQSShared> shared;
 };
 
 
@@ -98,9 +100,9 @@ class Gifs
 {
 public:
     // create instance, can only be called once!
-    explicit Gifs(const char* file, double classicalTimeStep, size_t nqm, const int * qmid, const double mass, const double length, const double time) {
+    explicit Gifs(const char* file, int mdStepStart, double classicalTimeStep, size_t nqm, const int * qmid, const double mass, const double length, const double time) {
         if (!GifsImpl::instance_exists()) {
-            impl = GifsImpl::get_instance(file, classicalTimeStep, nqm, qmid, mass, length, time);
+            impl = GifsImpl::get_instance(file, mdStepStart, classicalTimeStep, nqm, qmid, mass, length, time);
         } else {
             impl = GifsImpl::get_instance();   
         }

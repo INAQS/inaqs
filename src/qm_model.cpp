@@ -18,7 +18,8 @@ ConfigBlockReader QM_Model::model_reader() {
   return reader;
 }
 
-QM_Model::QM_Model(FileHandle& fh, 
+QM_Model::QM_Model(std::shared_ptr<INAQSShared> shared,
+                   FileHandle& fh, 
                    const arma::uvec& in_qmids, 
 		   arma::mat& in_qm_crd, 
 		   arma::mat& in_mm_crd, 
@@ -27,7 +28,7 @@ QM_Model::QM_Model(FileHandle& fh,
 		   const int mult,
 		   const int excited_states,
                    const int min_state):
-  QMInterface(in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states, min_state)
+  QMInterface(shared, in_qmids, in_qm_crd, in_mm_crd, in_mm_chg, charge, mult, excited_states, min_state)
 {
 
   if (NQM > 1){

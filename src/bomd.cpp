@@ -9,6 +9,7 @@
 #include <iomanip>
 QMInterface*
 select_interface(ConfigBlockReader& reader,
+                 std::shared_ptr<INAQSShared> shared,
                  FileHandle& fh,
                  const arma::uvec& qmids, 
                  arma::mat& qm_crd, 
@@ -26,9 +27,9 @@ select_interface(ConfigBlockReader& reader,
     reader.get_data("min_state", min_state);
 
     if (qmcode == "qchem") {
-        return new QM_QChem(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+      return new QM_QChem(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else if (qmcode == "qmmodel") {
-        return new QM_Model(fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+      return new QM_Model(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
     } else {
       throw std::runtime_error("qm interface  not implemented!");
     }
@@ -47,11 +48,13 @@ BOMD::add_common_keys(ConfigBlockReader& reader)
 
 
 
-BOMD::BOMD(double classicalTimeStep,
+BOMD::BOMD(std::shared_ptr<INAQSShared> shared,
            arma::mat& qm_grd,
            arma::mat& mm_grd) :
-  dtc{classicalTimeStep}, qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
-{}
+  shared{shared}, qm_grd{qm_grd}, mm_grd{mm_grd}, energy(1)
+{
+  dtc = shared->get_dtc();
+}
 
 std::shared_ptr<QMInterface>
 BOMD::setup(FileHandle& fh,
@@ -63,7 +66,7 @@ BOMD::setup(FileHandle& fh,
   auto reader = setup_reader();   // keys and block for child class
   add_common_keys(reader);        // active_state + keys for qm_interface 
   reader.parse(fh);
-  qm.reset(select_interface(reader, fh, atomicnumbers, qm_crd, mm_crd, mm_chg));
+  qm.reset(select_interface(reader, shared, fh, atomicnumbers, qm_crd, mm_crd, mm_chg));
   BOMD::get_reader_data(reader);  // call base to set/check active_state
   get_reader_data(reader);        // call child to conclude setup_reader(); base keys already parsed
 
@@ -112,12 +115,12 @@ BOMD::update_gradient()
 
 bool BOMD::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::mat &total_gradient, double total_energy) {
   (void) total_gradient; (void) masses; (void) velocities;
-  md_call_idx++;
   
   edrift = (total_energy - elast)/elast;
   elast = total_energy;
+  
   std::cout << "Total Energy: " << elast;
-  if (call_idx() > 3){
+  if (shared->get_step() - shared->initial_step > 1){
     std::cout << "; Fractional drift: " << edrift << std::endl;
   }
   else{

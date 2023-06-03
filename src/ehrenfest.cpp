@@ -106,10 +106,10 @@ double Ehrenfest::update_gradient(void){
     arma::real(a).st().print(output);
     output.close();
   }
-  saveh5(c.get(), "amps");  
-  saveh5(U, "overlapraw");
+  shared->saveh5(c.get(), "amps");  
+  shared->saveh5(U, "overlapraw");
   Electronic::phase_match(U, phases);
-  saveh5(U, "overlap");
+  shared->saveh5(U, "overlap");
   T = util::logmat_unitary(U) / dtc;
   V = arma::diagmat(energy);
 

@@ -64,7 +64,7 @@ double DiabaticSeam::update_gradient(void){
                 << "selecting state " << which_diabat << "." << std::endl;
     }
 
-    saveh5(H, "diabatic_H");
+    shared->saveh5(H, "diabatic_H");
 
     E = H(which_diabat, which_diabat);
     qm_grd = gd_qm.slice(which_diabat);

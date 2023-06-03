@@ -13,14 +13,14 @@
 #include "configreader.hpp"
 //
 // creation
-GifsImpl* GifsImpl::get_instance(const char* file, double classicalTimeStep, size_t nqm, const int * qmid, const double mass, const double length, const double time)
+GifsImpl* GifsImpl::get_instance(const char* file, int mdStepStart, double classicalTimeStep, size_t nqm, const int * qmid, const double mass, const double length, const double time)
 {
 // actually create instance, and register its destructor atexit!
     if (instance_exists()) {
-        // throw std::Exception("GIFS object was already created");
+       // throw std::Exception("GIFS object was already created");
     }
     //
-    impl = new GifsImpl(file, classicalTimeStep, nqm, qmid, mass, length, time);
+    impl = new GifsImpl(file, mdStepStart, classicalTimeStep, nqm, qmid, mass, length, time);
     //
     atexit(destroy_instance);
     return impl;
@@ -181,11 +181,12 @@ void GifsImpl::rescale_velocities(T total_energy, T* in_grad, T* in_masses, T* i
         to_global(in_grad, total_gradient, nqm, qm_index, nmm, mm_index);
         to_global(in_veloc, veloc, nqm, qm_index, nmm, mm_index);
     }
+
+    shared->inc_step();
 };
 //
 std::unique_ptr<BOMD>
 GifsImpl::select_bomd(ConfigBlockReader& reader, FileHandle& fh,
-                      double classicalTimeStep,
                       arma::uvec& atomicnumbers,
                       arma::mat& qm_crd,
                       arma::mat& mm_crd,
@@ -197,30 +198,30 @@ GifsImpl::select_bomd(ConfigBlockReader& reader, FileHandle& fh,
     std::string runtype;
     reader.get_data("runtype", runtype);
     if (runtype == "bomd") {
-      bomd.reset(new BOMD(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new BOMD(shared, qm_grd, mm_grd));
     }
     else if (runtype == "fssh") {
-      bomd.reset(new FSSH(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new FSSH(shared, qm_grd, mm_grd));
     }
     else if (runtype == "bomd-rescale") {
-      bomd.reset(new RescaleBomd(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new RescaleBomd(shared, qm_grd, mm_grd));
     }
     else if (runtype == "bomd-print") {
-      bomd.reset(new PrintBomd(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new PrintBomd(shared, qm_grd, mm_grd));
     }
     else if (runtype == "bomd-electronic") {
-      bomd.reset(new ElectronicBomd(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new ElectronicBomd(shared, qm_grd, mm_grd));
     }
     else if (runtype == "ehrenfest") {
-      bomd.reset(new Ehrenfest(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new Ehrenfest(shared, qm_grd, mm_grd));
     }
     else if (runtype == "diabatic_seam") {
-      bomd.reset(new DiabaticSeam(classicalTimeStep, qm_grd, mm_grd));
+      bomd.reset(new DiabaticSeam(shared, qm_grd, mm_grd));
     }
     else {
       throw std::runtime_error("unknown runtype");
     }
-    std::cerr << "Begining INAQS run of type " << runtype << std::endl;
+    std::cerr << "[INAQS] Begining INAQS run of type " << runtype << std::endl;
     qmi = bomd->setup(fh, atomicnumbers, qm_crd, mm_crd, mm_chg);
     
     return bomd;
@@ -231,14 +232,18 @@ GifsImpl::setup_reader(ConfigBlockReader& reader) {
   //using types = ConfigBlockReader::types;
     //
     reader.add_entry("runtype", std::string("bomd"));
+    reader.add_entry("archive", std::string("gifs.hdf5"));
 //    reader.add_entry("latoms", std::vector<int>{});
 }
 
 
-GifsImpl::GifsImpl(const char* file, double classicalTimeStep, size_t in_nqm, const int * ian, const double mass, const double length, const double time)
-    : nqm{in_nqm}, nmm{0}, qm_atomicnumbers(in_nqm), qm_index(in_nqm), conv(mass, length, time)
+GifsImpl::GifsImpl(const char* file, int mdStepStart, double classicalTimeStep, size_t in_nqm, const int * ian, const double mass, const double length, const double time)
+  : nqm{in_nqm}, nmm{0}, qm_atomicnumbers(in_nqm), qm_index(in_nqm), conv(mass, length, time)
 {
-
+  if(mdStepStart > 0){
+    std::cerr << "[INAQS] This is a restart job, begining from step " << mdStepStart << std::endl;
+  }
+  
   FileHandle fh{file};
   ConfigBlockReader reader;
   {
@@ -258,7 +263,13 @@ GifsImpl::GifsImpl(const char* file, double classicalTimeStep, size_t in_nqm, co
       }
     }
   }
-
+  
+  {
+    std::string archive_file;
+    reader.get_data("archive", archive_file);
+    shared = std::make_shared<INAQSShared>(mdStepStart, conv.time_md2au(classicalTimeStep), archive_file);
+  }
+  
     qm_crd.resize(3, nqm);
     qm_frc.resize(3, nqm);
     mm_frc.resize(3, 0);
@@ -275,7 +286,6 @@ GifsImpl::GifsImpl(const char* file, double classicalTimeStep, size_t in_nqm, co
     }
     //bomd = new BOMD(in_nqm, in_qmid);
     bomd = select_bomd(reader, fh,
-                       conv.time_md2au(classicalTimeStep),
                        qm_atomicnumbers,
                        qm_crd,
                        mm_crd,

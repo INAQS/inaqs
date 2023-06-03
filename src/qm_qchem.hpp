@@ -12,7 +12,8 @@ using REMKeys = std::map<std::string, std::string>;
 
 class QM_QChem: public QMInterface{
 public:
-  QM_QChem(FileHandle& fh, 
+  QM_QChem(std::shared_ptr<INAQSShared> shared,
+           FileHandle& fh, 
            const arma::uvec& in_qmids, 
 	   arma::mat& in_qm_crd, 
 	   arma::mat& in_mm_crd, 

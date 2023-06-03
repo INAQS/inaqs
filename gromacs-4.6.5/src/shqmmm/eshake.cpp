@@ -111,7 +111,7 @@ double compute_k(arma::mat & V, const arma::rowvec & minv){
   double vds = arma::as_scalar(V.as_col().t() * del_sigma.as_col());
   double sms = arma::as_scalar(del_sigma.as_col().t() * (minv % del_sigma.each_row()).as_col());
 
-  //FIXME:DVCS tolerance: need to do some thinking about how small vds/sms can be 
+  //FIXME:DVCS tolerance: need to do some thinking about how small vds/sms can be
   double k = 2 * vds/sms;
   
   V += -k/2*(del_sigma.each_row() % minv);

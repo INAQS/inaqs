@@ -39,7 +39,6 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
   /* added in BOMD::add_qm_keys() */
   reader.get_data("min_state", min_state);
 
-
   /* 
      Must set rng seed before decoherence because Decoherence will use
      armadillo random number generator
@@ -106,7 +105,8 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
     std::cerr << "[FSSH] Warning, velocity reversal turned off. " << std::endl;
   }
 
-  {
+  
+  if (!shared->restart){
     bool need_ci = true;
     std::vector<std::complex<double>> cs_in {};
     reader.get_data("amplitudes", cs_in);
@@ -145,6 +145,19 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
         c.reset(shstates, 1, active_state);
       }
     }
+  }
+  else{
+    std::cerr << "[FSSH] This is a restart job!" << std::endl;
+
+    arma::uvec temp;
+    shared->loadh5(temp, "surface", shared->get_step());
+    active_state = temp(0) - min_state;
+
+    arma::cx_vec amps;
+    shared->loadh5(amps, "amps", shared->get_step());
+    amps.t().print(std::cerr, "Initial amplitudes");
+    c.reset(shstates, 1, active_state);
+    c.set(amps);
   }
 
   std::cerr << "[FSSH] active_state = " << active_state + min_state << std::endl;
@@ -186,10 +199,17 @@ void FSSH::electronic_evolution(void){
   props.emplace(QMProperty::wfoverlap, &U);
   qm->get_properties(props);
 
-  saveh5(U, "overlapraw");
+  shared->saveh5(U, "overlapraw");
   check_overlap(U);
   Electronic::phase_match(U, phases);
-  saveh5(U, "overlap");
+
+  if (shared->restart && (shared->initial_step == shared->get_step())){
+    shared->loadh5(U, "overlap", shared->get_step());
+  }
+  
+  shared->saveh5(U, "overlap");
+
+  
   T = util::logmat_unitary(U) / dtc;
 
   // R.B.: energy was updated in update_gradient()
@@ -270,7 +290,7 @@ void FSSH::electronic_evolution(void){
   }  // end loop over dtq
   hop_probability = 1 - hop_probability;
   hop_probability(active_state) = 0; // don't report active
-  saveh5(hop_probability, "hop_probability");
+  shared->saveh5(hop_probability, "hop_probability");
   /*
   // to print hopping probabilities
   std::cerr << "[FSSH] " << call_idx() << ": Hop probabilities: ";
@@ -318,11 +338,11 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
     qm->get_properties(props);
   }
   nac *= phases(active_state) * phases(target_state);
-  saveh5(nac, "nac");
-  saveh5(total_gradient, "grad/total");
-  saveh5(arma::join_horiz(qm_grd, mm_grd),"grad/active");
-  saveh5(arma::join_horiz(qmg_new, mmg_new),"grad/target");
-  saveh5(velocities, "velocities");
+  shared->saveh5(nac, "nac");
+  shared->saveh5(total_gradient, "grad/total");
+  shared->saveh5(arma::join_horiz(qm_grd, mm_grd),"grad/active");
+  shared->saveh5(arma::join_horiz(qmg_new, mmg_new),"grad/target");
+  shared->saveh5(velocities, "velocities");
 
   // Make 3N vector versions of the NAC, velocity, and new
   // gradient. (m comes in as 3N.)
@@ -506,7 +526,7 @@ double FSSH::hop_and_scale(arma::mat &total_gradient, arma::mat &velocities, con
 
 // This is our primary hook into the Gromacs (or other) MD loop
 double FSSH::update_gradient(void){
-  qm->update();
+  qm->update(); // FIXME: should be done by INAQS at gifs_implementation::update_gradient()
 
   // get gradients and energies
   {
@@ -523,11 +543,19 @@ double FSSH::update_gradient(void){
     output << active_state + min_state << " ";
     c().st().print(output);
     output.close();
-    saveh5(c.get(), "amps");
+    shared->saveh5(c.get(), "amps");
   }
 
-  //FIXME: only should happen after 2nd call; unless we're doing a restart
-  electronic_evolution();
+  shared->saveh5(arma::uvec({active_state + min_state}), "surface");
+  
+  if (shared->get_step() > 0){
+    electronic_evolution();
+  }
+  else{ // make sure overlap quantities get saved
+    PropMap props{};
+    props.emplace(QMProperty::wfoverlap, &U);
+    qm->get_properties(props);
+  }
 
   return energy(active_state);
 }
@@ -586,8 +614,8 @@ bool FSSH::rescale_velocities(arma::mat &velocities, arma::vec &masses, arma::ma
   // call parent to update edrift and call_idx
   BOMD::rescale_velocities(velocities, masses, total_gradient, total_energy);
 
-  if (call_idx() > 3 && std::abs(edrift) > delta_e_tol){
-    std::cerr << "WARNING, energy drift exceeds tolerance!" << std::endl;
+  if (shared->get_step() - shared->initial_step > 1 && std::abs(edrift) > delta_e_tol){
+    shared->log("FSSH", "WARNING, energy drift exceeds tolerance!");
   }
   
   // update indicates we need to copy velocity and gradient back to GMX

@@ -21,7 +21,7 @@ VelocityReversal from_string(std::string str);
 
 class FSSH: public BOMD{
 public:
-  explicit FSSH(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
+  explicit FSSH(std::shared_ptr<INAQSShared> shared, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{shared, qm_grd, mm_grd} {}
   virtual ~FSSH() { delete decoherence; }
   virtual double update_gradient(void) override;
 

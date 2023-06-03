@@ -8,7 +8,7 @@
 
 class ElectronicBomd: public BOMD {
 public:
-  explicit ElectronicBomd(double classicalTimeStep, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{classicalTimeStep, qm_grd, mm_grd} {}
+  explicit ElectronicBomd(std::shared_ptr<INAQSShared> shared, arma::mat& qm_grd, arma::mat& mm_grd): BOMD{shared, qm_grd, mm_grd} {}
   ~ElectronicBomd() { }
   double update_gradient(void) override;
 
