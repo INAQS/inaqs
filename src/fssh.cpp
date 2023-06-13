@@ -2,6 +2,7 @@
 #include "electronic.hpp"
 #include "constants.hpp"
 #include "decoherence_afssh.hpp"
+#include "inaqs_shared.hpp"
 #include "util.hpp"
 #include <armadillo>
 #include <complex>
@@ -154,11 +155,11 @@ void FSSH::get_reader_data(ConfigBlockReader& reader) {
 
     arma::uvec temp;
     shared->loadh5(temp, "surface", shared->get_step());
-    active_state = temp(0) - min_state;
+    active_state = temp(0) - min_state; // surface is a uvec of length 1
 
     arma::cx_vec amps;
     shared->loadh5(amps, "amps", shared->get_step());
-    amps.t().print(std::cerr, "Initial amplitudes");
+    amps.st().print(std::cerr, "Initial amplitudes");
     c.reset(shstates, 1, active_state);
     c.set(amps);
   }
@@ -198,26 +199,34 @@ void FSSH::electronic_evolution(void){
     throw std::logic_error("Should never be hopping at start of electronic evolution!");
   }
 
-  PropMap props{};
-  props.emplace(QMProperty::wfoverlap, &U);
-  qm->get_properties(props);
+  {
+    PropMap props{};
+    props.emplace(QMProperty::wfoverlap, &U); // must do this even when restarting
+    qm->get_properties(props);
 
-  shared->saveh5(U, "overlapraw");
-  check_overlap(U);
-  Electronic::phase_match(U, phases);
+    static bool first_call = true;
 
-  if (shared->restart && (shared->initial_step == shared->get_step())){
-    shared->loadh5(U, "overlap", shared->get_step());
+    if (shared->restart && first_call){
+      INAQS_LOG(shared, "Loaded previous elctronic overlaps");
+      shared->loadh5(U, "overlap", shared->get_step());
+      shared->loadh5(phases, "phases", shared->get_step());
+    }
+    else{
+      shared->saveh5(U, "overlapraw");
+      check_overlap(U);
+      Electronic::phase_match(U, phases);
+      shared->saveh5(U, "overlap");
+      shared->saveh5(phases, "phases");
+    }
+
+    first_call = false;
   }
-  
-  shared->saveh5(U, "overlap");
 
-  
   T = util::logmat_unitary(U) / dtc;
 
   // R.B.: energy was updated in update_gradient()
   V = diagmat(energy);
-
+  
   /*
     Since the off-diagonal elements of V are always 0 in this
     implementation, we work only with the diagonal of V. Equation 20
@@ -259,6 +268,7 @@ void FSSH::electronic_evolution(void){
     //c.advance_rk4(V - I*T, dtq);
     c.advance_exact(V - I*T, dtq);
 
+
     // Check for a hop unless we've already had one
     if (! hopping){
       const arma::uword a = active_state;
@@ -294,14 +304,6 @@ void FSSH::electronic_evolution(void){
   hop_probability = 1 - hop_probability;
   hop_probability(active_state) = 0; // don't report active
   shared->saveh5(hop_probability, "hop_probability");
-  /*
-  // to print hopping probabilities
-  std::cerr << "[FSSH] " << call_idx() << ": Hop probabilities: ";
-  for (const auto & p: hop_probability){
-    std::cerr << p << " ";
-  }
-  std::cerr << std::endl;
-  */
 }
 
 
@@ -539,19 +541,26 @@ double FSSH::update_gradient(void){
     props.emplace(QMProperty::energies, util::range(min_state, min_state + shstates), &energy);
     qm->get_properties(props);
   }
-  
-  // write amplitudes
+
   {
+    /*
+      write amplitudes and active_surface: note that we do not save
+      the final amplitudes (which shoudn't be physically important
+      anyway). The choice of when to save matters for doing
+      restarts. Basically we want the amplitudes and state at the
+      *begining* of a step rather than at the end.
+    */
+
     std::ofstream output(amplitude_file, std::ios_base::app);
     output << active_state + min_state << " ";
     c().st().print(output);
     output.close();
     shared->saveh5(c.get(), "amps");
+    shared->saveh5(arma::uvec({active_state + min_state}), "surface");
   }
 
-  shared->saveh5(arma::uvec({active_state + min_state}), "surface");
-  
-  if (shared->get_step() > 0){
+  if ((shared->restart && (shared->get_step() >= shared->initial_step)) ||
+      (!shared->restart && (shared->get_step() > shared->initial_step))){
     electronic_evolution();
   }
   else{ // make sure overlap quantities get saved

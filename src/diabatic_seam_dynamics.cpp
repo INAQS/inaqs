@@ -75,6 +75,8 @@ double DiabaticSeam::update_gradient(void){
     props.emplace(QMProperty::energies, {lower,upper}, &energy);
     qm->get_properties(props);
 
+    // FIXME: should save the diabatic Hamiltonian here too.
+    
     E = 0.5 * (energy(0) + energy(1));
     qm_grd = 0.5 * (g_qm.slice(0) + g_qm.slice(1));
   }
