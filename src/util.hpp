@@ -21,6 +21,23 @@ namespace util{
   bool approx_equal(T a, T b, T tol=arma::datum::eps){
     return std::abs(a-b) < tol;
   };
+
+
+  /*
+    hash functions for comparing arma::mat and friends. Should only be
+    compared between containers of the same shape & dimension
+  */
+  template <template <typename> class C, class T>
+  size_t arma_hash(const C<T> & A){
+    size_t seed = 0;
+    std::hash<T> hash_elem;        // consider element
+    for (size_t i = 0; i < A.n_elem; i++){
+      seed ^= hash_elem(A(i)) * i; // consider its position
+    }
+  
+    return seed;
+  }
+
 }
 
 #endif

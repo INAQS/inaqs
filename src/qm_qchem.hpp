@@ -42,6 +42,7 @@ private:
 
   void state_tracker(PropMap &props);
 
+  size_t conf_hash(void) const;
 
   //FIXME: in the GREAT REFACTOR, should take all size_t/uword -> int as long as arma won't complain (since don't want 2s complement arithmetic)
   void get_nac_vector(arma::mat &nac, size_t I, size_t J);

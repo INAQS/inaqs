@@ -1275,16 +1275,23 @@ void QM_QChem::write_external_charges_section(std::ostream &os){
   os << "$end" << std::endl;
 }
 
+
+size_t QM_QChem::conf_hash(void) const{
+  return util::arma_hash(crd_qm) ^ util::arma_hash(crd_mm) ^ util::arma_hash(chg_mm);
+}
+
+
 /*
   Sentinel system to track whether the respective q-chem qink has been
   called since the last call to update(). See/update the protected
   nested enum class Q (as in sentinel) for the list of relevant qinks
 */
 bool QM_QChem::called(Q q){
-  static std::unordered_map<Q, int> calls;
+  //return false; // FIXME: if we're going to rip this functionality out, should do it right. 
+  static std::unordered_map<Q, size_t> calls;
   if (calls.find(q) == calls.end() || // test for existance; short-ciruit required
-      call_idx() != calls.at(q) ){    // test for equality
-    calls[q] = call_idx();            // operator[] will insert if new key
+      conf_hash() != calls.at(q) ){   // test for equality
+    calls[q] = conf_hash();           // operator[] will insert if new key
     return false;
   }
   else{
