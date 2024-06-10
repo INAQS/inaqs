@@ -58,7 +58,7 @@ double DiabaticSeam::update_gradient(void){
     props.emplace(QMProperty::diabatic_gradients, {lower,upper}, &gd_qm);
     qm->get_properties(props);
 
-    if (call_idx() == 1){ // figure out which diabat is "upper" on the first step
+    if (call_idx() == 0){ // figure out which diabat is "upper" on the first step
       H.print("Initial diabatic Hamiltonian");
       std::cerr << "[DSEAM]: requested " << (which_diabat==0 ? "donor":"acceptor") << " diabat; "
                 << "selecting state " << which_diabat << "." << std::endl;
@@ -73,9 +73,11 @@ double DiabaticSeam::update_gradient(void){
     PropMap props {};
     props.emplace(QMProperty::qmgradient_multi, {lower, upper}, &g_qm);
     props.emplace(QMProperty::energies, {lower,upper}, &energy);
+    props.emplace(QMProperty::diabatic_H, {lower, upper}, &H);
     qm->get_properties(props);
 
-    // FIXME: should save the diabatic Hamiltonian here too.
+    // FIXME: this is not H at the corrected geometry
+    shared->saveh5(H, "diabatic_H");
     
     E = 0.5 * (energy(0) + energy(1));
     qm_grd = 0.5 * (g_qm.slice(0) + g_qm.slice(1));
