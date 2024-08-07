@@ -4,6 +4,7 @@
 #include "util.hpp"
 #include "qm_qchem.hpp"
 #include "qm_model.hpp"
+#include "qm_null.hpp"
 //
 #include <armadillo>
 #include <iomanip>
@@ -16,23 +17,25 @@ select_interface(ConfigBlockReader& reader,
                  arma::mat& mm_crd, 
                  arma::vec& mm_chg)
 { 
-    std::string qmcode{};
-    int mult, chg;
-    size_t excited_states, min_state;
-    reader.get_data("qmcode", qmcode);
-    reader.get_data("multiplicity", mult);
-    reader.get_data("charge", chg);
+  std::string qmcode{};
+  int mult, chg;
+  size_t excited_states, min_state;
+  reader.get_data("qmcode", qmcode);
+  reader.get_data("multiplicity", mult);
+  reader.get_data("charge", chg);
 
-    reader.get_data("excited_states", excited_states);
-    reader.get_data("min_state", min_state);
+  reader.get_data("excited_states", excited_states);
+  reader.get_data("min_state", min_state);
 
-    if (qmcode == "qchem") {
-      return new QM_QChem(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
-    } else if (qmcode == "qmmodel") {
-      return new QM_Model(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
-    } else {
-      throw std::runtime_error("qm interface  not implemented!");
-    }
+  if (qmcode == "qchem") {
+    return new QM_QChem(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+  } else if (qmcode == "qmmodel") {
+    return new QM_Model(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+  } else if (qmcode == "null") {
+    return new QM_Null(shared, fh, qmids, qm_crd, mm_crd, mm_chg, chg, mult, excited_states, min_state);
+  } else {
+    throw std::runtime_error("qm interface  not implemented!");
+  }
 }
 
 void
