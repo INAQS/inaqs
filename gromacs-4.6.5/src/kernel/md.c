@@ -105,7 +105,6 @@
 #endif
 
 #ifdef GMX_GIFS
-extern char * inaqsConfigFile;
 #include "../shqmmm/gmxgifs.h"
 #endif
 
@@ -718,24 +717,6 @@ double do_md(FILE *fplog, t_commrec *cr, int nfile, const t_filenm fnm[],
         }
         fprintf(fplog, "\n");
     }
-
-#ifdef GMX_GIFS
-    if (fr->bQMMM){
-      const char * inaqsConfigFile =
-        opt2bSet("-inaqs", nfile, fnm) ?
-        ftp2fn(efDAT, nfile, fnm) : NULL;
-
-      real mdTimeStep = ir->delta_t;
-      int mdStepStart = ir->init_step;
-      t_QMrec * qm = fr->qr->qm[0];
-      size_t nqm = qm->nrQMatoms;
-      void * qm_atomids = qm->atomicnumberQM;
-
-      if (!inaqs_init(inaqsConfigFile, mdStepStart, mdTimeStep, nqm, qm_atomids)){
-        gmx_fatal(FARGS, "Unable to initialize INAQS!");
-      }
-    }
-#endif
 
     /* Set and write start time */
     runtime_start(runtime);

@@ -95,6 +95,10 @@
 #include "gpu_utils.h"
 #include "nbnxn_cuda_data_mgmt.h"
 
+#ifdef GMX_GIFS
+#include "../shqmmm/gmxgifs.h"
+#endif
+
 typedef struct {
     gmx_integrator_t *func;
 } gmx_intp_t;
@@ -1695,6 +1699,25 @@ int mdrunner(gmx_hw_opt_t *hw_opt,
 
             setup_dd_grid(fplog, cr->dd);
         }
+
+#ifdef GMX_GIFS
+        /* Initialize INAQS */
+        if (fr->bQMMM){
+          const char * inaqsConfigFile =
+            opt2bSet("-inaqs", nfile, fnm) ?
+            ftp2fn(efDAT, nfile, fnm) : NULL;
+
+          const real mdTimeStep = inputrec->delta_t;
+          const int mdStepStart = inputrec->init_step;
+          const t_QMrec * qm = fr->qr->qm[0];
+          const size_t nqm = qm->nrQMatoms;
+          const void * qm_atomids = qm->atomicnumberQM;
+
+          if (!inaqs_init(inaqsConfigFile, mdStepStart, mdTimeStep, nqm, qm_atomids)){
+            gmx_fatal(FARGS, "Unable to initialize INAQS!");
+          }
+        }
+#endif
 
         /* Now do whatever the user wants us to do (how flexible...) */
         integrator[inputrec->eI].func(fplog, cr, nfile, fnm,
