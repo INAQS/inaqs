@@ -473,9 +473,38 @@ static inline void close_neighbor_lists(t_forcerec *fr, gmx_bool bMakeQMMMnblist
 {
     int n, i;
 
+    //fprintf(stderr, "Entering %s with bMakeQMMMnblist=%d\n", __func__, bMakeQMMMnblist);
     if (bMakeQMMMnblist)
     {
         close_nblist(&(fr->QMMMlist));
+#ifdef GMX_GIFS
+        /*
+          Why the early returns? close_neighbor_lists() is called from
+          nsgrid_core(..., bMakeQMMMnblist), which in turn is called
+          *twice* from search_neighbours. The first call has
+          bMakeQMMMnblist=false, and the second =true. Both calls
+          subsequently invoke close_neighbor_lists(). The result is
+          that each of the fr->nblists[n].nlist_{sr,lr}[i] lists is
+          closed twice, which will erroneously double increment
+          nlist->nri (c.f. close_nblist()). The error will manifest
+          later on when evaluating the nonbonded interactions.
+          Specifically, nri is used to traverse the arrays at
+          nlist->shift and nlist->gid. Because nlist->nri is one
+          larger than it should be, we see the junk (uninitialized)
+          values past the logical end of nlist->shift and
+          nlist->gid. This is effectively a case of an off-by-one
+          error invoked by the double-close of the nblist.
+
+          Mozilla's rr debugger made finding this issue waaay easier.
+        */
+
+        static gmx_bool bWarned = 0;
+        if (!bWarned){
+          gmx_warning("Invoking double-close fix for neighbor lists");
+          bWarned = 1;
+        }
+        return;
+#endif
     }
 
     for (n = 0; n < fr->nnblists; n++)
