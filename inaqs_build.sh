@@ -10,7 +10,7 @@ INAQSBUILD="$INAQSROOT/build"
 GMXBUILD="$GMXROOT/build"
 
 # make sure cmake picks up the correct compilers
-export CC=gcc CXX=g++
+export CC=${CC:-gcc} CXX=${CXX:-g++}
 
 # make sure gromacs can find libgifs/libmemes during linking
 # shouldn't matter afterwards
@@ -81,7 +81,7 @@ in
         ;;
     clean)
         echo "Deleting build directories"
-        rm -r "$GMXBUILD" "$INAQSBUILD"
+        rm -r "$GMXBUILD" "$INAQSBUILD" || true
         ;;
     GROMACS)
         buildGMX
