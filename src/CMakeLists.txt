@@ -1,5 +1,5 @@
 find_package(Armadillo)
-if(${ARMADILLO_FOUND})
+if(${ARMADILLO_FOUND} AND ("${ARMADILLO_VERSION_MAJOR}" STRGREATER_EQUAL "9"))
     include_directories(${ARMADILLO_INCLUDE_DIRS})
     link_libraries(${ARMADILLO_LIBRARIES})
 else()
