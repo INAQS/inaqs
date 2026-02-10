@@ -43,7 +43,9 @@ function buildGMX(){
                   -DGMX_DEFAULT_SUFFIX=OFF \
                   -DGMX_BINARY_SUFFIX="" \
                   -DGMX_DOUBLE=ON \
-                  -DGMX_BUILD_OWN_FFTW=ON
+                  -DGMX_BUILD_OWN_FFTW=ON \
+                  -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+                  -DGMX_CPU_ACCELERATION=None
                   #-DFFTWF_LIBRARY=/opt/fftw/gnu/3.3.8/lib/libfftw3.so \
                   #-DFFTWF_INCLUDE_DIR=/opt/fftw/gnu/3.3.8/include \
 

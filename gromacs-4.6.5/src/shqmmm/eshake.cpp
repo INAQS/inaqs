@@ -1,6 +1,11 @@
 #include "eshake.hpp"
 #include "gmx_fatal.h"
 
+// Undefine GROMACS macros that conflict with Armadillo internals
+#undef XX
+#undef YY
+#undef ZZ
+
 #include <iostream>
 #include <utility>
 #include <armadillo>
